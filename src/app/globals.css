@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), ui-serif, Georgia, "Times New Roman", serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Valle D'incanto — paleta do mockup */
+  --color-header: #d1d8df;
+  --color-footer: #604d3f;
+  --color-footer-fg: #f9f7f2;
+  --color-slot-available: #8da4b7;
+  --color-slot-available-fg: #f9f7f2;
+  --color-slot-occupied: #d6d3d1;
+  --color-slot-occupied-fg: #5c5652;
+  --color-charcoal: #2d2926;
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #f9f7f2;
+  --foreground: #2d2926;
+  --card: #ffffff;
+  --card-foreground: #2d2926;
+  --popover: #ffffff;
+  --popover-foreground: #2d2926;
+
+  --primary: #604d3f;
+  --primary-foreground: #f9f7f2;
+
+  --secondary: #e8e4df;
+  --secondary-foreground: #2d2926;
+
+  --muted: #ebe8e4;
+  --muted-foreground: #6b6560;
+
+  --accent: #d1d8df;
+  --accent-foreground: #2d2926;
+
+  --destructive: oklch(0.55 0.18 25);
+  --border: #ddd8d2;
+  --input: #ddd8d2;
+  --ring: #604d3f;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
