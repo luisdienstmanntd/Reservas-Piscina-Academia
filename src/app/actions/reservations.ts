@@ -199,6 +199,16 @@ const guestWhatsappRequiredSchema = z
     message: "WhatsApp inválido. Use DDD + número (10 a 13 dígitos).",
   });
 
+const guestNameOptionalSchema = z
+  .string()
+  .max(200, "Nome muito longo (máx. 200 caracteres).")
+  .optional()
+  .transform((s) => {
+    if (s === undefined) return null;
+    const t = s.trim();
+    return t.length ? t : null;
+  });
+
 const createGuestSchema = z.object({
   facility: facilitySchema,
   apartmentNumber: apartmentStr,
@@ -206,6 +216,7 @@ const createGuestSchema = z.object({
   reservationDate: dateStr,
   slotStart: z.string(),
   guestWhatsapp: guestWhatsappRequiredSchema,
+  guestName: guestNameOptionalSchema,
 });
 
 function validateStayAndSlot(
@@ -277,6 +288,7 @@ export async function createGuestReservation(input: {
   reservationDate: string;
   slotStart: string;
   guestWhatsapp: string;
+  guestName?: string;
 }): Promise<ActionResult<{ id: string }>> {
   const parsed = createGuestSchema.safeParse(input);
   if (!parsed.success) {
@@ -294,6 +306,7 @@ export async function createGuestReservation(input: {
     reservationDate,
     slotStart,
     guestWhatsapp,
+    guestName,
   } = parsed.data;
   const v = validateStayAndSlot(
     facility,
@@ -336,6 +349,7 @@ export async function createGuestReservation(input: {
         apartment_number: apartmentNumber.trim(),
         guest_checkout_date: guestCheckoutDate,
         guest_whatsapp: guestWhatsapp,
+        guest_name: guestName,
         created_by: "guest",
       })
       .select("id")
@@ -396,6 +410,7 @@ const createReceptionSchema = z.object({
   slotStart: z.string(),
   notes: z.string().max(500).optional(),
   guestWhatsapp: guestWhatsappOptionalSchema,
+  guestName: guestNameOptionalSchema,
 });
 
 export async function createReceptionReservation(input: {
@@ -404,6 +419,7 @@ export async function createReceptionReservation(input: {
   reservationDate: string;
   slotStart: string;
   guestWhatsapp?: string;
+  guestName?: string;
   notes?: string;
 }): Promise<ActionResult<{ id: string }>> {
   if (!(await receptionAuthed())) {
@@ -426,6 +442,7 @@ export async function createReceptionReservation(input: {
     slotStart,
     notes,
     guestWhatsapp,
+    guestName,
   } = parsed.data;
   const guestCheckoutDate = reservationDate;
   const v = validateStayAndSlot(
@@ -469,6 +486,7 @@ export async function createReceptionReservation(input: {
         apartment_number: apartmentNumber.trim(),
         guest_checkout_date: guestCheckoutDate,
         guest_whatsapp: guestWhatsapp,
+        guest_name: guestName,
         created_by: "reception",
         notes: notes?.trim() || null,
       })
@@ -500,6 +518,57 @@ export async function createReceptionReservation(input: {
     return {
       ok: false,
       error: "Falha ao salvar. Verifique a conexão e tente novamente.",
+      code: "network",
+    };
+  }
+}
+
+export async function updateReservationGuestName(
+  id: string,
+  guestName: string | null
+): Promise<ActionResult> {
+  if (!(await receptionAuthed())) {
+    return { ok: false, error: "Não autorizado.", code: "validation" };
+  }
+
+  const idParsed = z.string().uuid().safeParse(id);
+  if (!idParsed.success) {
+    return { ok: false, error: "Reserva inválida.", code: "validation" };
+  }
+
+  const t = guestName === null || guestName === undefined ? "" : String(guestName).trim();
+  if (t.length > 200) {
+    return {
+      ok: false,
+      error: "Nome muito longo (máx. 200 caracteres).",
+      code: "validation",
+    };
+  }
+  const normalized = t.length ? t : null;
+
+  const supabaseGn = getAdminClient();
+  if (!supabaseGn) {
+    return {
+      ok: false,
+      error: supabaseConfigErrorMessage(),
+      code: "validation",
+    };
+  }
+
+  try {
+    const { error } = await supabaseGn
+      .from("reservations")
+      .update({ guest_name: normalized })
+      .eq("id", idParsed.data);
+
+    if (error) throw error;
+
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível atualizar o nome.",
       code: "network",
     };
   }

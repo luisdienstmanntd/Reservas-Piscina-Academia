@@ -82,6 +82,7 @@ export type ReservationRow = {
   reservation_date: string;
   slot_start: string;
   apartment_number: string;
+  guest_name: string | null;
   guest_checkout_date: string | null;
   guest_whatsapp: string | null;
   confirmation_sent: boolean;

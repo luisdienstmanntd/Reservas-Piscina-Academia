@@ -31,6 +31,8 @@ CREATE TABLE public.reservations (
 
   guest_whatsapp text,
 
+  guest_name text,
+
   confirmation_sent boolean NOT NULL DEFAULT false,
   warning_sent boolean NOT NULL DEFAULT false,
 
@@ -71,6 +73,7 @@ CREATE TABLE public.reservations (
 COMMENT ON TABLE public.reservations IS 'Reservas piscina (13h–01h) e academia (24h, slots de 1h).';
 COMMENT ON COLUMN public.reservations.facility IS 'pool = piscina; gym = academia.';
 COMMENT ON COLUMN public.reservations.slot_start IS 'Hora de início do slot (1h). 00:00 = 00h–01h.';
+COMMENT ON COLUMN public.reservations.guest_name IS 'Nome do hóspede que realizou a reserva.';
 
 CREATE INDEX reservations_reservation_date_idx ON public.reservations (reservation_date);
 CREATE INDEX reservations_apartment_number_idx ON public.reservations (apartment_number);

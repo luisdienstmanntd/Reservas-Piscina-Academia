@@ -15,6 +15,7 @@ import {
   getReservationsForDate,
   loginReception,
   logoutReception,
+  updateReservationGuestName,
 } from "@/app/actions/reservations";
 import {
   AlertDialog,
@@ -68,6 +69,55 @@ function formatWhatsappDisplay(digits: string | null | undefined): string {
   return d;
 }
 
+function ReceptionGuestNameCell({
+  row,
+  onSaved,
+}: {
+  row: ReservationRow;
+  onSaved: () => void;
+}) {
+  const [value, setValue] = useState(row.guest_name ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setValue(row.guest_name ?? "");
+  }, [row.id, row.guest_name]);
+
+  async function commit() {
+    const next = value.trim();
+    const prev = (row.guest_name ?? "").trim();
+    if (next === prev) return;
+    setSaving(true);
+    try {
+      const r = await updateReservationGuestName(
+        row.id,
+        next.length ? next : null
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        setValue(row.guest_name ?? "");
+        return;
+      }
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Input
+      className="h-8 min-w-[7rem] max-w-[11rem] border-border bg-white text-sm lg:min-w-[9rem] lg:max-w-[13rem]"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      disabled={saving}
+      placeholder="Nome"
+      aria-label="Nome do hóspede"
+      maxLength={200}
+    />
+  );
+}
+
 type Props = { initialAuthed: boolean };
 
 export function ReceptionDashboard({ initialAuthed }: Props) {
@@ -93,6 +143,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [newApt, setNewApt] = useState("");
   const [newReservationDate, setNewReservationDate] = useState(todayStr);
   const [newSlot, setNewSlot] = useState<string>(slotStartsFor("pool")[0] ?? "13:00:00");
+  const [newGuestName, setNewGuestName] = useState("");
   const [newWhatsapp, setNewWhatsapp] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const [creating, setCreating] = useState(false);
@@ -267,6 +318,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         apartmentNumber: newApt,
         reservationDate: newReservationDate,
         slotStart: newSlot,
+        guestName: newGuestName.trim() ? newGuestName : undefined,
         guestWhatsapp: newWhatsapp.trim() ? newWhatsapp : undefined,
         notes: newNotes || undefined,
       });
@@ -276,6 +328,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       }
       toast.success("Reserva criada.");
       setNewApt("");
+      setNewGuestName("");
       setNewWhatsapp("");
       setNewNotes("");
       setNewReservationDate(hotelCalendarDate());
@@ -400,11 +453,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             role="region"
             aria-label="Grade de reservas do dia"
           >
-            <table className="w-full min-w-[1040px] text-sm lg:min-w-[1100px] lg:text-[15px]">
+            <table className="w-full min-w-[1180px] text-sm lg:min-w-[1240px] lg:text-[15px]">
               <thead>
                 <tr className="border-b text-left">
                   <th className="pb-2 pr-4 font-medium lg:pr-5">Horário</th>
                   <th className="pb-2 pr-4 font-medium lg:pr-5">Apto</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">Hóspede</th>
                   <th className="pb-2 pr-4 font-medium lg:pr-5">Observações</th>
                   <th className="pb-2 pr-4 font-medium lg:pr-5">WhatsApp</th>
                   <th className="pb-2 pr-4 font-medium lg:pr-5">whatsapp</th>
@@ -428,6 +482,16 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                           <span className="font-mono text-base lg:text-lg">
                             {row.apartment_number}
                           </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 align-top lg:py-3.5 lg:pr-5">
+                        {row ? (
+                          <ReceptionGuestNameCell
+                            row={row}
+                            onSaved={() => void load()}
+                          />
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -535,6 +599,19 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="ngn">Hóspede (opcional)</Label>
+                <Input
+                  id="ngn"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Nome do hóspede"
+                  maxLength={200}
+                  className="border-border bg-white"
+                  value={newGuestName}
+                  onChange={(e) => setNewGuestName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="nd">Data</Label>
                 <Input
                   id="nd"
@@ -592,7 +669,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   id="nn"
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
-                  placeholder="Opcional: pedido especial, nome do hóspede…"
+                  placeholder="Opcional: pedido especial, notas internas…"
                 />
               </div>
               <div className="sm:col-span-2">

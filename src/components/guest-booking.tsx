@@ -67,6 +67,7 @@ export function GuestBooking({ facility }: { facility: Facility }) {
 
   const [step, setStep] = useState<Step>(1);
   const [apartment, setApartment] = useState("");
+  const [guestName, setGuestName] = useState("");
   const [checkout, setCheckout] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -208,6 +209,7 @@ export function GuestBooking({ facility }: { facility: Facility }) {
         reservationDate: ymd,
         slotStart: slot,
         guestWhatsapp: whatsapp,
+        guestName: guestName.trim() ? guestName : undefined,
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -281,7 +283,8 @@ export function GuestBooking({ facility }: { facility: Facility }) {
                     Identificação (check-in)
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Apartamento, check-out e WhatsApp (obrigatório).
+                    Apartamento, nome (opcional), check-out e WhatsApp
+                    (obrigatório).
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 p-3 pt-0">
@@ -307,6 +310,21 @@ export function GuestBooking({ facility }: { facility: Facility }) {
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="gn" className="text-charcoal text-xs">
+                        Nome do hóspede (opcional)
+                      </Label>
+                      <Input
+                        id="gn"
+                        type="text"
+                        autoComplete="name"
+                        maxLength={200}
+                        placeholder="Como prefere ser chamado"
+                        className="border-border h-9 bg-white text-sm"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="co" className="text-charcoal text-xs">
