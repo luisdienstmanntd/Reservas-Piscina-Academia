@@ -328,17 +328,18 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   return (
     <div className="min-h-dvh bg-background">
-      <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
-        <header className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-3">
+      <div className="mx-auto w-full max-w-5xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 md:pt-6 lg:max-w-6xl lg:space-y-8 lg:px-8 lg:pb-10 xl:max-w-7xl 2xl:max-w-[min(100%-4rem,96rem)]">
+        <header className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+          <div className="min-w-0 space-y-3">
             <ValleWordmark size="sm" className="items-start text-left" />
-            <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal md:text-3xl">
+            <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
               Reservas
             </h1>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
+                className="lg:h-10 lg:px-4 lg:text-sm"
                 variant={facility === "pool" ? "default" : "outline"}
                 onClick={() => setFacility("pool")}
               >
@@ -347,6 +348,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <Button
                 type="button"
                 size="sm"
+                className="lg:h-10 lg:px-4 lg:text-sm"
                 variant={facility === "gym" ? "default" : "outline"}
                 onClick={() => setFacility("gym")}
               >
@@ -354,7 +356,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -367,63 +369,70 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           </div>
         </header>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
-          <div className="space-y-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:gap-6">
+          <div className="min-w-0 space-y-1">
             <Input
               id="day"
               type="date"
               value={dateStr}
               onChange={(e) => setDateStr(e.target.value)}
               aria-label="Dia"
-              className="w-full border-border bg-white sm:w-auto sm:min-w-[200px]"
+              className="h-10 w-full max-w-full border-border bg-white sm:w-auto sm:min-w-[220px] lg:min-w-[240px]"
             />
           </div>
           <Button
             type="button"
             variant="secondary"
+            className="w-full shrink-0 sm:w-auto lg:h-10"
             disabled={loading}
             onClick={() => void load()}
           >
             {loading ? "Atualizando…" : "Atualizar"}
           </Button>
-          <p className="text-muted-foreground sm:ml-auto text-sm">
+          <p className="text-muted-foreground text-sm sm:ml-auto lg:text-base">
             {format(fromYmd(dateStr), "EEEE, dd/MM/yyyy", { locale: ptBR })}
           </p>
         </div>
 
         <Card className="border-border/80 shadow-sm">
-          <CardContent className="overflow-x-auto">
-            <table className="w-full min-w-[1040px] text-sm">
+          <CardContent
+            className="min-w-0 overflow-x-auto overscroll-x-contain px-2 pb-2 pt-4 [scrollbar-gutter:stable] sm:px-6 sm:pb-6 sm:pt-6"
+            role="region"
+            aria-label="Grade de reservas do dia"
+          >
+            <table className="w-full min-w-[1040px] text-sm lg:min-w-[1100px] lg:text-[15px]">
               <thead>
                 <tr className="border-b text-left">
-                  <th className="pb-2 pr-4 font-medium">Horário</th>
-                  <th className="pb-2 pr-4 font-medium">Apto</th>
-                  <th className="pb-2 pr-4 font-medium">Observações</th>
-                  <th className="pb-2 pr-4 font-medium">WhatsApp</th>
-                  <th className="pb-2 pr-4 font-medium">whatsapp</th>
-                  <th className="pb-2 pr-4 font-medium">Origem</th>
-                  <th className="pb-2 font-medium text-right">Ações</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">Horário</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">Apto</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">Observações</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">WhatsApp</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">whatsapp</th>
+                  <th className="pb-2 pr-4 font-medium lg:pr-5">Origem</th>
+                  <th className="pb-2 pr-2 font-medium text-right lg:pl-2">
+                    Ações
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="tabular-nums">
                 {slotList.map((slot) => {
                   const norm = normalizeSlotStart(slot);
                   const row = bySlot.get(norm);
                   return (
                     <tr key={slot} className="border-b border-border/60">
-                      <td className="py-3 pr-4 font-medium">
+                      <td className="py-3 pr-4 font-medium lg:py-3.5 lg:pr-5">
                         {slotLabel(slot)}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
                         {row ? (
-                          <span className="font-mono text-base">
+                          <span className="font-mono text-base lg:text-lg">
                             {row.apartment_number}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="max-w-[min(280px,40vw)] py-3 pr-4 align-top">
+                      <td className="max-w-[min(280px,72vw)] py-3 pr-4 align-top sm:max-w-[280px] lg:max-w-xs lg:py-3.5 lg:pr-5 xl:max-w-sm">
                         {row ? (
                           row.notes?.trim() ? (
                             <span
@@ -439,16 +448,16 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
                         {row ? (
-                          <span className="font-mono text-xs sm:text-sm">
+                          <span className="font-mono text-xs sm:text-sm lg:text-[15px]">
                             {formatWhatsappDisplay(row.guest_whatsapp)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-3 pr-4 align-middle">
+                      <td className="py-3 pr-4 align-middle lg:py-3.5 lg:pr-5">
                         {row ? (
                           <ReceptionWaActions
                             row={row}
@@ -458,7 +467,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
                         {row ? (
                           <Badge
                             variant={
@@ -475,13 +484,13 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="py-3 pl-2 text-right lg:py-3.5">
                         {row && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive lg:h-9 lg:px-3"
                             onClick={() => setPendingDelete(row.id)}
                           >
                             <Trash2 className="size-4" />
@@ -498,15 +507,15 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         </Card>
 
         <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-serif text-lg text-charcoal">
+          <CardHeader className="px-4 sm:px-6 lg:px-8">
+            <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
               Nova reserva
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6 lg:px-8">
             <form
               onSubmit={(e) => void onCreate(e)}
-              className="grid gap-4 sm:grid-cols-2"
+              className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:max-w-5xl"
             >
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="na">Apto</Label>

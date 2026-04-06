@@ -90,7 +90,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
+    <div className="flex flex-wrap items-center justify-end gap-1.5 lg:gap-2">
       <Button
         type="button"
         size="sm"
@@ -98,7 +98,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         disabled={confirmDone || pending !== null}
         title="Enviar confirmação (WhatsApp Web)"
         className={cn(
-          "h-8 gap-1 px-2 text-xs",
+          "h-8 gap-1 px-2 text-xs lg:h-9 lg:px-3 lg:text-sm",
           !confirmDone && "bg-green-600 text-white hover:bg-green-700"
         )}
         onClick={() => void openWaAndMark("confirmation", confirmMsg)}
@@ -113,7 +113,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         disabled={warnDone || pending !== null}
         title="Aviso 10 min antes do fim"
         className={cn(
-          "h-8 gap-1 px-2 text-xs",
+          "h-8 gap-1 px-2 text-xs lg:h-9 lg:px-3 lg:text-sm",
           showWarningPulse &&
             "animate-pulse border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
         )}
