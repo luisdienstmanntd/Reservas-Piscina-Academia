@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "Piscina e Academia — Hotel Valle D'incanto",
   description:
     "Agendamento de horários da piscina (09h–01h) e da academia (24h).",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png", sizes: "any" }],
+    apple: [{ url: "/favicon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
