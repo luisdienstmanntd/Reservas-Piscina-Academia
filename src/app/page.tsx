@@ -23,7 +23,7 @@ export default function Home() {
             width={1024}
             height={364}
             priority
-            className="mx-auto mb-4 h-auto w-full max-w-[min(100%,18rem)] object-contain md:max-w-md"
+            className="mx-auto mb-3 h-auto w-full max-w-[min(100%,11rem)] object-contain sm:max-w-[12rem] md:max-w-[14rem]"
           />
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-charcoal md:text-4xl">
             Agendamentos
