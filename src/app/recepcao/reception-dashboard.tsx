@@ -763,6 +763,10 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </div>
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="nw">WhatsApp (opcional)</Label>
+                <p className="text-muted-foreground text-[11px] leading-snug">
+                  Preencha para ativar os botões de confirmação e aviso (10 min)
+                  na coluna whatsapp da grade.
+                </p>
                 <Input
                   id="nw"
                   type="tel"
