@@ -35,15 +35,20 @@ Na raiz do projeto, copie `.env.example` para `.env.local` e preencha:
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
+RECEPTION_PASSWORD=sua-senha-recepcao
 ```
 
 Reinicie o servidor de desenvolvimento (`npm run dev`) após alterar `.env.local`.
 
+- **Hóspede:** aplique também a migração `20260410120000_active_stays.sql` (ou use `setup_supabase_cloud.sql` completo) para a tabela `active_stays` usada pelos tokens de acesso.
+
 ## 5. Deploy na Vercel
 
 1. Conecte o repositório na Vercel.
-2. Em **Settings → Environment Variables**, adicione as mesmas variáveis (incluindo `SUPABASE_SERVICE_ROLE_KEY` como **Secret**).
+2. Em **Settings → Environment Variables**, adicione as mesmas variáveis (incluindo `SUPABASE_SERVICE_ROLE_KEY` como **Secret** e `RECEPTION_PASSWORD`).
 3. Faça um novo deploy.
+
+O middleware na Vercel usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para validar tokens de estadia em `/hospede/*`.
 
 ## 6. Conferir constraints (opcional)
 

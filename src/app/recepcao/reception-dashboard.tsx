@@ -17,6 +17,7 @@ import {
   logoutReception,
   updateReservationGuestName,
 } from "@/app/actions/reservations";
+import { generateStayToken } from "@/app/actions/stays";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -156,6 +157,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [formSummaryLoading, setFormSummaryLoading] = useState(false);
   const [, setMinuteTick] = useState(0);
 
+  const [guestAccessApt, setGuestAccessApt] = useState("");
+  const [guestAccessCheckout, setGuestAccessCheckout] = useState(todayStr);
+  const [guestAccessLoading, setGuestAccessLoading] = useState(false);
+  const [guestAccessUrl, setGuestAccessUrl] = useState<string | null>(null);
+
   useEffect(() => {
     let intervalId: number | undefined;
     const tick = () => setMinuteTick((n) => n + 1);
@@ -294,6 +300,33 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const slotAlreadyTaken = formOccupiedSlots.has(
     normalizeSlotStart(newSlot)
   );
+
+  async function onGenerateGuestAccess(e: React.FormEvent) {
+    e.preventDefault();
+    if (!guestAccessApt.trim()) {
+      toast.error("Selecione o apartamento.");
+      return;
+    }
+    setGuestAccessLoading(true);
+    setGuestAccessUrl(null);
+    try {
+      const r = await generateStayToken({
+        apartmentNumber: guestAccessApt,
+        checkoutDate: guestAccessCheckout,
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      const url = `${window.location.origin}/hospede?token=${encodeURIComponent(r.token)}`;
+      setGuestAccessUrl(url);
+      toast.success("Link gerado. Copie e envie ao hóspede.");
+    } catch {
+      toast.error("Falha ao gerar o link. Tente novamente.");
+    } finally {
+      setGuestAccessLoading(false);
+    }
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -567,6 +600,79 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 })}
               </tbody>
             </table>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader className="px-4 sm:px-6 lg:px-8">
+            <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
+              Gerar acesso hóspede
+            </CardTitle>
+            <CardDescription>
+              Link com token de estadia para agendar piscina ou academia no
+              telemóvel do hóspede.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
+            <form
+              onSubmit={(e) => void onGenerateGuestAccess(e)}
+              className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="ga-apt">Apartamento</Label>
+                <select
+                  id="ga-apt"
+                  required
+                  className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  value={guestAccessApt}
+                  onChange={(e) => setGuestAccessApt(e.target.value)}
+                >
+                  <option value="">Selecione…</option>
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ga-co">Check-out</Label>
+                <Input
+                  id="ga-co"
+                  type="date"
+                  min={todayStr}
+                  className="border-border bg-white"
+                  value={guestAccessCheckout}
+                  onChange={(e) => setGuestAccessCheckout(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={guestAccessLoading}>
+                  {guestAccessLoading ? "A gerar…" : "Gerar link"}
+                </Button>
+              </div>
+            </form>
+            {guestAccessUrl ? (
+              <div className="space-y-2 rounded-md border border-border/80 bg-muted/30 p-3">
+                <Label className="text-xs text-muted-foreground">
+                  URL para o hóspede
+                </Label>
+                <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
+                  {guestAccessUrl}
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(guestAccessUrl);
+                    toast.message("Copiado para a área de transferência.");
+                  }}
+                >
+                  Copiar link
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

@@ -36,6 +36,8 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` pode existir no `.env` para uso futuro; **este projeto** usa a service role nas Server Actions.
 
+   **Hóspede:** o acesso a `/hospede/*` usa **token de estadia** (tabela `active_stays`, cookie `guest_token`). A recepção gera o link no dashboard; o middleware valida o token na API Supabase (Edge). É necessário aplicar a migração `20260410120000_active_stays.sql` (ou o script cloud completo).
+
 4. Crie o schema na base:
 
    - **Projeto novo na nuvem:** no Dashboard → SQL, execute `supabase/setup_supabase_cloud.sql` (inclui `guest_whatsapp`).
@@ -71,6 +73,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 | `/hospede` | Redireciona para `/hospede/piscina` |
 | `/hospede/piscina` | Fluxo hóspede — `GuestBooking` com `facility: pool` |
 | `/hospede/academia` | Fluxo hóspede — `GuestBooking` com `facility: gym` |
+| `/acesso-negado` | Sem token válido ou estadia expirada |
 | `/recepcao` | Login por senha (cookie HTTP-only) + dashboard (grade do dia, nova reserva balcão, cancelar) |
 
 `src/app/recepcao/layout.tsx` — layout mínimo do segmento (estabilidade de CSS em dev no App Router).
@@ -79,7 +82,8 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 
 | | Hóspede (`/hospede/...`) | Recepção (`/recepcao`) |
 |--|--------------------------|-------------------------|
-| Identificação | Apto (lista fechada) + **check-out** + **WhatsApp (obrigatório)** + calendário da estadia | Apto + **data da reserva** + horário no formulário |
+| Acesso | Link com `?token=` (definido na recepção) → cookie `guest_token`; validade até **check-out** (fuso SP) | Painel com senha |
+| Identificação | **Apto e check-out** vêm do token (servidor); hóspede informa **WhatsApp** (obrigatório) + nome opcional | Apto + **data da reserva** + horário no formulário |
 | WhatsApp | **Obrigatório** (10–13 dígitos, normalizados na BD) | **Opcional** |
 | Validação de estadia | Reserva entre hoje e check-out | Internamente `guest_checkout_date = reservation_date` (só para passar `validateStayAndSlot`) |
 | Listagem | — | Grade por **dia** (calendário “Dia (grade)”): abre em **hoje** ao login; **não** muda ao criar reserva noutra data — alterar só manualmente para ver outro dia. |
@@ -92,7 +96,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 - **Por instalação e dia:** no máximo **1 reserva por apartamento** e **1 reserva por horário** (unicidade na BD + verificação pré-insert `assertSlotAndApartmentFree` + UI que desativa/oculta conflitos).
 - **Apartamentos:** apenas os códigos em `src/lib/apartment-codes.ts` (select + Zod nas actions).
 - **Datas “hoje”:** fuso **America/São_Paulo** (`src/lib/hotel-time.ts`).
-- **Segurança:** RLS ativa; `anon`/`authenticated` sem grants na tabela; a app usa **service role** só em Server Actions.
+- **Segurança:** RLS ativa; `anon`/`authenticated` sem grants em `reservations` e `active_stays`; **service role** em Server Actions e validação no middleware (Edge) para `/hospede/*` via REST Supabase.
 
 Textos na home (ex.: piscina 09h–01h) são **informativos**; slots **reserváveis** de exclusivo da piscina são **13h–01h** (`src/lib/reservations.ts` + constraints SQL).
 
@@ -103,8 +107,11 @@ Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartmen
 ## Estrutura de pastas (útil)
 
 ```
+src/middleware.ts            # Edge: cookie guest_token + validação token em active_stays (/hospede/*)
 src/app/
   actions/reservations.ts    # Server Actions: auth, CRUD, getReservationDaySummary, etc.
+  actions/stays.ts           # Token de estadia: generateStayToken, getValidatedGuestStay
+  acesso-negado/page.tsx     # Sem link válido / estadia expirada
   layout.tsx                 # Root + import globals.css
   page.tsx                   # Home
   hospede/                   # Fluxo hóspede + layout (viewport fixo)

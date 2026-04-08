@@ -15,14 +15,12 @@ import {
   type Facility,
   type ReservationRow,
 } from "@/lib/reservations";
-
-const RECEPTION_COOKIE = "reception_auth";
-const RECEPTION_COOKIE_VALUE = "1";
-
-async function receptionAuthed(): Promise<boolean> {
-  const jar = await cookies();
-  return jar.get(RECEPTION_COOKIE)?.value === RECEPTION_COOKIE_VALUE;
-}
+import {
+  RECEPTION_COOKIE,
+  RECEPTION_COOKIE_VALUE,
+  readReceptionAuthed,
+} from "@/lib/reception-auth";
+import { getValidatedGuestStay } from "@/app/actions/stays";
 
 const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const apartmentStr = z
@@ -77,7 +75,7 @@ export async function logoutReception(): Promise<void> {
 }
 
 export async function getReceptionAuthState(): Promise<boolean> {
-  return receptionAuthed();
+  return readReceptionAuthed();
 }
 
 /** Slots já ocupados e apartamentos que já têm reserva nesse dia (por instalação). */
@@ -95,6 +93,17 @@ export async function getReservationDaySummary(
   const f = facilitySchema.safeParse(facility);
   if (!f.success) {
     return { ok: false, error: "Instalação inválida." };
+  }
+
+  if (!(await readReceptionAuthed())) {
+    const stay = await getValidatedGuestStay();
+    if (!stay) {
+      return {
+        ok: false,
+        error:
+          "Acesso indisponível. Use o link enviado pela recepção ou peça um novo.",
+      };
+    }
   }
 
   const supabase = getAdminClient();
@@ -147,7 +156,7 @@ export async function getReservationsForDate(
   | { ok: true; rows: ReservationRow[] }
   | { ok: false; error: string; unauthorized?: boolean }
 > {
-  if (!(await receptionAuthed())) {
+  if (!(await readReceptionAuthed())) {
     return {
       ok: false,
       error: "Sessão da recepção expirada.",
@@ -211,8 +220,6 @@ const guestNameOptionalSchema = z
 
 const createGuestSchema = z.object({
   facility: facilitySchema,
-  apartmentNumber: apartmentStr,
-  guestCheckoutDate: dateStr,
   reservationDate: dateStr,
   slotStart: z.string(),
   guestWhatsapp: guestWhatsappRequiredSchema,
@@ -283,13 +290,21 @@ export type ActionResult<T = void> =
 
 export async function createGuestReservation(input: {
   facility: Facility;
-  apartmentNumber: string;
-  guestCheckoutDate: string;
   reservationDate: string;
   slotStart: string;
   guestWhatsapp: string;
   guestName?: string;
 }): Promise<ActionResult<{ id: string }>> {
+  const stay = await getValidatedGuestStay();
+  if (!stay) {
+    return {
+      ok: false,
+      error:
+        "Acesso indisponível ou estadia expirada. Peça um novo link na recepção.",
+      code: "validation",
+    };
+  }
+
   const parsed = createGuestSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -301,13 +316,13 @@ export async function createGuestReservation(input: {
 
   const {
     facility,
-    apartmentNumber,
-    guestCheckoutDate,
     reservationDate,
     slotStart,
     guestWhatsapp,
     guestName,
   } = parsed.data;
+  const apartmentNumber = stay.apartmentNumber;
+  const guestCheckoutDate = stay.checkoutDate;
   const v = validateStayAndSlot(
     facility,
     reservationDate,
@@ -422,7 +437,7 @@ export async function createReceptionReservation(input: {
   guestName?: string;
   notes?: string;
 }): Promise<ActionResult<{ id: string }>> {
-  if (!(await receptionAuthed())) {
+  if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
 
@@ -527,7 +542,7 @@ export async function updateReservationGuestName(
   id: string,
   guestName: string | null
 ): Promise<ActionResult> {
-  if (!(await receptionAuthed())) {
+  if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
 
@@ -580,7 +595,7 @@ export async function markMessageAsSent(
   id: string,
   type: "confirmation" | "warning"
 ): Promise<ActionResult> {
-  if (!(await receptionAuthed())) {
+  if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
 
@@ -628,7 +643,7 @@ export async function markMessageAsSent(
 }
 
 export async function deleteReservation(id: string): Promise<ActionResult> {
-  if (!(await receptionAuthed())) {
+  if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
 

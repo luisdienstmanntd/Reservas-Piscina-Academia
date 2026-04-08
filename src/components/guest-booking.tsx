@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { ALLOWED_APARTMENT_NUMBERS } from "@/lib/apartment-codes";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
   normalizeSlotStart,
@@ -61,14 +60,21 @@ const copy: Record<Facility, { title: string; step3Hint: string }> = {
   },
 };
 
-export function GuestBooking({ facility }: { facility: Facility }) {
+export function GuestBooking({
+  facility,
+  apartmentNumber,
+  guestCheckoutDate,
+}: {
+  facility: Facility;
+  apartmentNumber: string;
+  guestCheckoutDate: string;
+}) {
   const slots = useMemo(() => slotStartsFor(facility), [facility]);
   const t = copy[facility];
+  const apartment = apartmentNumber.trim();
 
   const [step, setStep] = useState<Step>(1);
-  const [apartment, setApartment] = useState("");
   const [guestName, setGuestName] = useState("");
-  const [checkout, setCheckout] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [occupied, setOccupied] = useState<Set<string>>(new Set());
@@ -84,7 +90,10 @@ export function GuestBooking({ facility }: { facility: Facility }) {
   const todayStr = useMemo(() => hotelCalendarDate(), []);
 
   const minDate = useMemo(() => fromYmd(todayStr), [todayStr]);
-  const maxDate = useMemo(() => fromYmd(checkout), [checkout]);
+  const maxDate = useMemo(
+    () => fromYmd(guestCheckoutDate),
+    [guestCheckoutDate]
+  );
 
   const headerDisplayDate = useMemo(() => {
     if (selectedDate) return selectedDate;
@@ -103,9 +112,8 @@ export function GuestBooking({ facility }: { facility: Facility }) {
         setOccupied(
           new Set(r.occupiedSlots.map((s) => normalizeSlotStart(s)))
         );
-        const apt = apartment.trim();
         setApartmentBookedThisDay(
-          apt.length > 0 && r.apartmentsBooked.includes(apt)
+          apartment.length > 0 && r.apartmentsBooked.includes(apartment)
         );
       } catch {
         toast.error(
@@ -126,17 +134,12 @@ export function GuestBooking({ facility }: { facility: Facility }) {
 
   function submitIdentify(e: React.FormEvent) {
     e.preventDefault();
-    const apt = apartment.trim();
-    if (!apt) {
-      toast.error("Selecione o apartamento.");
+    if (!apartment) {
+      toast.error("Dados da estadia em falta. Use o link da recepção.");
       return;
     }
-    if (!checkout) {
-      toast.error("Informe a data de check-out.");
-      return;
-    }
-    if (checkout < todayStr) {
-      toast.error("Check-out não pode ser anterior a hoje.");
+    if (guestCheckoutDate < todayStr) {
+      toast.error("Estadia expirada. Peça um novo link na recepção.");
       return;
     }
     const wa = whatsapp.trim();
@@ -151,7 +154,6 @@ export function GuestBooking({ facility }: { facility: Facility }) {
       );
       return;
     }
-    setApartment(apt);
     setCalendarBackTarget(1);
     setStep(2);
     setSelectedDate(undefined);
@@ -179,7 +181,7 @@ export function GuestBooking({ facility }: { facility: Facility }) {
       return;
     }
     const ymd = format(selectedDate, "yyyy-MM-dd");
-    if (ymd < todayStr || ymd > checkout) {
+    if (ymd < todayStr || ymd > guestCheckoutDate) {
       toast.error("Data fora do período da sua estadia.");
       return;
     }
@@ -204,8 +206,6 @@ export function GuestBooking({ facility }: { facility: Facility }) {
     try {
       const r = await createGuestReservation({
         facility,
-        apartmentNumber: apartment,
-        guestCheckoutDate: checkout,
         reservationDate: ymd,
         slotStart: slot,
         guestWhatsapp: whatsapp,
@@ -280,11 +280,16 @@ export function GuestBooking({ facility }: { facility: Facility }) {
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-0.5 p-3 pb-2">
                   <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Identificação (check-in)
+                    Identificação
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Apartamento, nome (opcional), check-out e WhatsApp
-                    (obrigatório).
+                    Apto. {apartment || "—"} · check-out{" "}
+                    {guestCheckoutDate
+                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
+                          locale: ptBR,
+                        })
+                      : "—"}
+                    . Nome (opcional) e WhatsApp (obrigatório).
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 p-3 pt-0">
@@ -292,25 +297,6 @@ export function GuestBooking({ facility }: { facility: Facility }) {
                     onSubmit={submitIdentify}
                     className="flex flex-col gap-3"
                   >
-                    <div className="space-y-1">
-                      <Label htmlFor="apt" className="text-charcoal text-xs">
-                        Nº do Apartamento
-                      </Label>
-                      <select
-                        id="apt"
-                        required
-                        className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                        value={apartment}
-                        onChange={(e) => setApartment(e.target.value)}
-                      >
-                        <option value="">Selecione…</option>
-                        {ALLOWED_APARTMENT_NUMBERS.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                     <div className="space-y-1">
                       <Label htmlFor="gn" className="text-charcoal text-xs">
                         Nome do hóspede (opcional)
@@ -324,19 +310,6 @@ export function GuestBooking({ facility }: { facility: Facility }) {
                         className="border-border h-9 bg-white text-sm"
                         value={guestName}
                         onChange={(e) => setGuestName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="co" className="text-charcoal text-xs">
-                        Check-out
-                      </Label>
-                      <Input
-                        id="co"
-                        type="date"
-                        min={todayStr}
-                        className="border-border h-9 bg-white text-sm"
-                        value={checkout}
-                        onChange={(e) => setCheckout(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
@@ -371,8 +344,10 @@ export function GuestBooking({ facility }: { facility: Facility }) {
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Apto. {apartment} · até{" "}
-                    {checkout
-                      ? format(fromYmd(checkout), "dd/MM/yy", { locale: ptBR })
+                    {guestCheckoutDate
+                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
+                          locale: ptBR,
+                        })
                       : "—"}
                   </CardDescription>
                 </CardHeader>

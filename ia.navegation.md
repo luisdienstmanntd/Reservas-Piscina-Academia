@@ -9,7 +9,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Cliente:** Hotel Valle D’incanto.
 - **Objetivo:** Reservas de **uso exclusivo** (slots de **1 hora**) na **piscina** e na **academia**, com limite **1 reserva por apartamento por dia** **por instalação** (`pool` vs `gym`), e **1 reserva por horário** por instalação/dia.
 - **Público:**
-  - **Hóspede:** sem login; apartamento (lista fechada) + **check-out** + **WhatsApp obrigatório** + escolha de dia dentro da estadia + grid de horários.
+  - **Hóspede:** link com **token de estadia** (`active_stays`, cookie `guest_token`); apartamento e check-out vêm do **servidor**; **WhatsApp obrigatório** + nome opcional + calendário da estadia + grid.
   - **Recepção:** senha (`RECEPTION_PASSWORD`) + cookie HTTP-only `reception_auth`; **grade** ligada ao seletor “Dia (grade)” (abre em **hoje** ao login; criar reserva noutra data **não** altera esse dia). Formulário **balcão** (apto, data da reserva, horário, WhatsApp opcional, observações).
 
 ---
@@ -22,6 +22,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Dados | Supabase Postgres; **apenas** `getAdminClient()` em **Server Actions** (`"use server"`) |
 | Chave | `SUPABASE_SERVICE_ROLE_KEY` — **nunca** em componentes `"use client"`, nem expor ao browser |
 | Validação | Zod em `src/app/actions/reservations.ts`; regras críticas **sempre** no servidor (`assertSlotAndApartmentFree` + constraints BD) |
+| Middleware (Edge) | `src/middleware.ts` — `matcher: ["/hospede", "/hospede/:path*"]`. `?token=` validado na REST Supabase (`active_stays`) → cookie `guest_token` → redirect sem query. Cada pedido: sem cookie ou token inválido/expirado (`checkout_date` vs hoje em **America/Sao_Paulo**) → `/acesso-negado`. Usa `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. **`/recepcao` e `/acesso-negado` fora do matcher.** |
 
 **Não** introduzir leitura/escrita Supabase com **anon key** no cliente para `reservations` sem revisão de segurança e políticas RLS adequadas.
 
@@ -57,7 +58,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 
 - **BD:** `UNIQUE (facility, reservation_date, slot_start)` e `UNIQUE (facility, reservation_date, apartment_number)`; CHECK `reservations_slot_valid`.
 - **Servidor:** `assertSlotAndApartmentFree()` em `reservations.ts` — lê reservas do dia/instalação **antes** do insert; devolve erro explícito se slot ou apartamento já ocupados (complementa a BD em corridas).
-- **Cliente:** `getReservationDaySummary(date, facility)` → `occupiedSlots` + `apartmentsBooked`; usado em `guest-booking.tsx` (grid desativado se apto já tem reserva no dia; slots ocupados desativados) e em `reception-dashboard.tsx` (opções de horário desativadas, botão bloqueado se conflito).
+- **Cliente:** `getReservationDaySummary(date, facility)` → `occupiedSlots` + `apartmentsBooked`; se **não** for recepção autenticada, exige **cookie `guest_token`** válido (`getValidatedGuestStay`). Usado em `guest-booking.tsx` e `reception-dashboard.tsx`.
 - **`getOccupiedSlotsForDate`:** mantido por compatibilidade; implementação delega em `getReservationDaySummary` e devolve só os slots.
 
 ### 3.6 WhatsApp (`guest_whatsapp`)
@@ -73,8 +74,17 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 
 ### 3.8 Autenticação recepção
 
-- `loginReception` / `logoutReception`; cookie `reception_auth`, httpOnly, `secure` em produção.
-- `getReservationsForDate`, `createReceptionReservation`, `deleteReservation` exigem `receptionAuthed()`.
+- `loginReception` / `logoutReception`; cookie `reception_auth`, httpOnly, `secure` em produção (`src/lib/reception-auth.ts`: `readReceptionAuthed`).
+- `getReservationsForDate`, `createReceptionReservation`, `deleteReservation` exigem `readReceptionAuthed()`.
+
+### 3.9 Token de estadia (`active_stays`)
+
+- **Tabela:** `active_stays` (token único, `apartment_number`, `checkout_date`). RLS sem grants a `anon`/`authenticated`; só **service role**.
+- **Recepção:** `generateStayToken` em `src/app/actions/stays.ts` (só se `readReceptionAuthed()`).
+- **Hóspede:** `getValidatedGuestStay()` lê cookie `guest_token` e valida na BD + data (fusos alinhados a `hotelCalendarDate` / `hotelTodayYmd`).
+- **`createGuestReservation`:** **nunca** confiar em apartamento/checkout do cliente — sempre derivar de `getValidatedGuestStay()` após validação Zod dos outros campos.
+- **`getReservationDaySummary`:** se não for recepção, exige estadia válida (mesma regra), senão erro genérico.
+- **Páginas** `hospede/piscina` e `hospede/academia`: SSR chamam `getValidatedGuestStay()` e passam props a `GuestBooking`.
 
 ---
 
@@ -85,12 +95,14 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Slots, labels, tipo `ReservationRow` | `src/lib/reservations.ts` |
 | Lista de apartamentos | `src/lib/apartment-codes.ts` + selects em `guest-booking.tsx`, `reception-dashboard.tsx` |
 | Todas as regras de reserva, resumo do dia, conflitos, Zod | `src/app/actions/reservations.ts` |
+| Token estadia, cookie hóspede | `src/app/actions/stays.ts`, `src/lib/guest-stay.ts` |
 | Fluxo hóspede (passos, calendário, grid, toasts) | `src/components/guest-booking.tsx` |
 | Login recepção, grade, formulário balcão, coluna WhatsApp | `src/app/recepcao/reception-dashboard.tsx` |
 | Segmento `/recepcao` (shell) | `src/app/recepcao/layout.tsx`, `page.tsx` |
 | Home, links | `src/app/page.tsx` |
 | Metadata global, fonts, Toaster | `src/app/layout.tsx`, `globals.css` |
 | Marca | `src/components/valle-wordmark.tsx` |
+| Middleware hóspede, link inválido | `src/middleware.ts`, `src/app/acesso-negado/page.tsx` |
 | Schema BD, migrações, projeto novo | `supabase/migrations/*`, `supabase/setup_supabase_cloud.sql` |
 | Env / cliente Supabase admin | `.env.example`, `src/lib/supabase/admin.ts` |
 
@@ -111,7 +123,8 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 
 - **`.env.local` na raiz** do Next (junto a `package.json`), não em subpastas de `supabase/`.
 - **`getAdminClient()`** pode ser `null` — tratar com `supabaseConfigErrorMessage()`.
-- **`GuestBooking`:** `facility` vem da rota (`piscina` → `pool`, `academia` → `gym`).
+- **`GuestBooking`:** `facility` vem da rota; `apartmentNumber` e `guestCheckoutDate` vêm das **props** (SSR com `getValidatedGuestStay`).
+- **`guest_token`:** sem migração `active_stays` aplicada, `/hospede/*` cai em `/acesso-negado`.
 - **Efeitos no dashboard recepção:** ao carregar resumo do formulário, não por `newSlot` nas dependências do `useEffect` (risco de loop); usar `setNewSlot(prev => …)` quando ajustar slot ocupado.
 - **Grade vs data do balcão:** após `createReceptionReservation`, **não** fazer `setDateStr(newReservationDate)` — atualizar só com `load()` para o `dateStr` atual (a grade não “salta” para a data da reserva criada).
 - **Dev:** 404 intermitente a `layout.css` no console não implica necessariamente app quebrada; confirmar com build de produção.
@@ -131,6 +144,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 1. `20260404000000_init_reservations.sql` — tabela inicial (só piscina; constraints antigas se projeto legado).
 2. `20260405120000_reservations_facility.sql` — `facility`, unicidades por instalação, CHECK de slots.
 3. `20260407120000_reservations_guest_whatsapp.sql` — coluna `guest_whatsapp`.
+4. `20260410120000_active_stays.sql` — tokens de estadia para `/hospede/*`.
 
 Projetos **novos** podem usar só `setup_supabase_cloud.sql` se preferirem um único script.
 
