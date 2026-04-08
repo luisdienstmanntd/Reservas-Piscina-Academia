@@ -8,7 +8,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 - **Supabase (PostgreSQL)** — acesso apenas no servidor via **service role** (`@supabase/supabase-js`)
 - **Zod** — validação nas Server Actions
 - **date-fns** — datas e rótulos de horários
-- **Sonner** — toasts no cliente
+- **Sonner** — toasts no cliente 
 
 ## Requisitos
 
