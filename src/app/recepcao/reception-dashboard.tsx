@@ -325,7 +325,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         toast.error(r.error);
         return;
       }
-      const url = `${window.location.origin}/hospede?token=${encodeURIComponent(r.token)}`;
+      const url = `${window.location.origin}/?token=${encodeURIComponent(r.token)}`;
       setGuestAccessUrl(url);
       toast.success("Link gerado. Copie e envie ao hóspede.");
     } catch {

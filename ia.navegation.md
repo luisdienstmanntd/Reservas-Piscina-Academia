@@ -22,7 +22,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Dados | Supabase Postgres; **apenas** `getAdminClient()` em **Server Actions** (`"use server"`) |
 | Chave | `SUPABASE_SERVICE_ROLE_KEY` — **nunca** em componentes `"use client"`, nem expor ao browser |
 | Validação | Zod em `src/app/actions/reservations.ts`; regras críticas **sempre** no servidor (`assertSlotAndApartmentFree` + constraints BD) |
-| Middleware (Edge) | `src/middleware.ts` — `matcher: ["/hospede", "/hospede/:path*"]`. `?token=` validado na REST Supabase (`active_stays`) → cookie `guest_token` → redirect sem query. Cada pedido: sem cookie ou token inválido/expirado (`checkout_date` vs hoje em **America/Sao_Paulo**) → `/acesso-negado`. Usa `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. **`/recepcao` e `/acesso-negado` fora do matcher.** |
+| Middleware (Edge) | `src/middleware.ts` — `matcher: ["/", "/hospede", "/hospede/:path*"]`. Em **`/?token=`**: valida na REST Supabase → cookie → redirect para **`/`** limpa (home). Em **`/hospede/*`**: mesmo com `?token=` ou só cookie; sem sessão válida → `/acesso-negado`. Usa `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. |
 
 **Não** introduzir leitura/escrita Supabase com **anon key** no cliente para `reservations` sem revisão de segurança e políticas RLS adequadas.
 

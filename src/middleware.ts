@@ -63,7 +63,26 @@ function setGuestCookie(response: NextResponse, token: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
   const tokenParam = request.nextUrl.searchParams.get("token")?.trim();
+
+  /** Link mágico na raiz: grava cookie e envia para a home (escolha piscina/academia). */
+  if (pathname === "/" && tokenParam) {
+    const row = await fetchStayFromSupabase(tokenParam);
+    if (!row) {
+      return redirectAcessoNegado(request, false);
+    }
+    const clean = new URL(request.url);
+    clean.pathname = "/";
+    clean.search = "";
+    const res = NextResponse.redirect(clean);
+    setGuestCookie(res, tokenParam);
+    return res;
+  }
+
+  if (!pathname.startsWith("/hospede")) {
+    return NextResponse.next();
+  }
 
   if (tokenParam) {
     const row = await fetchStayFromSupabase(tokenParam);
@@ -93,5 +112,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/hospede", "/hospede/:path*"],
+  matcher: ["/", "/hospede", "/hospede/:path*"],
 };

@@ -36,7 +36,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` pode existir no `.env` para uso futuro; **este projeto** usa a service role nas Server Actions.
 
-   **Hóspede:** o acesso a `/hospede/*` usa **token de estadia** (tabela `active_stays`, cookie `guest_token`). A recepção gera o link no dashboard; o middleware valida o token na API Supabase (Edge). É necessário aplicar a migração `20260410120000_active_stays.sql` (ou o script cloud completo).
+   **Hóspede:** o link gerado aponta para `/?token=…` (home); o middleware valida o token na API Supabase (Edge), define o cookie `guest_token` e o hóspede escolhe piscina ou academia. Rotas `/hospede/*` exigem esse cookie. Tabela `active_stays`; migração `20260410120000_active_stays.sql` (ou script cloud completo).
 
 4. Crie o schema na base:
 
@@ -82,7 +82,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 
 | | Hóspede (`/hospede/...`) | Recepção (`/recepcao`) |
 |--|--------------------------|-------------------------|
-| Acesso | Link com `?token=` (definido na recepção) → cookie `guest_token`; validade até **check-out** (fuso SP) | Painel com senha |
+| Acesso | Link `/?token=…` na recepção → cookie `guest_token` → página inicial; depois `/hospede/piscina` ou `/hospede/academia`. Validade até **check-out** (fuso SP) | Painel com senha |
 | Identificação | **Apto e check-out** vêm do token (servidor); hóspede informa **WhatsApp** (obrigatório) + nome opcional | Apto + **data da reserva** + horário no formulário |
 | WhatsApp | **Obrigatório** (10–13 dígitos, normalizados na BD) | **Opcional** |
 | Validação de estadia | Reserva entre hoje e check-out | Internamente `guest_checkout_date = reservation_date` (só para passar `validateStayAndSlot`) |
@@ -107,7 +107,7 @@ Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartmen
 ## Estrutura de pastas (útil)
 
 ```
-src/middleware.ts            # Edge: cookie guest_token + validação token em active_stays (/hospede/*)
+src/middleware.ts            # Edge: ?token= na / ou /hospede/* → cookie; /hospede/* exige token válido
 src/app/
   actions/reservations.ts    # Server Actions: auth, CRUD, getReservationDaySummary, etc.
   actions/stays.ts           # Token de estadia: generateStayToken, getValidatedGuestStay
