@@ -5,13 +5,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { CalendarCheck, CalendarDays, ChevronLeft, Home } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import {
   createGuestReservation,
   getReservationDaySummary,
 } from "@/app/actions/reservations";
-import { ValleWordmark } from "@/components/valle-wordmark";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -258,7 +258,13 @@ export function GuestBooking({
       <main className="flex min-h-0 min-w-0 flex-1 flex-col px-3 pt-2 pb-1">
         <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto overscroll-contain md:max-w-2xl">
           <div className="space-y-2 pb-2">
-            <ValleWordmark size="sm" className="mb-1" />
+            <Image
+              src="/logo-valle-dincanto.jpg"
+              alt="Logo Valle D'Incanto"
+              width={1024}
+              height={364}
+              className="mx-auto mb-1 h-10 w-auto max-w-[min(100%,10rem)] object-contain object-center sm:h-11 md:h-12"
+            />
             <h1 className="font-serif text-charcoal text-center text-base font-semibold tracking-tight sm:text-lg">
               {t.title}
             </h1>
