@@ -500,7 +500,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               alt="Logo Valle D'Incanto"
               width={1024}
               height={364}
-              className="block h-10 w-auto max-w-[min(100%,10rem)] object-contain object-left sm:h-11 md:h-12"
+              className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
             />
             <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
               Reservas
