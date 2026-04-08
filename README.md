@@ -11,7 +11,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 - **Sonner** — toasts no cliente 
 
 ## Requisitos
-
+ 
 - Node.js 18+ (recomendado a versão LTS atual)
 - Conta/projeto **Supabase** (nuvem) **ou** **Docker** + **Supabase CLI** para base local
 
