@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-
-import { ValleWordmark } from "@/components/valle-wordmark";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Acesso indisponível",
@@ -11,7 +10,13 @@ export default function AcessoNegadoPage() {
   return (
     <div className="bg-background flex min-h-dvh flex-col items-center justify-center px-6 py-12">
       <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
-        <ValleWordmark size="md" className="mb-8" />
+        <Image
+          src="/logo-valle-dincanto.jpg"
+          alt="Logo Valle D'Incanto"
+          width={1024}
+          height={364}
+          className="mx-auto mb-8 h-auto w-full max-w-[min(100%,11rem)] object-contain sm:max-w-[12rem] md:max-w-[14rem]"
+        />
         <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal md:text-3xl">
           Acesso indisponível
         </h1>
