@@ -99,7 +99,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 - **Segurança:** RLS ativa; `anon`/`authenticated` sem grants em `reservations` e `active_stays`; **service role** em Server Actions e validação no middleware (Edge) para `/hospede/*` via REST Supabase.
 
 Textos na home (ex.: piscina 09h–01h) são **informativos**; slots **reserváveis** de exclusivo da piscina são **13h–01h** (`src/lib/reservations.ts` + constraints SQL).
-
+ 
 ## Modelo de dados (`reservations`)
 
 Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartment_number`, `guest_checkout_date`, `guest_whatsapp` (opcional), `created_by` (`guest` | `reception`), `notes`, `created_at`.
