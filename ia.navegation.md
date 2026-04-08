@@ -147,7 +147,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 2. `20260405120000_reservations_facility.sql` — `facility`, unicidades por instalação, CHECK de slots.
 3. `20260407120000_reservations_guest_whatsapp.sql` — coluna `guest_whatsapp`.
 4. `20260408140000_reservations_whatsapp_flags.sql` — `confirmation_sent`, `warning_sent`.
-5. `20260409000000_reservations_guest_name.sql` — `guest_name` (se existir no repositório).
+5. `20260409000000_reservations_guest_name.sql` — `guest_name`.
 6. `20260410120000_active_stays.sql` — tokens de estadia (`/?token=` + `/hospede/*`).
 
 Projetos **novos** podem usar só `setup_supabase_cloud.sql` se preferirem um único script.
