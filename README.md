@@ -153,5 +153,5 @@ Ficheiro **`ia.navegation.md`** — contexto detalhado, invariantes, mapa de fic
 
 ## Licença
 
-Projeto privado do hotel (ajuste conforme a política interna).
+Projeto privado do hotel (ajuste conforme a política interna). 
 
