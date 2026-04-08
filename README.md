@@ -3,7 +3,7 @@
 Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por dia por apartamento** na **piscina** ou na **academia**, e para a **recepção** consultar, criar e cancelar reservas. Interface em **português (pt-BR)**, estilos com **Tailwind CSS 4** e componentes no estilo **shadcn/ui**.
 
 ## Stack
-
+ 
 - **Next.js** 15.5.x · **React** 19 · **TypeScript**  
 - **Supabase (PostgreSQL)** — acesso apenas no servidor via **service role** (`@supabase/supabase-js`)
 - **Zod** — validação nas Server Actions
