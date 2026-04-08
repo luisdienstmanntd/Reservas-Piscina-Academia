@@ -8,16 +8,11 @@
 
 ## 2. Aplicar o SQL do schema
 
-1. No painel: **SQL Editor** → **New query**.
-2. Copie todo o conteúdo de `supabase/migrations/20260404000000_init_reservations.sql`.
-3. Execute (**Run**). Deve aparecer “Success”.
+**Recomendado (base alinhada com o código atual):** executar **`supabase/setup_supabase_cloud.sql`** no SQL Editor (projeto novo), **ou** aplicar **todas** as migrações em `supabase/migrations/` **por ordem do nome do ficheiro** (projetos que já evoluem por migrações).
 
-Isso cria a tabela `reservations` com:
+Ordem de referência: `init` → `facility` → `guest_whatsapp` → `whatsapp_flags` → `guest_name` → `active_stays`, etc.
 
-- `UNIQUE (reservation_date, slot_start)` — nunca dois apartamentos no mesmo horário.
-- `UNIQUE (reservation_date, apartment_number)` — no máximo uma reserva por apartamento por dia.
-- `CHECK` nos horários permitidos (13h–23h e 00h–01h).
-- **RLS ativado** sem políticas para `anon`/`authenticated`; o app usa a **service role** só no servidor.
+A tabela **`reservations`** inclui (entre outras): unicidades por `facility` + data, `guest_whatsapp`, `guest_name`, `confirmation_sent` / `warning_sent`. A tabela **`active_stays`** guarda os tokens do link hóspede (`/?token=`).
 
 ## 3. Obter as chaves da API
 
@@ -48,7 +43,7 @@ Reinicie o servidor de desenvolvimento (`npm run dev`) após alterar `.env.local
 2. Em **Settings → Environment Variables**, adicione as mesmas variáveis (incluindo `SUPABASE_SERVICE_ROLE_KEY` como **Secret** e `RECEPTION_PASSWORD`).
 3. Faça um novo deploy.
 
-O middleware na Vercel usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para validar tokens de estadia em `/hospede/*`.
+O middleware na Vercel usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para validar tokens na REST API: pedidos a **`/?token=…`** (definição do cookie e redirect para a home) e a **`/hospede/*`** (cookie obrigatório).
 
 ## 6. Conferir constraints (opcional)
 

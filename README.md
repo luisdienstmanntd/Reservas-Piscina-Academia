@@ -74,7 +74,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 | `/hospede/piscina` | Fluxo hóspede — `GuestBooking` com `facility: pool` |
 | `/hospede/academia` | Fluxo hóspede — `GuestBooking` com `facility: gym` |
 | `/acesso-negado` | Sem token válido ou estadia expirada |
-| `/recepcao` | Login por senha (cookie HTTP-only) + dashboard (grade do dia, nova reserva balcão, cancelar) |
+| `/recepcao` | Login por senha + dashboard: grade do dia, **editar nome e WhatsApp na grelha**, confirmação/aviso WhatsApp (coluna dedicada), **gerar link de acesso hóspede** (`/?token=…`), nova reserva balcão, cancelar |
 
 `src/app/recepcao/layout.tsx` — layout mínimo do segmento (estabilidade de CSS em dev no App Router).
 
@@ -87,6 +87,8 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 | WhatsApp | **Obrigatório** (10–13 dígitos, normalizados na BD) | **Opcional** |
 | Validação de estadia | Reserva entre hoje e check-out | Internamente `guest_checkout_date = reservation_date` (só para passar `validateStayAndSlot`) |
 | Listagem | — | Grade por **dia** (calendário “Dia (grade)”): abre em **hoje** ao login; **não** muda ao criar reserva noutra data — alterar só manualmente para ver outro dia. |
+| WhatsApp na grade | — | **Edição inline** no campo da coluna; mensagens **Confirmação** / **Aviso (~10 min)** via `web.whatsapp.com` (`src/lib/wa-me.ts`, `reception-wa-actions.tsx`). Sem número válido, os botões ficam desativados. |
+| Link hóspede | — | Cartão **Gerar acesso hóspede**: token em `active_stays`, URL `/?token=…`, texto de boas-vindas + **Copiar mensagem e link**. |
 
 ## Regras de negócio (resumo)
 
@@ -102,7 +104,9 @@ Textos na home (ex.: piscina 09h–01h) são **informativos**; slots **reserváv
  
 ## Modelo de dados (`reservations`)
 
-Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartment_number`, `guest_checkout_date`, `guest_whatsapp` (opcional), `created_by` (`guest` | `reception`), `notes`, `created_at`.
+Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartment_number`, `guest_checkout_date`, `guest_name`, `guest_whatsapp` (opcional; dígitos), `confirmation_sent`, `warning_sent` (tracking envio WhatsApp pela recepção), `created_by` (`guest` | `reception`), `notes`, `created_at`.
+
+Tabela **`active_stays`:** `token` (único), `apartment_number`, `checkout_date`, `created_at` — ligação mágica para o fluxo hóspede (ver migração `20260410120000_active_stays.sql`).
 
 ## Estrutura de pastas (útil)
 
@@ -120,12 +124,16 @@ src/app/
     page.tsx                 # SSR: getReceptionAuthState → ReceptionDashboard
     reception-dashboard.tsx  # UI cliente: login, grade, formulário balcão
 src/components/
-  guest-booking.tsx          # Wizard hóspede (4 passos)
+  guest-booking.tsx          # Wizard hóspede (sem apto no formulário; vem do token)
+  reception-wa-actions.tsx   # Botões confirmação / aviso 10 min (WhatsApp Web)
   valle-wordmark.tsx         # Marca em tipografia
   site-footer.tsx
   ui/                        # Button, Card, Calendar, etc.
 src/lib/
   reservations.ts            # Facility, slots, ReservationRow, labels
+  wa-me.ts                   # URLs e mensagens WhatsApp; janela aviso 10 min
+  guest-stay.ts              # Cookie `guest_token`, `hotelTodayYmd` (Edge/Node)
+  reception-auth.ts          # Cookie recepção, readReceptionAuthed
   apartment-codes.ts         # Lista fixa de apartamentos
   hotel-time.ts              # Data civil do hotel (SP)
   supabase/admin.ts          # getAdminClient() — null se faltar env
@@ -137,10 +145,12 @@ supabase/
 
 ## API de servidor (resumo)
 
-Definidas em `src/app/actions/reservations.ts` (todas `"use server"`):
+Em `src/app/actions/reservations.ts` (`"use server"`):
 
-- **Hóspede (sem cookie recepção):** `getReservationDaySummary`, `getOccupiedSlotsForDate` (compatível, delega no resumo), `createGuestReservation`.
-- **Recepção:** `loginReception`, `logoutReception`, `getReceptionAuthState`, `getReservationsForDate`, `createReceptionReservation`, `deleteReservation`.
+- **Hóspede:** `getReservationDaySummary`, `getOccupiedSlotsForDate`, `createGuestReservation` (exige cookie `guest_token` válido onde aplicável).
+- **Recepção:** `loginReception`, `logoutReception`, `getReceptionAuthState`, `getReservationsForDate`, `createReceptionReservation`, `deleteReservation`, `updateReservationGuestName`, `updateReservationGuestWhatsapp`, `markMessageAsSent` (confirmação / aviso).
+
+Em `src/app/actions/stays.ts`: `generateStayToken`, `getValidatedGuestStay`.
 
 ## Desenvolvimento: avisos comuns
 

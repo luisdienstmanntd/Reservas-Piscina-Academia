@@ -61,11 +61,12 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Cliente:** `getReservationDaySummary(date, facility)` → `occupiedSlots` + `apartmentsBooked`; se **não** for recepção autenticada, exige **cookie `guest_token`** válido (`getValidatedGuestStay`). Usado em `guest-booking.tsx` e `reception-dashboard.tsx`.
 - **`getOccupiedSlotsForDate`:** mantido por compatibilidade; implementação delega em `getReservationDaySummary` e devolve só os slots.
 
-### 3.6 WhatsApp (`guest_whatsapp`)
+### 3.6 WhatsApp (`guest_whatsapp`) e mensagens na grade
 
-- Coluna `text` nullable na BD.
-- **Hóspede:** obrigatório — `guestWhatsappRequiredSchema` em `createGuestSchema` / `createGuestReservation`; valor gravado só com **dígitos**, **10–13** caracteres.
-- **Recepção:** opcional — `guestWhatsappOptionalSchema`; vazio → `null`; se preenchido, mesma regra de dígitos.
+- Coluna `text` nullable na BD; armazenar **só dígitos** (10–13) quando preenchido.
+- **Hóspede:** obrigatório — `guestWhatsappRequiredSchema` em `createGuestReservation`.
+- **Recepção:** opcional no balcão; **edição inline** na coluna WhatsApp da grade — `updateReservationGuestWhatsapp` em `reservations.ts` (validação igual ao balcão).
+- **`confirmation_sent` / `warning_sent`:** booleanos; `markMessageAsSent` após abrir WhatsApp Web. UI em `reception-wa-actions.tsx`; links e textos em `src/lib/wa-me.ts`. Sem número válido (`whatsappDigitsForWaMe`), botões **Confirmação** / **Aviso** ficam desativados.
 
 ### 3.7 Copy vs lógica (marketing)
 
@@ -80,7 +81,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 ### 3.9 Token de estadia (`active_stays`)
 
 - **Tabela:** `active_stays` (token único, `apartment_number`, `checkout_date`). RLS sem grants a `anon`/`authenticated`; só **service role**.
-- **Recepção:** `generateStayToken` em `src/app/actions/stays.ts` (só se `readReceptionAuthed()`).
+- **Recepção:** `generateStayToken` em `stays.ts`; URL partilhada **`/?token=…`**; bloco de cópia com mensagem de boas-vindas + link (`reception-dashboard.tsx`).
 - **Hóspede:** `getValidatedGuestStay()` lê cookie `guest_token` e valida na BD + data (fusos alinhados a `hotelCalendarDate` / `hotelTodayYmd`).
 - **`createGuestReservation`:** **nunca** confiar em apartamento/checkout do cliente — sempre derivar de `getValidatedGuestStay()` após validação Zod dos outros campos.
 - **`getReservationDaySummary`:** se não for recepção, exige estadia válida (mesma regra), senão erro genérico.
@@ -97,7 +98,8 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Todas as regras de reserva, resumo do dia, conflitos, Zod | `src/app/actions/reservations.ts` |
 | Token estadia, cookie hóspede | `src/app/actions/stays.ts`, `src/lib/guest-stay.ts` |
 | Fluxo hóspede (passos, calendário, grid, toasts) | `src/components/guest-booking.tsx` |
-| Login recepção, grade, formulário balcão, edição nome/WhatsApp, coluna wa.me | `src/app/recepcao/reception-dashboard.tsx` |
+| Login recepção, grade, link hóspede, edição nome/WhatsApp, integração wa.me | `src/app/recepcao/reception-dashboard.tsx` |
+| Botões confirmação / aviso WhatsApp na grade | `src/components/reception-wa-actions.tsx`, `src/lib/wa-me.ts` |
 | Segmento `/recepcao` (shell) | `src/app/recepcao/layout.tsx`, `page.tsx` |
 | Home, links | `src/app/page.tsx` |
 | Metadata global, fonts, Toaster | `src/app/layout.tsx`, `globals.css` |
@@ -144,7 +146,9 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 1. `20260404000000_init_reservations.sql` — tabela inicial (só piscina; constraints antigas se projeto legado).
 2. `20260405120000_reservations_facility.sql` — `facility`, unicidades por instalação, CHECK de slots.
 3. `20260407120000_reservations_guest_whatsapp.sql` — coluna `guest_whatsapp`.
-4. `20260410120000_active_stays.sql` — tokens de estadia para `/hospede/*`.
+4. `20260408140000_reservations_whatsapp_flags.sql` — `confirmation_sent`, `warning_sent`.
+5. `20260409000000_reservations_guest_name.sql` — `guest_name` (se existir no repositório).
+6. `20260410120000_active_stays.sql` — tokens de estadia (`/?token=` + `/hospede/*`).
 
 Projetos **novos** podem usar só `setup_supabase_cloud.sql` se preferirem um único script.
 
