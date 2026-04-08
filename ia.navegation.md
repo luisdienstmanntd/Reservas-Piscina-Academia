@@ -97,7 +97,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Todas as regras de reserva, resumo do dia, conflitos, Zod | `src/app/actions/reservations.ts` |
 | Token estadia, cookie hóspede | `src/app/actions/stays.ts`, `src/lib/guest-stay.ts` |
 | Fluxo hóspede (passos, calendário, grid, toasts) | `src/components/guest-booking.tsx` |
-| Login recepção, grade, formulário balcão, coluna WhatsApp | `src/app/recepcao/reception-dashboard.tsx` |
+| Login recepção, grade, formulário balcão, edição nome/WhatsApp, coluna wa.me | `src/app/recepcao/reception-dashboard.tsx` |
 | Segmento `/recepcao` (shell) | `src/app/recepcao/layout.tsx`, `page.tsx` |
 | Home, links | `src/app/page.tsx` |
 | Metadata global, fonts, Toaster | `src/app/layout.tsx`, `globals.css` |

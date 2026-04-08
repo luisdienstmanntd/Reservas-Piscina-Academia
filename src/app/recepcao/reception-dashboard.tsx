@@ -16,6 +16,7 @@ import {
   loginReception,
   logoutReception,
   updateReservationGuestName,
+  updateReservationGuestWhatsapp,
 } from "@/app/actions/reservations";
 import { generateStayToken } from "@/app/actions/stays";
 import {
@@ -75,6 +76,70 @@ function formatWhatsappDisplay(digits: string | null | undefined): string {
     return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   }
   return d;
+}
+
+function ReceptionGuestWhatsappCell({
+  row,
+  onSaved,
+}: {
+  row: ReservationRow;
+  onSaved: () => void;
+}) {
+  const [value, setValue] = useState(() => {
+    const raw = row.guest_whatsapp?.replace(/\D/g, "") ?? "";
+    if (!raw) return "";
+    const disp = formatWhatsappDisplay(row.guest_whatsapp);
+    return disp !== "—" ? disp : raw;
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const raw = row.guest_whatsapp?.replace(/\D/g, "") ?? "";
+    if (!raw) {
+      setValue("");
+      return;
+    }
+    const disp = formatWhatsappDisplay(row.guest_whatsapp);
+    setValue(disp !== "—" ? disp : raw);
+  }, [row.id, row.guest_whatsapp]);
+
+  async function commit() {
+    const prevDigits = (row.guest_whatsapp ?? "").replace(/\D/g, "");
+    const nextDigits = value.replace(/\D/g, "");
+    if (nextDigits === prevDigits) return;
+    setSaving(true);
+    try {
+      const r = await updateReservationGuestWhatsapp(
+        row.id,
+        nextDigits.length ? value : null
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        setValue(
+          row.guest_whatsapp ? formatWhatsappDisplay(row.guest_whatsapp) : ""
+        );
+        return;
+      }
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Input
+      type="tel"
+      inputMode="tel"
+      autoComplete="tel"
+      className="h-8 min-w-[8rem] max-w-[12rem] border-border bg-white font-mono text-xs lg:min-w-[10rem] lg:max-w-[14rem] lg:text-sm"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      disabled={saving}
+      placeholder="WhatsApp"
+      aria-label="WhatsApp do hóspede"
+    />
+  );
 }
 
 function ReceptionGuestNameCell({
@@ -552,11 +617,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
+                      <td className="py-3 pr-4 align-top lg:py-3.5 lg:pr-5">
                         {row ? (
-                          <span className="font-mono text-xs sm:text-sm lg:text-[15px]">
-                            {formatWhatsappDisplay(row.guest_whatsapp)}
-                          </span>
+                          <ReceptionGuestWhatsappCell
+                            row={row}
+                            onSaved={() => void load()}
+                          />
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

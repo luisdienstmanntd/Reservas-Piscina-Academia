@@ -589,6 +589,60 @@ export async function updateReservationGuestName(
   }
 }
 
+export async function updateReservationGuestWhatsapp(
+  id: string,
+  raw: string | null
+): Promise<ActionResult> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Não autorizado.", code: "validation" };
+  }
+
+  const idParsed = z.string().uuid().safeParse(id);
+  if (!idParsed.success) {
+    return { ok: false, error: "Reserva inválida.", code: "validation" };
+  }
+
+  const digits =
+    raw == null || !String(raw).trim()
+      ? null
+      : String(raw).replace(/\D/g, "");
+
+  if (digits !== null && (digits.length < 10 || digits.length > 13)) {
+    return {
+      ok: false,
+      error: "WhatsApp inválido. Use DDD + número (10 a 13 dígitos).",
+      code: "validation",
+    };
+  }
+
+  const supabaseWaEdit = getAdminClient();
+  if (!supabaseWaEdit) {
+    return {
+      ok: false,
+      error: supabaseConfigErrorMessage(),
+      code: "validation",
+    };
+  }
+
+  try {
+    const { error } = await supabaseWaEdit
+      .from("reservations")
+      .update({ guest_whatsapp: digits })
+      .eq("id", idParsed.data);
+
+    if (error) throw error;
+
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível atualizar o WhatsApp.",
+      code: "network",
+    };
+  }
+}
+
 const waMessageTypeSchema = z.enum(["confirmation", "warning"]);
 
 export async function markMessageAsSent(
