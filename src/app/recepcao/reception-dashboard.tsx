@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LogOut, Trash2 } from "lucide-react";
@@ -42,7 +43,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ReceptionWaActions } from "@/components/reception-wa-actions";
-import { ValleWordmark } from "@/components/valle-wordmark";
 import { ALLOWED_APARTMENT_NUMBERS } from "@/lib/apartment-codes";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
@@ -449,7 +449,13 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
         <div className="mx-auto flex max-w-md flex-1 flex-col justify-center gap-6 p-6">
-        <ValleWordmark size="md" className="mb-2" />
+        <Image
+          src="/logo-valle-dincanto.jpg"
+          alt="Logo Valle D'Incanto"
+          width={1024}
+          height={364}
+          className="mx-auto mb-2 h-auto w-full max-w-[min(100%,10rem)] object-contain sm:max-w-[11rem] md:max-w-[12rem]"
+        />
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
             <CardTitle className="font-serif text-lg text-charcoal">
@@ -489,7 +495,13 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 md:pt-6 lg:max-w-6xl lg:space-y-8 lg:px-8 lg:pb-10 xl:max-w-7xl 2xl:max-w-[min(100%-4rem,96rem)]">
         <header className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
           <div className="min-w-0 space-y-3">
-            <ValleWordmark size="sm" className="items-start text-left" />
+            <Image
+              src="/logo-valle-dincanto.jpg"
+              alt="Logo Valle D'Incanto"
+              width={1024}
+              height={364}
+              className="block h-10 w-auto max-w-[min(100%,10rem)] object-contain object-left sm:h-11 md:h-12"
+            />
             <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
               Reservas
             </h1>
