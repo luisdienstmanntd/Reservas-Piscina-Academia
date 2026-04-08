@@ -4,7 +4,7 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 
 ## Stack
 
-- **Next.js** 15.5.x · **React** 19 · **TypeScript** 
+- **Next.js** 15.5.x · **React** 19 · **TypeScript**  
 - **Supabase (PostgreSQL)** — acesso apenas no servidor via **service role** (`@supabase/supabase-js`)
 - **Zod** — validação nas Server Actions
 - **date-fns** — datas e rótulos de horários 
