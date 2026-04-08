@@ -151,6 +151,7 @@ Definidas em `src/app/actions/reservations.ts` (todas `"use server"`):
 
 Ficheiro **`ia.navegation.md`** — contexto detalhado, invariantes, mapa de ficheiros e boas práticas para assistentes.
 
+
 ## Licença
 
 Projeto privado do hotel (ajuste conforme a política interna).
