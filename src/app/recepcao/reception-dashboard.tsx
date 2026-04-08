@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogOut, MessageCircle, Trash2 } from "lucide-react";
+import { LogOut, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -52,12 +52,11 @@ import {
   type ReservationRow,
 } from "@/lib/reservations";
 
-/** Mensagem padrão ao partilhar o link com o hóspede via WhatsApp. */
-const GUEST_WELCOME_WHATSAPP_TEMPLATE =
-  "Sejam bem-vindos ao Valle D'incanto! Para sua melhor experiência, segue o link para agendamentos da piscina e academia: \n\n[LINK_GERADO]";
+const GUEST_ACCESS_WELCOME_TEXT =
+  "Sejam bem-vindos ao Valle D'incanto! Para sua melhor experiência, segue o link para agendamentos da piscina e academia:";
 
-function guestWelcomeWhatsappText(link: string): string {
-  return GUEST_WELCOME_WHATSAPP_TEMPLATE.replace("[LINK_GERADO]", link);
+function guestAccessClipText(link: string): string {
+  return `${GUEST_ACCESS_WELCOME_TEXT}\n\nlink:\n${link}`;
 }
 
 function fromYmd(localYmd: string): Date {
@@ -661,39 +660,29 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </div>
             </form>
             {guestAccessUrl ? (
-              <div className="space-y-2 rounded-md border border-border/80 bg-muted/30 p-3">
-                <Label className="text-xs text-muted-foreground">
-                  URL para o hóspede
-                </Label>
-                <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
-                  {guestAccessUrl}
+              <div className="space-y-3 rounded-md border border-border/80 bg-muted/30 p-3">
+                <p className="text-sm leading-relaxed text-charcoal">
+                  {GUEST_ACCESS_WELCOME_TEXT}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(guestAccessUrl);
-                      toast.message("Copiado para a área de transferência.");
-                    }}
-                  >
-                    Copiar link
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="gap-1.5 bg-[#25D366] text-white hover:bg-[#20BD5A]"
-                    onClick={() => {
-                      const text = guestWelcomeWhatsappText(guestAccessUrl);
-                      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-                      window.open(url, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    <MessageCircle className="size-4 shrink-0" aria-hidden />
-                    Enviar pelo WhatsApp
-                  </Button>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-charcoal">link:</p>
+                  <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
+                    {guestAccessUrl}
+                  </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(
+                      guestAccessClipText(guestAccessUrl)
+                    );
+                    toast.message("Mensagem e link copiados.");
+                  }}
+                >
+                  Copiar mensagem e link
+                </Button>
               </div>
             ) : null}
           </CardContent>
