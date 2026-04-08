@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogOut, Trash2 } from "lucide-react";
+import { LogOut, MessageCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -51,6 +51,14 @@ import {
   type Facility,
   type ReservationRow,
 } from "@/lib/reservations";
+
+/** Mensagem padrão ao partilhar o link com o hóspede via WhatsApp. */
+const GUEST_WELCOME_WHATSAPP_TEMPLATE =
+  "Sejam bem-vindos ao Valle D'incanto! Para sua melhor experiência, segue o link para agendamentos da piscina e academia: \n\n[LINK_GERADO]";
+
+function guestWelcomeWhatsappText(link: string): string {
+  return GUEST_WELCOME_WHATSAPP_TEMPLATE.replace("[LINK_GERADO]", link);
+}
 
 function fromYmd(localYmd: string): Date {
   const [y, m, d] = localYmd.split("-").map(Number);
@@ -660,17 +668,32 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
                   {guestAccessUrl}
                 </p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(guestAccessUrl);
-                    toast.message("Copiado para a área de transferência.");
-                  }}
-                >
-                  Copiar link
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(guestAccessUrl);
+                      toast.message("Copiado para a área de transferência.");
+                    }}
+                  >
+                    Copiar link
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-1.5 bg-[#25D366] text-white hover:bg-[#20BD5A]"
+                    onClick={() => {
+                      const text = guestWelcomeWhatsappText(guestAccessUrl);
+                      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <MessageCircle className="size-4 shrink-0" aria-hidden />
+                    Enviar pelo WhatsApp
+                  </Button>
+                </div>
               </div>
             ) : null}
           </CardContent>
