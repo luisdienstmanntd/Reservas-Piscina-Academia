@@ -156,5 +156,3 @@ Ficheiro **`ia.navegation.md`** — contexto detalhado, invariantes, mapa de fic
 
 Projeto privado do hotel (ajuste conforme a política interna).
 
-
-
