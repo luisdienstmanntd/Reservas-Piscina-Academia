@@ -1,8 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Dumbbell } from "lucide-react";
 
 import { SiteFooter } from "@/components/site-footer";
-import { ValleWordmark } from "@/components/valle-wordmark";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,7 +17,14 @@ export default function Home() {
     <div className="flex min-h-dvh flex-col bg-background">
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-10 px-6 py-12 md:max-w-2xl">
         <div className="text-center">
-          <ValleWordmark size="lg" className="mb-4" />
+          <Image
+            src="/logo-valle-dincanto.jpg"
+            alt="Logo Valle D'Incanto"
+            width={1024}
+            height={364}
+            priority
+            className="mx-auto mb-4 h-auto w-full max-w-[min(100%,18rem)] object-contain md:max-w-md"
+          />
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-charcoal md:text-4xl">
             Agendamentos
           </h1>
