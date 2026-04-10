@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Image from "next/image";
@@ -85,6 +85,7 @@ function ReceptionGuestWhatsappCell({
   row: ReservationRow;
   onSaved: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(() => {
     const raw = row.guest_whatsapp?.replace(/\D/g, "") ?? "";
     if (!raw) return "";
@@ -94,6 +95,7 @@ function ReceptionGuestWhatsappCell({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (inputRef.current === document.activeElement) return;
     const raw = row.guest_whatsapp?.replace(/\D/g, "") ?? "";
     if (!raw) {
       setValue("");
@@ -128,6 +130,7 @@ function ReceptionGuestWhatsappCell({
 
   return (
     <Input
+      ref={inputRef}
       type="tel"
       inputMode="tel"
       autoComplete="tel"
@@ -149,10 +152,12 @@ function ReceptionGuestNameCell({
   row: ReservationRow;
   onSaved: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(row.guest_name ?? "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (inputRef.current === document.activeElement) return;
     setValue(row.guest_name ?? "");
   }, [row.id, row.guest_name]);
 
@@ -179,6 +184,7 @@ function ReceptionGuestNameCell({
 
   return (
     <Input
+      ref={inputRef}
       className="h-8 min-w-[7rem] max-w-[11rem] border-border bg-white text-sm lg:min-w-[9rem] lg:max-w-[13rem]"
       value={value}
       onChange={(e) => setValue(e.target.value)}
@@ -292,31 +298,51 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     return m;
   }, [rows]);
 
-  const load = useCallback(async (dateOverride?: string) => {
-    const ymd = dateOverride ?? dateStr;
-    setLoading(true);
-    try {
-      const r = await getReservationsForDate(ymd, facility);
-      if (!r.ok) {
-        if (r.unauthorized) {
-          setAuthed(false);
-          toast.error(r.error);
+  const load = useCallback(
+    async (
+      dateOverride?: string,
+      options?: { silent?: boolean }
+    ) => {
+      const ymd = dateOverride ?? dateStr;
+      const silent = options?.silent ?? false;
+      if (!silent) setLoading(true);
+      try {
+        const r = await getReservationsForDate(ymd, facility);
+        if (!r.ok) {
+          if (r.unauthorized) {
+            setAuthed(false);
+            toast.error(r.error);
+            return;
+          }
+          if (!silent) toast.error(r.error);
           return;
         }
-        toast.error(r.error);
-        return;
+        setRows(r.rows);
+      } catch {
+        if (!silent) toast.error("Falha de rede ao carregar reservas.");
+      } finally {
+        if (!silent) setLoading(false);
       }
-      setRows(r.rows);
-    } catch {
-      toast.error("Falha de rede ao carregar reservas.");
-    } finally {
-      setLoading(false);
-    }
-  }, [dateStr, facility]);
+    },
+    [dateStr, facility]
+  );
 
   useEffect(() => {
     if (!authed) return;
     void load();
+  }, [authed, load]);
+
+  const pauseGridPollRef = useRef(false);
+  pauseGridPollRef.current =
+    pendingDelete !== null || deleting || loading;
+
+  useEffect(() => {
+    if (!authed) return;
+    const id = window.setInterval(() => {
+      if (pauseGridPollRef.current) return;
+      void load(undefined, { silent: true });
+    }, 30_000);
+    return () => window.clearInterval(id);
   }, [authed, load]);
 
   async function onLogin(e: React.FormEvent) {
