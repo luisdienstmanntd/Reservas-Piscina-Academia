@@ -4,6 +4,7 @@ import {
   GUEST_TOKEN_COOKIE,
   hotelTodayYmd,
   isCheckoutStillValid,
+  parseGuestTokenInput,
 } from "@/lib/guest-stay";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 45;
@@ -64,7 +65,9 @@ function setGuestCookie(response: NextResponse, token: string) {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const tokenParam = request.nextUrl.searchParams.get("token")?.trim();
+  const tokenParam = parseGuestTokenInput(
+    request.nextUrl.searchParams.get("token")
+  );
 
   /** Link mágico na raiz: grava cookie e envia para a home (escolha piscina/academia). */
   if (pathname === "/" && tokenParam) {
@@ -98,7 +101,9 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  const cookieToken = request.cookies.get(GUEST_TOKEN_COOKIE)?.value?.trim();
+  const cookieToken = parseGuestTokenInput(
+    request.cookies.get(GUEST_TOKEN_COOKIE)?.value
+  );
   if (!cookieToken) {
     return redirectAcessoNegado(request, false);
   }

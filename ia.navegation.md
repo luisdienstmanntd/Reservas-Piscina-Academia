@@ -106,7 +106,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 | Marca | `src/components/valle-wordmark.tsx` |
 | Middleware hóspede, link inválido | `src/middleware.ts`, `src/app/acesso-negado/page.tsx` |
 | Schema BD, migrações, projeto novo | `supabase/migrations/*`, `supabase/setup_supabase_cloud.sql` |
-| Env / cliente Supabase admin | `.env.example`, `src/lib/supabase/admin.ts` |
+| Env / cliente Supabase admin | `.env.template` (mapa versionado), `.env.local` (valores reais, gitignored), `src/lib/supabase/admin.ts` |
 
 ---
 

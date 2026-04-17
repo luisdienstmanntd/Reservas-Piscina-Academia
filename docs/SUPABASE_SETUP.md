@@ -24,7 +24,7 @@ A tabela **`reservations`** inclui (entre outras): unicidades por `facility` + d
 
 ## 4. Variáveis de ambiente local
 
-Na raiz do projeto, copie `.env.example` para `.env.local` e preencha:
+Na raiz existe **`.env.template`** (só nomes das variáveis, sem segredos, versionado no Git) como referência. Crie **`.env.local`**, copie a estrutura e preencha:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co

@@ -23,10 +23,14 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
    npm install
    ```
 
-2. Copie `.env.example` para **`.env.local` na raiz do projeto** (mesmo nível que `package.json`).  
+2. Configure as variáveis de ambiente na raiz (mesmo nível que `package.json`):
+
+   - **`.env.template`** (ficheiro **versionado** no Git): contém **apenas os nomes** das variáveis, sem segredos. Serve de **mapa fixo** quando se clona o repo noutra máquina ou se reformata o computador — evita esquecer `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou `RECEPTION_PASSWORD`. O Next.js **não** lê este ficheiro em runtime.
+   - **`.env.local`** (ficheiro **local**, no `.gitignore`): copie a estrutura a partir de `.env.template`, preencha os valores reais e guarde. **Nunca** commite chaves nem senhas.
+
    **Não** coloque `.env.local` dentro de `supabase/migrations/` — o Next.js **não** carrega variáveis dali.
 
-3. Preencha:
+3. Preencha `.env.local` (Dashboard Supabase → **Settings → API** para URL e **service_role**):
 
    | Variável | Uso |
    |----------|-----|
@@ -64,6 +68,9 @@ Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por di
 | `npm run db:stop` | Para stack local |
 | `npm run db:status` | URL e chaves locais |
 | `npm run db:reset` | Recria DB local e aplica migrações |
+| `npm run test` | Vitest — testes unitários em `src/**/*.test.ts` |
+| `npm run test:integration` | Vitest — integração/concorrência (Supabase local; ver `vitest.integration.config.ts`) |
+| `npm run test:e2e` | Playwright — E2E (ex.: `tests/e2e/guest-booking-flow.spec.ts`) |
 
 ## Rotas principais
 

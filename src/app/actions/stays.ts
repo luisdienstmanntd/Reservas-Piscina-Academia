@@ -1,29 +1,20 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { z } from "zod";
 
+import { isoYmdDateSchema, stayApartmentSchema } from "@/lib/booking-zod";
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 import {
   GUEST_TOKEN_COOKIE,
   hotelTodayYmd,
   isCheckoutStillValid,
+  parseGuestTokenInput,
 } from "@/lib/guest-stay";
 import { readReceptionAuthed } from "@/lib/reception-auth";
 import {
   getAdminClient,
   supabaseConfigErrorMessage,
 } from "@/lib/supabase/admin";
-
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
-const apartmentStr = z
-  .string()
-  .trim()
-  .min(1, "Informe o apartamento.")
-  .refine((s) => isAllowedApartmentNumber(s), {
-    message: "Apartamento inválido.",
-  });
 
 export type ValidatedGuestStay = {
   apartmentNumber: string;
@@ -37,7 +28,7 @@ export async function getValidatedGuestStay(): Promise<
   ValidatedGuestStay | null
 > {
   const jar = await cookies();
-  const token = jar.get(GUEST_TOKEN_COOKIE)?.value?.trim();
+  const token = parseGuestTokenInput(jar.get(GUEST_TOKEN_COOKIE)?.value);
   if (!token) return null;
 
   const supabase = getAdminClient();
@@ -75,8 +66,8 @@ export async function generateStayToken(input: {
     return { ok: false, error: "Sessão da recepção expirada." };
   }
 
-  const apt = apartmentStr.safeParse(input.apartmentNumber);
-  const co = dateStr.safeParse(input.checkoutDate);
+  const apt = stayApartmentSchema.safeParse(input.apartmentNumber);
+  const co = isoYmdDateSchema.safeParse(input.checkoutDate);
   if (!apt.success) {
     return { ok: false, error: apt.error.issues[0]?.message ?? "Apto inválido." };
   }

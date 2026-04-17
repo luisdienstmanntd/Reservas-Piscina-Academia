@@ -4,34 +4,27 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 
 import {
+  createGuestSchema,
+  createReceptionSchema,
+  facilitySchema,
+  isoYmdDateSchema,
+} from "@/lib/booking-zod";
+import {
   getAdminClient,
   supabaseConfigErrorMessage,
 } from "@/lib/supabase/admin";
-import { hotelCalendarDate } from "@/lib/hotel-time";
-import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 import {
   normalizeSlotStart,
-  slotStartsFor,
   type Facility,
   type ReservationRow,
 } from "@/lib/reservations";
+import { validateStayAndSlot } from "@/lib/reservation-slot-validation";
 import {
   RECEPTION_COOKIE,
   RECEPTION_COOKIE_VALUE,
   readReceptionAuthed,
 } from "@/lib/reception-auth";
 import { getValidatedGuestStay } from "@/app/actions/stays";
-
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const apartmentStr = z
-  .string()
-  .trim()
-  .min(1, "Informe o número do apartamento.")
-  .refine((s) => isAllowedApartmentNumber(s), {
-    message: "Apartamento inválido. Use um número da lista do hotel.",
-  });
-
-const facilitySchema = z.enum(["pool", "gym"]);
 
 function isPostgresUniqueViolation(err: unknown): boolean {
   const o = err as { code?: string; message?: string };
@@ -86,7 +79,7 @@ export async function getReservationDaySummary(
   | { ok: true; occupiedSlots: string[]; apartmentsBooked: string[] }
   | { ok: false; error: string }
 > {
-  const parsed = dateStr.safeParse(reservationDate);
+  const parsed = isoYmdDateSchema.safeParse(reservationDate);
   if (!parsed.success) {
     return { ok: false, error: "Data inválida." };
   }
@@ -164,7 +157,7 @@ export async function getReservationsForDate(
     };
   }
 
-  const parsed = dateStr.safeParse(reservationDate);
+  const parsed = isoYmdDateSchema.safeParse(reservationDate);
   if (!parsed.success) {
     return { ok: false, error: "Data inválida." };
   }
@@ -197,54 +190,6 @@ export async function getReservationsForDate(
         "Não foi possível carregar as reservas. Verifique a conexão e tente de novo.",
     };
   }
-}
-
-const guestWhatsappRequiredSchema = z
-  .string()
-  .trim()
-  .min(1, "Informe o seu WhatsApp.")
-  .transform((s) => s.replace(/\D/g, ""))
-  .refine((d) => d.length >= 10 && d.length <= 13, {
-    message: "WhatsApp inválido. Use DDD + número (10 a 13 dígitos).",
-  });
-
-const guestNameOptionalSchema = z
-  .string()
-  .max(200, "Nome muito longo (máx. 200 caracteres).")
-  .optional()
-  .transform((s) => {
-    if (s === undefined) return null;
-    const t = s.trim();
-    return t.length ? t : null;
-  });
-
-const createGuestSchema = z.object({
-  facility: facilitySchema,
-  reservationDate: dateStr,
-  slotStart: z.string(),
-  guestWhatsapp: guestWhatsappRequiredSchema,
-  guestName: guestNameOptionalSchema,
-});
-
-function validateStayAndSlot(
-  facility: Facility,
-  reservationDate: string,
-  guestCheckoutDate: string,
-  slotStart: string
-): string | null {
-  const today = hotelCalendarDate();
-  if (reservationDate < today) {
-    return "Não é possível reservar datas passadas.";
-  }
-  if (reservationDate > guestCheckoutDate) {
-    return "A data da reserva deve ser até o seu check-out.";
-  }
-  const norm = normalizeSlotStart(slotStart);
-  const allowed = new Set(slotStartsFor(facility));
-  if (!allowed.has(norm)) {
-    return "Horário inválido.";
-  }
-  return null;
 }
 
 /** Garante que horário e apartamento estão livres (antes do insert; a BD continua a validar em corrida). */
@@ -402,31 +347,6 @@ export async function createGuestReservation(input: {
     };
   }
 }
-
-const guestWhatsappOptionalSchema = z
-  .string()
-  .optional()
-  .transform((s) => {
-    if (s === undefined) return null;
-    const t = s.trim();
-    if (!t) return null;
-    return t.replace(/\D/g, "");
-  })
-  .refine((d) => d === null || (d.length >= 10 && d.length <= 13), {
-    message:
-      "WhatsApp inválido. Deixe em branco ou use DDD + número (10 a 13 dígitos).",
-  });
-
-/** Balcão: data da reserva no formulário; check-out interno = mesmo dia (só validação). */
-const createReceptionSchema = z.object({
-  facility: facilitySchema,
-  apartmentNumber: apartmentStr,
-  reservationDate: dateStr,
-  slotStart: z.string(),
-  notes: z.string().max(500).optional(),
-  guestWhatsapp: guestWhatsappOptionalSchema,
-  guestName: guestNameOptionalSchema,
-});
 
 export async function createReceptionReservation(input: {
   facility: Facility;
