@@ -1,6 +1,6 @@
 # 🤝 Contribuindo para este projeto
 
-Obrigado por se interessar em contribuir ao Valle D'incanto!
+Obrigado por se interessar em contribuir ao Projeto!
 
 ## Fluxo de contribuição
 
