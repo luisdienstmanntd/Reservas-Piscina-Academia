@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Valle D’incanto — Piscina e Academia
 
 Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por dia por apartamento** na **piscina** ou na **academia**, e para a **recepção** consultar, criar e cancelar reservas. Interface em **português (pt-BR)**, estilos com **Tailwind CSS 4** e componentes no estilo **shadcn/ui**.
@@ -172,3 +173,7 @@ Ficheiro **`ia.navegation.md`** — contexto detalhado, invariantes, mapa de fic
 
 Projeto privado do hotel (ajuste conforme a política interna). 
 
+=======
+# Reservas-Piscina-Academia
+Sistema de reservas de piscina/academia para hotel. Next.js 15 + Supabase + Vercel.
+>>>>>>> 048a6a6b54b94d3aa33258430fb02875e4445d4b
