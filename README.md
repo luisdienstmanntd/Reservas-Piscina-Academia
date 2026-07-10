@@ -1,12 +1,12 @@
 # 🏨 Valle D'incanto — Sistema de Reservas
 
-> **Projeto de aprendizado em produção** | Resolvendo problema real | Adquirindo conhecimento em ADS | 📊 Gerando dados para análise
+> **Projeto de aprendizado em produção** | Resolvendo problema real | Adquirindo conhecimento em ANÁLISE DE DESENVOLVIMENTO DE SISTEMAS | 📊 Gerando dados para análise
 
 ## 🎯 Sobre
 
-Sistema de reservas de piscina e academia para hotel real em Canela-RS. Desenvolvido como **projeto de aprendizado prático** enquanto curso ADS, aplicando conhecimentos de desenvolvimento, análise de sistemas e **preparação de dados**.
+Sistema de reservas de piscina e academia para hotel real em Gramado-RS. Desenvolvido como **projeto de aprendizado prático** enquanto curso ADS, aplicando conhecimentos de desenvolvimento, análise de sistemas e **preparação de dados**.
 
-**Cliente Real:** Hotel Valle D'incanto (Canela-RS)  
+**Cliente Real:** Hotel Valle D'incanto (Gramado-RS)  
 **Status:** ✅ Em produção | 🔄 Em desenvolvimento ativo  
 **Aprendizado:** Full-stack, produção, testes, banco de dados, **extração de dados para análise**
 
@@ -14,9 +14,10 @@ Sistema de reservas de piscina e academia para hotel real em Canela-RS. Desenvol
 
 ## 💡 Por que existe?
 
-Problema real: Hotel precisava de sistema de agendamento online para piscina e academia.
+Problema real: Hotel utilizava planilha googlesheets, o que fazia com que ocorrece erros, intercorrências e obrigava os hóspedes a comparecer a recepção para agendamentos.
+Precisava de sistema de agendamento online, onde os próprios clientes pudessem agendar seu horário.
 
-Solução: Sistema web moderno que permite hóspedes agendarem sem ligar para recepção.
+Solução: Sistema web moderno que permite hóspedes agendarem sem ligar para recepção, acessando no celular, através de um link gerado pela recepção. 
 
 Resultado: Processo automatizado + dados estruturados + aprendizado prático.
 
@@ -292,4 +293,4 @@ MIT — Use livremente
 
 **Status:** ✅ Produção | 📚 Aprendizado contínuo | 🎓 ADS/DevClub
 
-*Último update: Junho 2026*
+*Último update: Julho 2026*
