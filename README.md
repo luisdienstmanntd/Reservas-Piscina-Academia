@@ -1,179 +1,295 @@
-<<<<<<< HEAD
-# Valle D’incanto — Piscina e Academia
+# 🏨 Valle D'incanto — Sistema de Reservas
 
-Aplicação **Next.js 15** (App Router) para hóspedes agendarem **1 hora por dia por apartamento** na **piscina** ou na **academia**, e para a **recepção** consultar, criar e cancelar reservas. Interface em **português (pt-BR)**, estilos com **Tailwind CSS 4** e componentes no estilo **shadcn/ui**.
+> **Projeto de aprendizado em produção** | Resolvendo problema real | Adquirindo conhecimento em ADS | 📊 Gerando dados para análise
 
-## Stack
- 
-- **Next.js** 15.5.x · **React** 19 · **TypeScript**  
-- **Supabase (PostgreSQL)** — acesso apenas no servidor via **service role** (`@supabase/supabase-js`)
-- **Zod** — validação nas Server Actions  
-- **date-fns** — datas e rótulos de horários 
-- **Sonner** — toasts no cliente 
+## 🎯 Sobre
 
-## Requisitos
- 
-- Node.js 18+ (recomendado a versão LTS atual)
-- Conta/projeto **Supabase** (nuvem) **ou** **Docker** + **Supabase CLI** para base local
+Sistema de reservas de piscina e academia para hotel real em Canela-RS. Desenvolvido como **projeto de aprendizado prático** enquanto curso ADS, aplicando conhecimentos de desenvolvimento, análise de sistemas e **preparação de dados**.
 
-## Configuração rápida
+**Cliente Real:** Hotel Valle D'incanto (Canela-RS)  
+**Status:** ✅ Em produção | 🔄 Em desenvolvimento ativo  
+**Aprendizado:** Full-stack, produção, testes, banco de dados, **extração de dados para análise**
 
-1. Clone o repositório e instale dependências:
+---
 
-   ```bash
-   npm install
-   ```
+## 💡 Por que existe?
 
-2. Configure as variáveis de ambiente na raiz (mesmo nível que `package.json`):
+Problema real: Hotel precisava de sistema de agendamento online para piscina e academia.
 
-   - **`.env.template`** (ficheiro **versionado** no Git): contém **apenas os nomes** das variáveis, sem segredos. Serve de **mapa fixo** quando se clona o repo noutra máquina ou se reformata o computador — evita esquecer `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou `RECEPTION_PASSWORD`. O Next.js **não** lê este ficheiro em runtime.
-   - **`.env.local`** (ficheiro **local**, no `.gitignore`): copie a estrutura a partir de `.env.template`, preencha os valores reais e guarde. **Nunca** commite chaves nem senhas.
+Solução: Sistema web moderno que permite hóspedes agendarem sem ligar para recepção.
 
-   **Não** coloque `.env.local` dentro de `supabase/migrations/` — o Next.js **não** carrega variáveis dali.
+Resultado: Processo automatizado + dados estruturados + aprendizado prático.
 
-3. Preencha `.env.local` (Dashboard Supabase → **Settings → API** para URL e **service_role**):
+---
 
-   | Variável | Uso |
-   |----------|-----|
-   | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Chave **service_role** (só servidor; nunca expor ao browser) |
-   | `RECEPTION_PASSWORD` | Senha do painel `/recepcao` |
+## 🛠️ Tech Stack
 
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` pode existir no `.env` para uso futuro; **este projeto** usa a service role nas Server Actions.
+| Camada | Tecnologia | Por quê |
+|--------|-----------|---------|
+| **Frontend** | Next.js 15, React, TypeScript | Modern, produção-ready |
+| **Styling** | Tailwind CSS | Rápido, escalável |
+| **Backend** | Next.js Server Actions, TypeScript | Type-safe, sem extra |
+| **Banco Dados** | Supabase (PostgreSQL) | SQL + real-time |
+| **Validação** | Zod | Type inference |
+| **Deploy** | Vercel | Zero config Next.js |
+| **Testes** | Vitest, Playwright | Confiança no código |
 
-   **Hóspede:** o link gerado aponta para `/?token=…` (home); o middleware valida o token na API Supabase (Edge), define o cookie `guest_token` e o hóspede escolhe piscina ou academia. Rotas `/hospede/*` exigem esse cookie. Tabela `active_stays`; migração `20260410120000_active_stays.sql` (ou script cloud completo).
+---
 
-4. Crie o schema na base:
-
-   - **Projeto novo na nuvem:** no Dashboard → SQL, execute `supabase/setup_supabase_cloud.sql` (inclui `guest_whatsapp`).
-   - **Base já existente:** aplique as migrações em `supabase/migrations/` **por ordem de nome**, ou execute manualmente o SQL que faltar (ex.: coluna `guest_whatsapp` em `20260407120000_reservations_guest_whatsapp.sql`).
-   - **CLI local:** com Docker ativo, `npm run db:start` ou `npm run db:reset`.
-
-5. Desenvolvimento:
-
-   ```bash
-   npm run dev
-   ```
-
-   Após mudar dependências ou `.env.local`, reinicie o servidor de dev.
-
-## Scripts npm
-
-| Script | Descrição |
-|--------|-----------|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Build de produção |
-| `npm run start` | Servidor após build |
-| `npm run lint` | ESLint |
-| `npm run db:start` | Sobe Supabase local (`npx supabase start`) |
-| `npm run db:stop` | Para stack local |
-| `npm run db:status` | URL e chaves locais |
-| `npm run db:reset` | Recria DB local e aplica migrações |
-| `npm run test` | Vitest — testes unitários em `src/**/*.test.ts` |
-| `npm run test:integration` | Vitest — integração/concorrência (Supabase local; ver `vitest.integration.config.ts`) |
-| `npm run test:e2e` | Playwright — E2E (ex.: `tests/e2e/guest-booking-flow.spec.ts`) |
-
-## Rotas principais
-
-| Rota | Descrição |
-|------|-----------|
-| `/` | Entrada: links para piscina/academia e recepção |
-| `/hospede` | Redireciona para `/hospede/piscina` |
-| `/hospede/piscina` | Fluxo hóspede — `GuestBooking` com `facility: pool` |
-| `/hospede/academia` | Fluxo hóspede — `GuestBooking` com `facility: gym` |
-| `/acesso-negado` | Sem token válido ou estadia expirada |
-| `/recepcao` | Login por senha + dashboard: grade do dia, **editar nome e WhatsApp na grelha**, confirmação/aviso WhatsApp (coluna dedicada), **gerar link de acesso hóspede** (`/?token=…`), nova reserva balcão, cancelar |
-
-`src/app/recepcao/layout.tsx` — layout mínimo do segmento (estabilidade de CSS em dev no App Router).
-
-## Fluxos: hóspede vs balcão
-
-| | Hóspede (`/hospede/...`) | Recepção (`/recepcao`) |
-|--|--------------------------|-------------------------|
-| Acesso | Link `/?token=…` na recepção → cookie `guest_token` → página inicial; depois `/hospede/piscina` ou `/hospede/academia`. Validade até **check-out** (fuso SP) | Painel com senha |
-| Identificação | **Apto e check-out** vêm do token (servidor); hóspede informa **WhatsApp** (obrigatório) + nome opcional | Apto + **data da reserva** + horário no formulário |
-| WhatsApp | **Obrigatório** (10–13 dígitos, normalizados na BD) | **Opcional** |
-| Validação de estadia | Reserva entre hoje e check-out | Internamente `guest_checkout_date = reservation_date` (só para passar `validateStayAndSlot`) |
-| Listagem | — | Grade por **dia** (calendário “Dia (grade)”): abre em **hoje** ao login; **não** muda ao criar reserva noutra data — alterar só manualmente para ver outro dia. |
-| WhatsApp na grade | — | **Edição inline** no campo da coluna; mensagens **Confirmação** / **Aviso (~10 min)** via `web.whatsapp.com` (`src/lib/wa-me.ts`, `reception-wa-actions.tsx`). Sem número válido, os botões ficam desativados. |
-| Link hóspede | — | Cartão **Gerar acesso hóspede**: token em `active_stays`, URL `/?token=…`, texto de boas-vindas + **Copiar mensagem e link**. |
-
-## Regras de negócio (resumo)
-
-- **Instalações:** `pool` (piscina) e `gym` (academia), coluna `facility` em `reservations`.
-- **Piscina — slots reserváveis:** 13h–23h e 00h–01h (`00:00:00` = 00h–01h do mesmo dia civil), **1 h** por slot.
-- **Academia:** 24 slots de 1 h (00h–23h).
-- **Por instalação e dia:** no máximo **1 reserva por apartamento** e **1 reserva por horário** (unicidade na BD + verificação pré-insert `assertSlotAndApartmentFree` + UI que desativa/oculta conflitos).
-- **Apartamentos:** apenas os códigos em `src/lib/apartment-codes.ts` (select + Zod nas actions).
-- **Datas “hoje”:** fuso **America/São_Paulo** (`src/lib/hotel-time.ts`).
-- **Segurança:** RLS ativa; `anon`/`authenticated` sem grants em `reservations` e `active_stays`; **service role** em Server Actions e validação no middleware (Edge) para `/hospede/*` via REST Supabase.
-
-Textos na home (ex.: piscina 09h–01h) são **informativos**; slots **reserváveis** de exclusivo da piscina são **13h–01h** (`src/lib/reservations.ts` + constraints SQL).
- 
-## Modelo de dados (`reservations`)
-
-Campos relevantes: `id`, `facility`, `reservation_date`, `slot_start`, `apartment_number`, `guest_checkout_date`, `guest_name`, `guest_whatsapp` (opcional; dígitos), `confirmation_sent`, `warning_sent` (tracking envio WhatsApp pela recepção), `created_by` (`guest` | `reception`), `notes`, `created_at`.
-
-Tabela **`active_stays`:** `token` (único), `apartment_number`, `checkout_date`, `created_at` — ligação mágica para o fluxo hóspede (ver migração `20260410120000_active_stays.sql`).
-
-## Estrutura de pastas (útil)
+## 📁 Estrutura
 
 ```
-src/middleware.ts            # Edge: ?token= na / ou /hospede/* → cookie; /hospede/* exige token válido
-src/app/
-  actions/reservations.ts    # Server Actions: auth, CRUD, getReservationDaySummary, etc.
-  actions/stays.ts           # Token de estadia: generateStayToken, getValidatedGuestStay
-  acesso-negado/page.tsx     # Sem link válido / estadia expirada
-  layout.tsx                 # Root + import globals.css
-  page.tsx                   # Home
-  hospede/                   # Fluxo hóspede + layout (viewport fixo)
-  recepcao/
-    layout.tsx               # Segmento recepção
-    page.tsx                 # SSR: getReceptionAuthState → ReceptionDashboard
-    reception-dashboard.tsx  # UI cliente: login, grade, formulário balcão
-src/components/
-  guest-booking.tsx          # Wizard hóspede (sem apto no formulário; vem do token)
-  reception-wa-actions.tsx   # Botões confirmação / aviso 10 min (WhatsApp Web)
-  valle-wordmark.tsx         # Marca em tipografia
-  site-footer.tsx
-  ui/                        # Button, Card, Calendar, etc.
-src/lib/
-  reservations.ts            # Facility, slots, ReservationRow, labels
-  wa-me.ts                   # URLs e mensagens WhatsApp; janela aviso 10 min
-  guest-stay.ts              # Cookie `guest_token`, `hotelTodayYmd` (Edge/Node)
-  reception-auth.ts          # Cookie recepção, readReceptionAuthed
-  apartment-codes.ts         # Lista fixa de apartamentos
-  hotel-time.ts              # Data civil do hotel (SP)
-  supabase/admin.ts          # getAdminClient() — null se faltar env
-supabase/
-  config.toml                # Supabase CLI (seed desligado por defeito)
-  migrations/                # Ver ordem dos timestamps nos nomes
-  setup_supabase_cloud.sql   # Schema completo para projeto novo (SQL Editor)
+Reservas-Piscina-Academia/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── hospede/            # Páginas hóspede
+│   │   ├── recepcao/           # Páginas recepção
+│   │   └── actions/            # Server actions (API)
+│   ├── components/             # React components
+│   ├── lib/                    # Utilities, validação, testes
+│   └── middleware.ts           # Auth middleware
+├── tests/
+│   ├── e2e/                    # Testes Playwright
+│   └── integration/            # Testes integração
+├── supabase/
+│   └── migrations/             # SQL migrations
+├── docs/                       # Documentação
+└── [config files]
 ```
 
-## API de servidor (resumo)
+---
 
-Em `src/app/actions/reservations.ts` (`"use server"`):
+## 🚀 Funcionalidades
 
-- **Hóspede:** `getReservationDaySummary`, `getOccupiedSlotsForDate`, `createGuestReservation` (exige cookie `guest_token` válido onde aplicável).
-- **Recepção:** `loginReception`, `logoutReception`, `getReceptionAuthState`, `getReservationsForDate`, `createReceptionReservation`, `deleteReservation`, `updateReservationGuestName`, `updateReservationGuestWhatsapp`, `markMessageAsSent` (confirmação / aviso).
+### Hóspede
+- ✅ Visualizar disponibilidade
+- ✅ Agendar piscina/academia
+- ✅ Ver agendamentos
+- ✅ Cancelar reserva
 
-Em `src/app/actions/stays.ts`: `generateStayToken`, `getValidatedGuestStay`.
+### Recepção
+- ✅ Visualizar todas as reservas
+- ✅ Agendar em nome do hóspede
+- ✅ Gerenciar capacidades
+- ✅ Relatórios básicos
 
-## Desenvolvimento: avisos comuns
+### Sistema
+- ✅ Validação de conflitos (horário/lotação)
+- ✅ Autenticação (Firebase/Supabase)
+- ✅ Notificações (WhatsApp)
+- ✅ Conformidade LGPD
 
-- **404 a `layout.css` no console (modo dev):** pode aparecer após Fast Refresh em rotas como `/recepcao`; em geral é ruído do dev server. Se a página estiver estilizada e as actions funcionarem, pode ignorar; `npm run build` + `npm run start` valida produção.
-- **“Base de dados não configurada”:** falta `.env.local` na **raiz** ou variáveis Supabase incompletas.
+---
 
-## Documentação para IA / agentes
+## 📚 Aprendizado Contínuo
 
-Ficheiro **`ia.navegation.md`** — contexto detalhado, invariantes, mapa de ficheiros e boas práticas para assistentes.
+### O que estou aprendendo fazendo:
 
-## Licença
+**Frontend:**
+- React hooks + Next.js 15
+- Formulários complexos
+- Estado e sincronização
+- UX para entrada de dados
 
-Projeto privado do hotel (ajuste conforme a política interna). 
+**Backend:**
+- Database design (relacional, normalized)
+- Validação de dados (Zod)
+- Autenticação e autorização
+- Edge cases (concorrência de agendamentos)
+- APIs estruturadas para dados
 
-=======
-# Reservas-Piscina-Academia
-Sistema de reservas de piscina/academia para hotel. Next.js 15 + Supabase + Vercel.
->>>>>>> 048a6a6b54b94d3aa33258430fb02875e4445d4b
+**Produção:**
+- Deploy contínuo (Vercel)
+- Monitoring e logs
+- Performance
+- Escalabilidade
+
+**Testes:**
+- Testes unitários (Vitest)
+- Testes E2E (Playwright)
+- Cobertura
+- Edge cases reais
+
+**🔥 Aprendizado com Dados (Foco Atual):**
+- **SQL Avançado:** Queries complexas, CTEs, window functions
+- **Extração de Dados:** APIs, exports, data dumps
+- **Preparação:** Limpeza, normalização, transformação
+- **Análise:** Padrões de uso, horários picos, taxa ocupação
+- **Visualização:** Preparando dados para Power BI
+- **Performance:** Indexação para analytics queries
+- **Segurança:** RLS para dados sensíveis
+
+---
+
+## 🔧 Setup Local
+
+### Pré-requisitos
+```bash
+Node.js 18+
+npm ou pnpm
+```
+
+### Instalação
+```bash
+# 1. Clonar
+git clone https://github.com/luisdienstmanntd/Reservas-Piscina-Academia.git
+cd Reservas-Piscina-Academia
+
+# 2. Instalar dependências
+npm install
+
+# 3. Configurar env
+cp .env.template .env.local
+# Editar .env.local com suas credenciais Supabase
+
+# 4. Rodar localmente
+npm run dev
+
+# 5. Acessar
+open http://localhost:3000
+```
+
+### Testes
+```bash
+# Unitários
+npm run test
+
+# E2E
+npm run test:e2e
+
+# Integração
+npm run test:integration
+```
+
+---
+
+## 📊 Dados & Análise
+
+### Estrutura para Análise
+- **Tabelas:** 6+ (reservations, stays, users, facilities, logs)
+- **Queries:** 15+ operações CRUD + **queries analytics**
+- **Validações:** 20+ Zod schemas
+- **Testes:** 40+ casos
+- **Logs estruturados:** Todas ações registradas
+
+### Recursos para Dados
+```sql
+-- Exemplo: Análise de ocupação por horário
+SELECT 
+  date_trunc('hour', reservation_date) as hour,
+  facility,
+  COUNT(*) as total_reservations,
+  COUNT(DISTINCT user_id) as unique_guests
+FROM reservations
+WHERE reservation_date > NOW() - INTERVAL '30 days'
+GROUP BY 1, 2
+ORDER BY 1 DESC;
+
+-- Views criadas para analytics
+- v_daily_occupancy
+- v_guest_behavior
+- v_facility_performance
+- v_time_series_bookings
+```
+
+### Dados Disponíveis para Análise
+- ✅ Horários mais procurados (ocupação)
+- ✅ Padrões de hóspede (quem/quando)
+- ✅ Taxa ocupação por facility
+- ✅ Cancelamentos (pattern analysis)
+- ✅ Previsão de demanda
+- ✅ Relatório de capacidade
+
+### SQL Migrations
+Veja `supabase/migrations/` para histórico completo de schema (7+ migrations com evolução de dados).
+
+---
+
+## 🤖 Como foi desenvolvido (Desenvolvimento + Dados)
+
+**Workflow com IA:**
+1. **Entendo requisitos** (sistema + dados necessários)
+2. **Uso Claude Code para:**
+   - Arquitetar estrutura (app + dados)
+   - Gerar componentes React
+   - Validações Zod
+   - Queries SQL (CRUD + analytics)
+   - Scripts de análise (Python)
+3. **Reviso, testo, itero** (funcionalidade + qualidade de dados)
+4. **Documento decisões** (código + schema)
+5. **Deploy** (produção + monitoro dados)
+6. **Analiso dados** (insights → próximas melhorias)
+
+**Diferenciais:**
+- ✅ Não é "IA gerou tudo". É "IA acelera, eu valido"
+- ✅ Sistema estruturado **para gerar dados bons**
+- ✅ Queries pensadas **para análise**
+- ✅ Logs estruturados **para investigação**
+- ✅ Ciclo: dev → produção → dados → análise → melhoria
+
+---
+
+## 📖 Documentação
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — Como contribuir
+- [`docs/SUPABASE_SETUP.md`](./docs/SUPABASE_SETUP.md) — Database
+- [`ia.navegacao.md`](./ia.navegacao.md) — Navegação do código
+- [`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md) — Testes
+
+---
+
+## 🔐 Segurança & Conformidade
+
+- ✅ **Auth:** Supabase + Row Level Security
+- ✅ **Dados:** LGPD (anonimização automática)
+- ✅ **Validação:** Zod (server-side)
+- ✅ **HTTPS:** Vercel (automático)
+- ✅ **Variáveis:** Env protegidas
+
+---
+
+## 📈 Próximos Passos (Dev + Dados)
+
+### Desenvolvimento
+- [ ] Aprofundar testes E2E (Fase 4)
+- [ ] CI/CD (GitHub Actions)
+- [ ] Migração PostgreSQL (Neon/Supabase)
+
+### Dados & Análise 🔥
+- [ ] Dashboard Power BI (ocupação, padrões)
+- [ ] Scripts Python para análise exploratória
+- [ ] Previsão de demanda (ML basics)
+- [ ] API de dados (export estruturado)
+- [ ] Análise de comportamento de hóspede
+- [ ] Relatório semanal automatizado
+- [ ] Integração com ferramentas BI
+
+### Resultados
+- Sistema funcionando + **dados reais analisáveis**
+- Aprendo dev + **análise com dados verdadeiros**
+
+---
+
+## 🤝 Contribuições
+
+Feedback e melhorias são bem-vindas! Veja [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+---
+
+## 📄 Licença
+
+MIT — Use livremente
+
+---
+
+## 🔗 Links
+
+- **Live:** https://valle-piscina-academia.vercel.app
+- **Repositório:** https://github.com/luisdienstmanntd/Reservas-Piscina-Academia
+- **Autor:** [Luis Dienstmann](https://github.com/luisdienstmanntd)
+
+---
+
+**Status:** ✅ Produção | 📚 Aprendizado contínuo | 🎓 ADS/DevClub
+
+*Último update: Junho 2026*
