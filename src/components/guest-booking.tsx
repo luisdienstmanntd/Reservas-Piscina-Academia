@@ -51,7 +51,7 @@ const copy: Record<Facility, { title: string; step3Hint: string }> = {
   pool: {
     title: "Agendamento da Piscina",
     step3Hint:
-      "09h–13h coletivo (sem reserva). 13h–01h exclusivo — toque para reservar.",
+      "09h–13h Uso compartilhado (sem reserva). 13h–01h Exclusivo — Toque para reservar.",
   },
   gym: {
     title: "Agendamento da Academia",
@@ -192,7 +192,7 @@ export function GuestBooking({
     if (!selectedDate || submitting) return;
     if (apartmentBookedThisDay) {
       toast.error(
-        "Este apartamento já tem reserva neste dia nesta instalação. Limite: 1 hora por dia."
+        "Limite diário atingido. Para reservar mais de 1 horário nesta data, consulte a recepção."
       );
       return;
     }
@@ -394,8 +394,8 @@ export function GuestBooking({
                   </p>
                   {apartmentBookedThisDay ? (
                     <p className="text-destructive text-[11px] font-medium leading-snug">
-                      Este apartamento já tem reserva neste dia nesta instalação.
-                      Limite: 1 hora por dia.
+                      Limite diário atingido. Para reservar mais de 1 horário
+                      nesta data, consulte a recepção.
                     </p>
                   ) : null}
                 </CardHeader>

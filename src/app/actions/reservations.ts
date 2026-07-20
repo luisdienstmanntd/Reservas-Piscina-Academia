@@ -200,6 +200,7 @@ async function assertSlotAndApartmentFree(
     reservationDate: string;
     normSlot: string;
     apartmentNumber: string;
+    apartmentConflictMessage?: string;
   }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data, error } = await supabase
@@ -222,12 +223,16 @@ async function assertSlotAndApartmentFree(
       return {
         ok: false,
         error:
+          params.apartmentConflictMessage ??
           "Este apartamento já tem reserva neste dia nesta instalação. Limite: 1 hora por dia.",
       };
     }
   }
   return { ok: true };
 }
+
+const GUEST_DAILY_LIMIT_MESSAGE =
+  "Limite diário atingido. Para reservar mais de 1 horário nesta data, consulte a recepção.";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -294,6 +299,7 @@ export async function createGuestReservation(input: {
     reservationDate,
     normSlot,
     apartmentNumber,
+    apartmentConflictMessage: GUEST_DAILY_LIMIT_MESSAGE,
   });
   if (!free.ok) {
     return { ok: false, error: free.error, code: "conflict" };
@@ -332,8 +338,7 @@ export async function createGuestReservation(input: {
       if (kind === "apartment") {
         return {
           ok: false,
-          error:
-            "Seu apartamento já possui uma reserva neste dia nesta instalação. Limite: 1 hora por dia.",
+          error: GUEST_DAILY_LIMIT_MESSAGE,
           code: "conflict",
         };
       }
