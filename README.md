@@ -162,6 +162,20 @@ npm run test:e2e
 npm run test:integration
 ```
 
+### Keep-alive do Supabase (plano Free)
+
+O workflow `.github/workflows/supabase-keepalive.yml` executa uma consulta de
+leitura mínima no banco duas vezes por dia, com 12 horas de intervalo. Para
+ativá-lo, cadastre em **GitHub → Settings → Secrets and variables → Actions**:
+
+- `SUPABASE_URL`: URL do projeto Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY`: chave secreta usada somente pelo workflow.
+
+Depois que o workflow estiver na branch padrão, abra **Actions → Supabase
+keep-alive → Run workflow** para validar a configuração. O agendamento roda às
+00:17 e 12:17 UTC (21:17 e 09:17 no horário de Brasília). O workflow não cria
+nem altera reservas.
+
 ---
 
 ## 📊 Dados & Análise

@@ -1,0 +1,50 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # 00:17 e 12:17 UTC = 21:17 e 09:17 em America/Sao_Paulo.
+    # Minuto 17 evita o pico de workflows no início de cada hora.
+    - cron: "17 0,12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  query-database:
+    name: Consultar banco de dados
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Validar configuração
+        shell: bash
+        run: |
+          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
+            echo "Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY nos Actions secrets do repositório."
+            exit 1
+          fi
+
+      - name: Executar consulta mínima
+        shell: bash
+        run: |
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --get "${SUPABASE_URL%/}/rest/v1/reservations" \
+            --data-urlencode "select=id" \
+            --data-urlencode "limit=1" \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Accept: application/json" \
+            --output /dev/null
+
+          echo "Consulta Supabase concluída com sucesso."
