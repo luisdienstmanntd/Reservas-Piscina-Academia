@@ -16,6 +16,7 @@ import {
   loginReception,
   logoutReception,
   updateReservationGuestName,
+  updateReservationNotes,
   updateReservationGuestWhatsapp,
 } from "@/app/actions/reservations";
 import { guestWhatsappOptionalSchema } from "@/lib/booking-zod";
@@ -188,6 +189,61 @@ function ReceptionGuestNameCell({
       placeholder="Nome"
       aria-label="Nome do hóspede"
       maxLength={200}
+    />
+  );
+}
+
+function ReceptionNotesCell({
+  row,
+  onSaved,
+}: {
+  row: ReservationRow;
+  onSaved: () => void;
+}) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [value, setValue] = useState(row.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (inputRef.current === document.activeElement) return;
+    setValue(row.notes ?? "");
+  }, [row.id, row.notes]);
+
+  async function commit() {
+    const next = value.trim();
+    const prev = (row.notes ?? "").trim();
+    if (next === prev) return;
+    setSaving(true);
+    try {
+      const r = await updateReservationNotes(
+        row.id,
+        next.length ? next : null
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        setValue(row.notes ?? "");
+        return;
+      }
+      onSaved();
+    } catch {
+      toast.error("Não foi possível salvar as observações. Tente novamente.");
+      setValue(row.notes ?? "");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Textarea
+      ref={inputRef}
+      className="min-h-16 min-w-[9rem] border-border bg-white text-xs lg:text-sm"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      disabled={saving}
+      placeholder="Observações"
+      aria-label="Observações da reserva"
+      maxLength={2000}
     />
   );
 }
@@ -653,16 +709,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                       </td>
                       <td className="max-w-[min(280px,72vw)] py-3 pr-4 align-top sm:max-w-[280px] lg:max-w-xs lg:py-3.5 lg:pr-5 xl:max-w-sm">
                         {row ? (
-                          row.notes?.trim() ? (
-                            <span
-                              className="text-charcoal/90 line-clamp-3 text-xs leading-snug break-words"
-                              title={row.notes}
-                            >
-                              {row.notes}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )
+                          <ReceptionNotesCell row={row} onSaved={() => void load()} />
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
