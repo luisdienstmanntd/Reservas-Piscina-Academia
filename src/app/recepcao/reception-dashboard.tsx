@@ -200,7 +200,7 @@ function ReceptionNotesCell({
   row: ReservationRow;
   onSaved: () => void;
 }) {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(row.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -234,9 +234,10 @@ function ReceptionNotesCell({
   }
 
   return (
-    <Textarea
+    <Input
       ref={inputRef}
-      className="min-h-16 min-w-[9rem] border-border bg-white text-xs lg:text-sm"
+      className="h-8 w-full min-w-[9rem] max-w-[18rem] border-border bg-white text-xs lg:text-sm"
+      title={value || "Observações"}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
