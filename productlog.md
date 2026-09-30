@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-09-30 — Texto dos horários da piscina
+
+- **Status:** Concluído (publicação pendente)
+- **Pedido:** Substituir a orientação por “09h–13h Uso compartilhado” e “13h–01h Exclusivo — Toque para reservar.”, em duas linhas e com alinhamento justificado.
+- **Decisão e execução:** Removida a expressão “(sem reserva)”, incluída quebra de linha preservada por whitespace-pre-line e text-justify apenas para a piscina. Horários e regras de reserva permanecem iguais.
+- **Validação:** ESLint do componente e TypeScript aprovados.
+- **Pendências:** Integrar o PR #1 e publicar na Vercel.
+- **Referência:** src/components/guest-booking.tsx.
+
 ### 2026-09-30 — Telefones válidos e tela exclusiva para hóspedes
 
 - **Status:** Concluído (implementação local; publicação pendente)
