@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogOut, Trash2 } from "lucide-react";
+import { Eye, EyeOff, LogOut, Trash2 } from "lucide-react";
 
 import {
   createReceptionReservation,
@@ -202,6 +202,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     setAuthed(initialAuthed);
   }, [initialAuthed]);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
 
   const todayStr = useMemo(() => hotelCalendarDate(), []);
@@ -493,14 +494,28 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <form onSubmit={onLogin} className="flex flex-col gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pw">Senha</Label>
-                <Input
-                  id="pw"
-                  type="password"
-                  autoComplete="current-password"
-                  className="border-border bg-white"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="pw"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="border-border bg-white pr-12"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full w-11 text-muted-foreground"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    aria-controls="pw"
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
+                    {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                  </Button>
+                </div>
               </div>
               <Button type="submit" disabled={loggingIn} className="w-full">
                 {loggingIn ? "Entrando…" : "Entrar"}
