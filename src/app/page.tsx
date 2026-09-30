@@ -74,14 +74,6 @@ export default function Home() {
           </Card>
         </div>
 
-        <p className="text-muted-foreground text-center text-xs">
-          <Link
-            href="/recepcao"
-            className="underline-offset-4 hover:text-charcoal hover:underline"
-          >
-            Área da recepção
-          </Link>
-        </p>
       </main>
 
       <SiteFooter />

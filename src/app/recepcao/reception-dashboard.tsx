@@ -19,6 +19,8 @@ import {
   updateReservationGuestName,
   updateReservationGuestWhatsapp,
 } from "@/app/actions/reservations";
+import { guestWhatsappOptionalSchema } from "@/lib/booking-zod";
+import { formatPhoneDisplay, PHONE_HINT } from "@/lib/phone";
 import { generateStayToken } from "@/app/actions/stays";
 import {
   AlertDialog,
@@ -65,18 +67,7 @@ function fromYmd(localYmd: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-/** Exibe dígitos armazenados como WhatsApp legível (BR). */
-function formatWhatsappDisplay(digits: string | null | undefined): string {
-  if (!digits || digits.length < 10) return "—";
-  const d = digits.replace(/\D/g, "");
-  if (d.length === 11) {
-    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  }
-  if (d.length === 10) {
-    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  }
-  return d;
-}
+const formatWhatsappDisplay = formatPhoneDisplay;
 
 function ReceptionGuestWhatsappCell({
   row,
@@ -106,14 +97,18 @@ function ReceptionGuestWhatsappCell({
   }, [row.id, row.guest_whatsapp]);
 
   async function commit() {
-    const prevDigits = (row.guest_whatsapp ?? "").replace(/\D/g, "");
-    const nextDigits = value.replace(/\D/g, "");
-    if (nextDigits === prevDigits) return;
+    const parsed = guestWhatsappOptionalSchema.safeParse(value);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message);
+      setValue(row.guest_whatsapp ? formatWhatsappDisplay(row.guest_whatsapp) : "");
+      return;
+    }
+    if (value.trim() === (row.guest_whatsapp ? formatWhatsappDisplay(row.guest_whatsapp) : "")) return;
     setSaving(true);
     try {
       const r = await updateReservationGuestWhatsapp(
         row.id,
-        nextDigits.length ? value : null
+        parsed.data
       );
       if (!r.ok) {
         toast.error(r.error);
@@ -139,7 +134,8 @@ function ReceptionGuestWhatsappCell({
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
       disabled={saving}
-      placeholder="WhatsApp"
+      placeholder="DDD ou + país"
+      title={PHONE_HINT}
       aria-label="WhatsApp do hóspede"
     />
   );
@@ -442,6 +438,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       toast.error("Este horário já está reservado. Escolha outro.");
       return;
     }
+    const phone = guestWhatsappOptionalSchema.safeParse(newWhatsapp);
+    if (!phone.success) {
+      toast.error(phone.error.issues[0]?.message);
+      return;
+    }
     setCreating(true);
     try {
       const r = await createReceptionReservation({
@@ -450,7 +451,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         reservationDate: newReservationDate,
         slotStart: newSlot,
         guestName: newGuestName.trim() ? newGuestName : undefined,
-        guestWhatsapp: newWhatsapp.trim() ? newWhatsapp : undefined,
+        guestWhatsapp: phone.data ?? undefined,
         notes: newNotes || undefined,
       });
       if (!r.ok) {
@@ -876,11 +877,15 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="(00) 00000-0000"
+                  placeholder="(54) 99999-9999 ou +44 7911 123456"
+                  aria-describedby="nw-hint"
                   className="border-border bg-white"
                   value={newWhatsapp}
                   onChange={(e) => setNewWhatsapp(e.target.value)}
                 />
+                <p id="nw-hint" className="text-xs text-muted-foreground">
+                  {PHONE_HINT}
+                </p>
               </div>
               {(aptAlreadyBooked || slotAlreadyTaken) && (
                 <p className="text-destructive text-sm sm:col-span-2">

@@ -23,6 +23,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { guestWhatsappRequiredSchema } from "@/lib/booking-zod";
+import { PHONE_HINT } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
@@ -142,18 +144,12 @@ export function GuestBooking({
       toast.error("Estadia expirada. Peça um novo link na recepção.");
       return;
     }
-    const wa = whatsapp.trim();
-    if (!wa) {
-      toast.error("Informe o seu WhatsApp.");
+    const phone = guestWhatsappRequiredSchema.safeParse(whatsapp);
+    if (!phone.success) {
+      toast.error(phone.error.issues[0]?.message);
       return;
     }
-    const waDigits = wa.replace(/\D/g, "");
-    if (waDigits.length < 10 || waDigits.length > 13) {
-      toast.error(
-        "WhatsApp inválido. Use DDD + número (10 a 13 dígitos, com ou sem 9)."
-      );
-      return;
-    }
+    setWhatsapp(phone.data);
     setCalendarBackTarget(1);
     setStep(2);
     setSelectedDate(undefined);
@@ -328,11 +324,15 @@ export function GuestBooking({
                         inputMode="tel"
                         autoComplete="tel"
                         required
-                        placeholder="(00) 00000-0000"
+                        placeholder="(54) 99999-9999 ou +44 7911 123456"
+                        aria-describedby="wa-hint"
                         className="border-border h-9 bg-white text-sm"
                         value={whatsapp}
                         onChange={(e) => setWhatsapp(e.target.value)}
                       />
+                      <p id="wa-hint" className="text-xs text-muted-foreground">
+                        {PHONE_HINT}
+                      </p>
                     </div>
                     <Button type="submit" className="h-10 w-full" size="default">
                       Continuar

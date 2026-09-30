@@ -1,20 +1,14 @@
 import { normalizeSlotStart } from "@/lib/reservations";
+import { normalizeStoredPhone } from "@/lib/phone";
 
 /** Fuso fixo do hotel (sem horário de verão desde 2019). */
 const SAO_PAULO_OFFSET = "-03:00";
 
 /**
- * Dígitos para wa.me: só números; se tiver 10 ou 11 dígitos, prefixo 55 (Brasil).
- * Se já começar por 55 com comprimento adequado, mantém.
+ * Valida o telefone e preserva seu código de país, incluindo reservas antigas.
  */
 export function whatsappDigitsForWaMe(input: string | null | undefined): string | null {
-  if (input == null || !String(input).trim()) return null;
-  const d = String(input).replace(/\D/g, "");
-  if (!d) return null;
-  if (d.startsWith("55") && d.length >= 12 && d.length <= 15) return d;
-  if (d.length === 10 || d.length === 11) return `55${d}`;
-  if (d.length >= 12 && d.length <= 15) return d;
-  return null;
+  return normalizeStoredPhone(input)?.slice(1) ?? null;
 }
 
 /** Link direto ao WhatsApp Web (evita redirecionamento wa.me). */
