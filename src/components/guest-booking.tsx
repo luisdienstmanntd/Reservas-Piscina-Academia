@@ -53,7 +53,7 @@ const copy: Record<Facility, { title: string; step3Hint: string }> = {
   pool: {
     title: "Agendamento da Piscina",
     step3Hint:
-      "09h–13h Uso compartilhado (sem reserva). 13h–01h Exclusivo — Toque para reservar.",
+      "09h–13h Uso compartilhado\n13h–01h Exclusivo — Toque para reservar.",
   },
   gym: {
     title: "Agendamento da Academia",
@@ -389,7 +389,7 @@ export function GuestBooking({
                     {format(selectedDate, "EEE dd/MM", { locale: ptBR })} · 1h/
                     apto./dia
                   </CardDescription>
-                  <p className="text-muted-foreground text-[11px] leading-snug">
+                  <p className={cn("text-muted-foreground text-[11px] leading-snug", facility === "pool" && "whitespace-pre-line text-justify")}>
                     {t.step3Hint}
                   </p>
                   {apartmentBookedThisDay ? (
