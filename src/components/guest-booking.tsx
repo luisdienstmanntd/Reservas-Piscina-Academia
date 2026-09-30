@@ -389,7 +389,7 @@ export function GuestBooking({
                     {format(selectedDate, "EEE dd/MM", { locale: ptBR })} · 1h/
                     apto./dia
                   </CardDescription>
-                  <p className={cn("text-muted-foreground text-[11px] leading-snug", facility === "pool" && "whitespace-pre-line text-justify")}>
+                  <p className={cn("text-muted-foreground text-[11px] leading-snug", facility === "pool" && "whitespace-pre-line text-justify [text-align-last:justify]")}>
                     {t.step3Hint}
                   </p>
                   {apartmentBookedThisDay ? (
