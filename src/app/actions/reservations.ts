@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 
 import {
+  guestWhatsappOptionalSchema,
   createGuestSchema,
   createReceptionSchema,
   facilitySchema,
@@ -527,18 +528,15 @@ export async function updateReservationGuestWhatsapp(
     return { ok: false, error: "Reserva inválida.", code: "validation" };
   }
 
-  const digits =
-    raw == null || !String(raw).trim()
-      ? null
-      : String(raw).replace(/\D/g, "");
-
-  if (digits !== null && (digits.length < 10 || digits.length > 13)) {
+  const phoneParsed = guestWhatsappOptionalSchema.safeParse(raw);
+  if (!phoneParsed.success) {
     return {
       ok: false,
-      error: "WhatsApp inválido. Use DDD + número (10 a 13 dígitos).",
+      error: phoneParsed.error.issues[0]?.message ?? "WhatsApp inválido.",
       code: "validation",
     };
   }
+  const digits = phoneParsed.data;
 
   const supabaseWaEdit = getAdminClient();
   if (!supabaseWaEdit) {

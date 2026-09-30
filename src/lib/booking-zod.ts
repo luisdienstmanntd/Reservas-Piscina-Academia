@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
 
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 
@@ -24,13 +25,17 @@ export const stayApartmentSchema = z
 
 export const facilitySchema = z.enum(["pool", "gym"]);
 
-const guestWhatsappRequiredSchema = z
+export const guestWhatsappRequiredSchema = z
   .string()
   .trim()
   .min(1, "Informe o seu WhatsApp.")
-  .transform((s) => s.replace(/\D/g, ""))
-  .refine((d) => d.length >= 10 && d.length <= 13, {
-    message: "WhatsApp inválido. Use DDD + número (10 a 13 dígitos).",
+  .transform((s, ctx) => {
+    const phone = normalizePhone(s);
+    if (!phone) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: PHONE_ERROR });
+      return z.NEVER;
+    }
+    return phone;
   });
 
 const guestNameOptionalSchema = z
@@ -51,18 +56,17 @@ export const createGuestSchema = z.object({
   guestName: guestNameOptionalSchema,
 });
 
-const guestWhatsappOptionalSchema = z
+export const guestWhatsappOptionalSchema = z
   .string()
-  .optional()
-  .transform((s) => {
-    if (s === undefined) return null;
-    const t = s.trim();
-    if (!t) return null;
-    return t.replace(/\D/g, "");
-  })
-  .refine((d) => d === null || (d.length >= 10 && d.length <= 13), {
-    message:
-      "WhatsApp inválido. Deixe em branco ou use DDD + número (10 a 13 dígitos).",
+  .nullish()
+  .transform((s, ctx) => {
+    if (!s?.trim()) return null;
+    const phone = normalizePhone(s);
+    if (!phone) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: PHONE_ERROR });
+      return z.NEVER;
+    }
+    return phone;
   });
 
 export const createReceptionSchema = z.object({

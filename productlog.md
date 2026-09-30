@@ -49,6 +49,33 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-09-30 — Texto dos horários da piscina
+
+- **Status:** Concluído (publicação pendente)
+- **Pedido:** Substituir a orientação por “09h–13h Uso compartilhado” e “13h–01h Exclusivo — Toque para reservar.”, em duas linhas e com alinhamento justificado.
+- **Decisão e execução:** Removida a expressão “(sem reserva)”, incluída quebra de linha preservada por whitespace-pre-line e text-justify apenas para a piscina. Horários e regras de reserva permanecem iguais.
+- **Validação:** ESLint do componente e TypeScript aprovados.
+- **Pendências:** Integrar o PR #1 e publicar na Vercel.
+- **Referência:** src/components/guest-booking.tsx.
+
+### 2026-09-30 — Telefones válidos e tela exclusiva para hóspedes
+
+- **Status:** Concluído (implementação local; publicação pendente)
+- **Área:** Reservas, WhatsApp e navegação do hóspede
+- **Pedido:** Recusar telefones fora do formato correto; aceitar brasileiros com DDD e internacionais com código do país; retirar o link “Área da recepção” da tela compartilhada com hóspedes. Revisar com subagente.
+- **Por que foi pedido:** Evitar contatos inválidos e mostrar ao hóspede apenas opções de agendamento.
+- **Problema observado:** Cadastro e edição aceitavam quaisquer 10–13 dígitos após remover caracteres, inclusive letras e DDDs inválidos. A home exibia o acesso à recepção.
+- **Causa:** Validação por comprimento duplicada em cliente/servidor e link administrativo na home pública.
+- **Decisão:** Validar com libphonenumber-js/max e regra compartilhada: brasileiro com DDD; internacional com + e código de país. Armazenar novos telefones em E.164, preservando interpretação de registros antigos compatíveis. Manter telefone opcional na recepção e obrigatório para hóspedes.
+- **O que foi feito:** Validação na identificação do hóspede, criação na recepção, edição na grade e Server Actions. Exemplos nos campos, formatação de exibição e links WhatsApp com país correto. Removido link da recepção da home.
+- **Resultado:** Entradas inválidas são recusadas antes da gravação; hóspedes não veem o atalho à recepção.
+- **Validação:** 70 testes unitários aprovados, incluindo validação servidor sem gravação real; lint, TypeScript e build aprovados. Subagente revisou as duas mudanças sem achados impeditivos.
+- **Impactos e riscos:** Validação de plano/formato não comprova existência do número ou conta WhatsApp. Telefones internacionais antigos de 10/11 dígitos sem + são ambíguos e devem ser corrigidos manualmente. Nenhum dado existente foi regravado.
+- **Não fazer / evitar regressão:** Não remover letras para tornar entrada inválida válida; não prefixar 55 em números internacionais novos; não usar produção para testes de escrita.
+- **Tentativas que falharam:** Clone inicial bloqueado pela rede e depois pelo Schannel; resolvido com permissão de rede e backend OpenSSL. Vitest/esbuild padrão bloqueado ao ler diretório ancestral no sandbox; executado com configuração temporária equivalente e configLoader runner.
+- **Pendências:** Integrar a alteração e verificar publicação na Vercel.
+- **Referências:** src/lib/phone.ts, src/lib/booking-zod.ts, src/app/actions/reservations.ts, src/app/page.tsx.
+
 ### 2026-08-10 — Keep-alive do Supabase duas vezes ao dia
 
 - **Status:** Concluído

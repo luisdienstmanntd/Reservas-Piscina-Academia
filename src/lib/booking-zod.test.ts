@@ -63,7 +63,7 @@ describe("createGuestSchema", () => {
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data.guestWhatsapp).toBe("11912345678");
+      expect(r.data.guestWhatsapp).toBe("+5511912345678");
       expect(r.data.guestName).toBe("João");
     }
   });
