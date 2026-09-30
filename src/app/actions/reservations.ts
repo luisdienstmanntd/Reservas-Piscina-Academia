@@ -515,6 +515,60 @@ export async function updateReservationGuestName(
   }
 }
 
+export async function updateReservationNotes(
+  id: string,
+  notes: string | null
+): Promise<ActionResult> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Não autorizado.", code: "validation" };
+  }
+
+  const idParsed = z.string().uuid().safeParse(id);
+  if (!idParsed.success) {
+    return { ok: false, error: "Reserva inválida.", code: "validation" };
+  }
+
+  const t = notes === null || notes === undefined ? "" : String(notes).trim();
+  if (t.length > 2000) {
+    return {
+      ok: false,
+      error: "Observações muito longas (máx. 2000 caracteres).",
+      code: "validation",
+    };
+  }
+  const normalized = t.length ? t : null;
+
+  const supabaseNotes = getAdminClient();
+  if (!supabaseNotes) {
+    return {
+      ok: false,
+      error: supabaseConfigErrorMessage(),
+      code: "validation",
+    };
+  }
+
+  try {
+    const { data, error } = await supabaseNotes
+      .from("reservations")
+      .update({ notes: normalized })
+      .eq("id", idParsed.data)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { ok: false, error: "Reserva não encontrada.", code: "validation" };
+
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível atualizar as observações.",
+      code: "network",
+    };
+  }
+}
+
 export async function updateReservationGuestWhatsapp(
   id: string,
   raw: string | null
