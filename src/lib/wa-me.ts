@@ -90,5 +90,5 @@ export function buildConfirmationMessage(
 
 export function buildWarningMessage(facility: string): string {
   const place = facilityDisplayName(facility);
-  return `Olá! Passando para lembrar que sua reserva na ${place} termina em 10 minutos. Precisamos preparar o ambiente para o próximo hóspede. Agradecemos a compreensão!`;
+  return `Olá! Lembrando que sua reserva na ${place} termina em 10 minutos. Precisamos preparar o ambiente para o próximo hóspede. Agradecemos a compreensão!`;
 }
