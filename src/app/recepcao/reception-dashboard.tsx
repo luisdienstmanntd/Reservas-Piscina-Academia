@@ -7,7 +7,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LogOut, Trash2 } from "lucide-react";
-import Link from "next/link";
 
 import {
   createReceptionReservation,
@@ -509,9 +508,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             </form>
           </CardContent>
         </Card>
-        <Button variant="link" asChild className="text-muted-foreground">
-          <Link href="/">← Voltar ao início</Link>
-        </Button>
         </div>
       </div>
     );
@@ -920,9 +916,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           </CardContent>
         </Card>
 
-        <Button variant="link" asChild className="text-muted-foreground px-0">
-          <Link href="/">← Início</Link>
-        </Button>
       </div>
 
       <AlertDialog
