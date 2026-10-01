@@ -1,7 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { z } from "zod";
+import { loginStaff, logoutStaff } from "./staff";
 
 import {
   guestWhatsappOptionalSchema,
@@ -21,8 +21,7 @@ import {
 } from "@/lib/reservations";
 import { validateStayAndSlot } from "@/lib/reservation-slot-validation";
 import {
-  RECEPTION_COOKIE,
-  RECEPTION_COOKIE_VALUE,
+  readStaffUser,
   readReceptionAuthed,
 } from "@/lib/reception-auth";
 import { getValidatedGuestStay } from "@/app/actions/stays";
@@ -42,31 +41,8 @@ function uniqueViolationKind(err: unknown): "slot" | "apartment" | "unknown" {
   return "unknown";
 }
 
-export async function loginReception(
-  password: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const expected = process.env.RECEPTION_PASSWORD;
-  if (!expected) {
-    return { ok: false, error: "Defina RECEPTION_PASSWORD no servidor." };
-  }
-  if (password !== expected) {
-    return { ok: false, error: "Senha incorreta." };
-  }
-  const jar = await cookies();
-  jar.set(RECEPTION_COOKIE, RECEPTION_COOKIE_VALUE, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 12,
-    path: "/",
-  });
-  return { ok: true };
-}
-
-export async function logoutReception(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(RECEPTION_COOKIE);
-}
+export async function loginReception(password: string, username = "recepcao") { return loginStaff(username,password); }
+export async function logoutReception(): Promise<void> { await logoutStaff(); }
 
 export async function getReceptionAuthState(): Promise<boolean> {
   return readReceptionAuthed();
@@ -363,7 +339,8 @@ export async function createReceptionReservation(input: {
   guestName?: string;
   notes?: string;
 }): Promise<ActionResult<{ id: string }>> {
-  if (!(await readReceptionAuthed())) {
+  const staff = await readStaffUser();
+  if (!staff) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
 
@@ -429,6 +406,7 @@ export async function createReceptionReservation(input: {
         guest_whatsapp: guestWhatsapp,
         guest_name: guestName,
         created_by: "reception",
+        created_by_staff_name: staff.name,
         notes: notes?.trim() || null,
       })
       .select("id")

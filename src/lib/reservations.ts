@@ -89,5 +89,6 @@ export type ReservationRow = {
   warning_sent: boolean;
   created_at: string;
   created_by: string;
+  created_by_staff_name?: string | null;
   notes: string | null;
 };

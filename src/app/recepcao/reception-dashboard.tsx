@@ -6,7 +6,8 @@ import { ptBR } from "date-fns/locale";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogOut, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Eye, EyeOff, LogOut, Settings, Trash2 } from "lucide-react";
 
 import {
   createReceptionReservation,
@@ -259,6 +260,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     setAuthed(initialAuthed);
   }, [initialAuthed]);
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("recepcao");
   const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
 
@@ -402,7 +404,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     e.preventDefault();
     setLoggingIn(true);
     try {
-      const r = await loginReception(password);
+      const r = await loginReception(password, username);
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -549,6 +551,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           </CardHeader>
           <CardContent>
             <form onSubmit={onLogin} className="flex flex-col gap-4">
+              <div className="space-y-2"><Label htmlFor="username">Usuário</Label><Input id="username" autoComplete="username" autoCapitalize="none" value={username} onChange={(e) => setUsername(e.target.value)} required maxLength={40} /></div>
               <div className="space-y-2">
                 <Label htmlFor="pw">Senha</Label>
                 <div className="relative">
@@ -622,6 +625,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="icon" aria-label="Configurações"><Link href="/recepcao/configuracoes"><Settings className="size-4" aria-hidden /></Link></Button>
             <Button
               type="button"
               variant="outline"
@@ -745,7 +749,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                             }
                           >
                             {row.created_by === "reception"
-                              ? "Recepção"
+                              ? row.created_by_staff_name || "Recepção"
                               : "Hóspede"}
                           </Badge>
                         ) : (

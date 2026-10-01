@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock("@/lib/reception-auth", () => ({
   readReceptionAuthed: mocks.readReceptionAuthed,
+  readStaffUser: async () => ({ id: "11111111-1111-4111-8111-111111111111", name: "Recepção", username: "recepcao", session_version: 1 }),
   RECEPTION_COOKIE: "test", RECEPTION_COOKIE_VALUE: "test",
 }));
 vi.mock("@/app/actions/stays", () => ({ getValidatedGuestStay: mocks.getValidatedGuestStay }));
