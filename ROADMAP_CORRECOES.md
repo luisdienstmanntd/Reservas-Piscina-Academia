@@ -78,29 +78,29 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 ### Fase 2 — Estancar perda de dados 🗄️ *(antes de acumular mais histórico)*
 
-- [ ] **2.1 — Migration soft delete** *(resolve F2, parte 1)*
+- [x] **2.1 — Migration soft delete** *(resolve F2, parte 1)*
   - Colunas `status` ('active'/'cancelled'), `cancelled_at`, `cancelled_by`.
   - Trocar as 2 UNIQUE constraints por **índices únicos parciais** (`WHERE status = 'active'`).
-  - ⚠️ Atualizar `uniqueViolationKind()` com os novos nomes de índice.
-  - Concluído em: ____
+  - Os índices parciais mantêm os nomes das constraints antigas, então `uniqueViolationKind()` não precisou mudar.
+  - Concluído em: 08/11/2026
 
-- [ ] **2.2 — Actions com soft delete** *(resolve F2, parte 2)*
+- [x] **2.2 — Actions com soft delete** *(resolve F2, parte 2)*
   - `deleteReservation` → `cancelReservation` (UPDATE, não DELETE).
   - Filtrar `status = 'active'` em `getReservationDaySummary`, `assertSlotAndApartmentFree`, `getReservationsForDate`.
   - ✅ Pronto quando: cancelar → slot volta a ficar livre → recriar no mesmo slot funciona → linha cancelada permanece no banco. Teste de integração cobrindo esse ciclo.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
-- [ ] **2.3 — Checkout honesto no balcão** *(resolve F3)*
+- [x] **2.3 — Checkout honesto no balcão** *(resolve F3)*
   - `guest_checkout_date = NULL` em reservas da recepção; `validateStayAndSlot` pula a checagem quando NULL.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
-- [ ] **2.4 — `updated_at` + auditoria** *(resolve F6)*
+- [x] **2.4 — `updated_at` + auditoria** *(resolve F6)*
   - Trigger `BEFORE UPDATE` para `updated_at`; avaliar tabela `reservation_events` (criação/edição/cancelamento) — vira tabela-fato para o BI.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
-- [ ] **2.5 — Anonimização com NULL** *(resolve F13)*
+- [x] **2.5 — Anonimização com NULL** *(resolve F13)*
   - Cron LGPD passa a gravar `NULL`; considerar flag `anonymized boolean`.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
 ### Fase 3 — Camada Power BI 📊
 
@@ -143,8 +143,8 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 | Fase | Etapas | Concluídas | Status |
 |------|--------|------------|--------|
-| 1 — Segurança | 3 | 3 | ✅ Concluída (aguarda deploy e configuração) |
-| 2 — Dados | 5 | 0 | ⏳ Não iniciada |
+| 1 — Segurança | 3 | 3 | ✅ Concluída (mergeada; falta confirmar o login em produção) |
+| 2 — Dados | 5 | 5 | ✅ Concluída (migrations aplicadas; aguarda deploy) |
 | 3 — Power BI | 4 | 0 | ⏳ Não iniciada |
 | 4 — Funcional | 3 | 0 | ⏳ Não iniciada |
 | 5 — Operação | 6 | 0 | ⏳ Não iniciada |

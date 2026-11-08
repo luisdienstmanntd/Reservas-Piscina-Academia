@@ -159,7 +159,8 @@ export async function getReservationDaySummary(
       .from("reservations")
       .select("slot_start, apartment_number")
       .eq("reservation_date", parsed.data)
-      .eq("facility", f.data);
+      .eq("facility", f.data)
+      .eq("status", "active");
 
     if (error) throw error;
 
@@ -227,6 +228,7 @@ export async function getReservationsForDate(
       .select("*")
       .eq("reservation_date", parsed.data)
       .eq("facility", f.data)
+      .eq("status", "active")
       .order("slot_start", { ascending: true });
 
     if (error) throw error;
@@ -257,7 +259,8 @@ async function assertSlotAndApartmentFree(
     .from("reservations")
     .select("slot_start, apartment_number")
     .eq("facility", params.facility)
-    .eq("reservation_date", params.reservationDate);
+    .eq("reservation_date", params.reservationDate)
+    .eq("status", "active");
 
   if (error) throw error;
 
@@ -434,13 +437,8 @@ export async function createReceptionReservation(input: {
     guestWhatsapp,
     guestName,
   } = parsed.data;
-  const guestCheckoutDate = reservationDate;
-  const v = validateStayAndSlot(
-    facility,
-    reservationDate,
-    guestCheckoutDate,
-    slotStart
-  );
+  // Balcão não informa check-out: grava NULL em vez de inventar um valor.
+  const v = validateStayAndSlot(facility, reservationDate, null, slotStart);
   if (v) {
     return { ok: false, error: v, code: "validation" };
   }
@@ -474,7 +472,7 @@ export async function createReceptionReservation(input: {
         reservation_date: reservationDate,
         slot_start: normSlot,
         apartment_number: apartmentNumber.trim(),
-        guest_checkout_date: guestCheckoutDate,
+        guest_checkout_date: null,
         guest_whatsapp: guestWhatsapp,
         guest_name: guestName,
         created_by: "reception",
@@ -722,7 +720,8 @@ export async function markMessageAsSent(
   }
 }
 
-export async function deleteReservation(id: string): Promise<ActionResult> {
+/** Cancela a reserva mantendo a linha no banco (soft delete) e liberando horário/apartamento. */
+export async function cancelReservation(id: string): Promise<ActionResult> {
   if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
@@ -732,8 +731,8 @@ export async function deleteReservation(id: string): Promise<ActionResult> {
     return { ok: false, error: "Reserva inválida.", code: "validation" };
   }
 
-  const supabaseDel = getAdminClient();
-  if (!supabaseDel) {
+  const supabaseCancel = getAdminClient();
+  if (!supabaseCancel) {
     return {
       ok: false,
       error: supabaseConfigErrorMessage(),
@@ -742,12 +741,26 @@ export async function deleteReservation(id: string): Promise<ActionResult> {
   }
 
   try {
-    const { error } = await supabaseDel
+    const { data, error } = await supabaseCancel
       .from("reservations")
-      .delete()
-      .eq("id", idParsed.data);
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: "reception",
+      })
+      .eq("id", idParsed.data)
+      .eq("status", "active")
+      .select("id")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      return {
+        ok: false,
+        error: "Reserva não encontrada ou já cancelada.",
+        code: "validation",
+      };
+    }
 
     return { ok: true };
   } catch (e) {
