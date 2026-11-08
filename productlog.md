@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-08 — README alinhado ao estado real do projeto
+
+- **Status:** Concluído
+- **Área:** Documentação
+- **Pedido:** Ler o projeto e atualizá-lo no GitHub.
+- **Problema observado:** O README prometia itens inexistentes: autenticação Firebase, 6+ tabelas, quatro views de analytics (`v_daily_occupancy` etc.), notificações WhatsApp automáticas, "40+ testes" e CI/CD como pendência. Também apontava para `ia.navegacao.md` (o arquivo real é `ia.navegation.md`) e não citava a falha de segurança do cookie da recepção.
+- **Causa:** Texto escrito antes da implementação e não revisado depois.
+- **Decisão:** Documentar apenas o que existe no código e remeter o restante ao `ROADMAP_CORRECOES.md`. Nenhuma mudança de código.
+- **O que foi feito:** Reescritas as seções de funcionalidades, stack, dados & análise, segurança, documentação e próximos passos do `README.md`.
+- **Validação:** 73 testes unitários, ESLint e `tsc --noEmit` aprovados antes da edição; testes de integração e E2E não executados (dependem de Supabase/navegador).
+- **Impactos e riscos:** Nenhum em runtime. O README agora declara como pendentes as falhas F1–F3 da revisão técnica; continuam sem correção.
+- **Pendências:** Executar a Fase 1 do `ROADMAP_CORRECOES.md` (cookie assinado e rate limit no login).
+- **Referências:** `README.md`, `REVISAO_TECNICA.md`, `ROADMAP_CORRECOES.md`.
+
 ### 2026-09-30 — Texto dos horários da piscina
 
 - **Status:** Concluído (publicação pendente)
