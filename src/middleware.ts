@@ -8,6 +8,8 @@ import {
 } from "@/lib/guest-stay";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 45;
+/** Tempo máximo da consulta ao Supabase; estourar = token tratado como não validado. */
+const SUPABASE_TIMEOUT_MS = 5000;
 
 type StayRow = { apartment_number: string; checkout_date: string };
 
@@ -29,6 +31,7 @@ async function fetchStayFromSupabase(
         Accept: "application/json",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const rows = (await res.json()) as StayRow[];
