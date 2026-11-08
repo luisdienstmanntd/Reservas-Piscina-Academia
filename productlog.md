@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-08 — Fase 3 do roadmap: camada de dados para o Power BI (preparada, não aplicada)
+
+- **Status:** Em andamento (arquivos prontos e testados localmente; falta aplicar em produção)
+- **Área:** Banco de dados, análise de dados e documentação
+- **Pedido:** Excluir todas as reservas existentes no banco e preparar a Fase 3.
+- **Por que foi pedido:** Começar o histórico analítico do zero, sem dados de teste, e deixar o banco pronto para o Power BI.
+- **Decisão:** (a) Exclusão feita em produção a pedido explícito: 4 reservas (2 reais de julho, já anonimizadas, e 2 de teste de 08/11) e, por cascata, os 4 eventos de auditoria. Antes, uma cópia só das colunas sem dados pessoais foi guardada fora do repositório. Estadias (links), `login_attempts` e demais tabelas não foram tocadas. (b) 3.1: coluna `reservations.stay_id` (FK com `ON DELETE SET NULL`) gravada pelas reservas do link do hóspede; balcão fica `NULL`; job diário apaga estadias vencidas há mais de 30 dias SEM reservas. (c) 3.2: schema `analytics` com `vw_reservas`, `vw_estadias` (sem token) e `vw_eventos`, todas sem nome, WhatsApp ou observações. (d) 3.3: role `powerbi_reader` criada SEM senha (a senha é definida por quem administra, fora do repositório), com limite de 5 conexões e 30 s por consulta, só `SELECT` no schema `analytics` e nenhum acesso a `public`.
+- **O que foi feito:** migrations `20261108140000_reservations_stay_id.sql`, `20261108150000_analytics_layer.sql`, `20261108160000_cleanup_orphan_stays_cron.sql`; `src/app/actions/stays.ts` (devolve o id da estadia) e `createGuestReservation` (grava `stay_id`); testes novos; `docs/POWERBI.md` (conexão, modelo, medidas DAX e roteiro do relatório); `setup_supabase_cloud.sql`.
+- **Validação:** 97 testes unitários, ESLint, `tsc` aprovados. Cadeia completa de migrations aplicada em um PostgreSQL 16 local com dados de exemplo: a role lê as 3 views e recebe `permission denied` em todas as tabelas de `public`; `anon` e `authenticated` não entram no schema; nenhuma coluna das views tem dado pessoal ou token; a limpeza só apaga estadia vencida sem reserva; apagar estadia não apaga a reserva. `pg_cron` simulado. As medidas DAX e a conexão real com o Power BI NÃO foram executadas.
+- **Impactos e riscos:** A exclusão das reservas é permanente (o plano gratuito do Supabase não tem backup automático). Ordem de publicação obrigatória: aplicar a migration `20261108140000` ANTES do código, senão a reserva do hóspede falha por falta da coluna `stay_id`. As views usam as permissões do dono (necessário para a role não ler `public`); o schema `analytics` não é exposto pela API do Supabase. `apartamento` nas views é só o número do quarto. Reservas anteriores ao campo `stay_id` não terão vínculo (hoje não há nenhuma).
+- **Não fazer / evitar regressão:** Não dar `GRANT` em tabelas de `public` para `powerbi_reader`; não incluir nome, WhatsApp, observações ou `token` nas views; não conectar o Power BI com `service_role`; não gravar a senha da role no repositório.
+- **Pendências:** Aplicar as 3 migrations em produção (ordem do nome) e só depois publicar o código; definir a senha da role; montar o relatório no Power BI; decidir se `notes` entra na anonimização; item 5.6 (tabela `apartments`) segue na Fase 5.
+- **Referências:** `docs/POWERBI.md`, `REVISAO_TECNICA.md` §3, `ROADMAP_CORRECOES.md`.
+
 ### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos
 
 - **Status:** Concluído (migrations aplicadas em produção; deploy do código pendente)
