@@ -15,7 +15,7 @@ ALTER TABLE public.reservations
 COMMENT ON COLUMN public.reservations.updated_at IS 'Última alteração da linha (trigger).';
 
 CREATE FUNCTION public.reservations_set_updated_at() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   NEW.updated_at := now();
   RETURN NEW;
@@ -53,7 +53,7 @@ INSERT INTO public.reservation_events (reservation_id, event_type, actor, occurr
 SELECT id, 'created', created_by, created_at FROM public.reservations;
 
 CREATE FUNCTION public.reservations_log_event() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SET search_path = '' AS $$
 DECLARE
   changed text[] := ARRAY[]::text[];
 BEGIN

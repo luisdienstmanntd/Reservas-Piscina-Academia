@@ -51,7 +51,7 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos
 
-- **Status:** Concluído (publicação pendente: aplicar as 3 migrations ANTES do deploy)
+- **Status:** Concluído (migrations aplicadas em produção; deploy do código pendente)
 - **Área:** Reservas, banco de dados, LGPD e auditoria
 - **Pedido:** Executar a Fase 2 do `ROADMAP_CORRECOES.md` (itens 2.1 a 2.5).
 - **Por que foi pedido:** Dado apagado não volta: cada cancelamento destruía a linha (F2), reservas de balcão gravavam checkout falso (F3), não havia `updated_at` nem trilha (F6) e a LGPD gravava `''` (F13). Isso inviabiliza taxa de cancelamento e demanda real no Power BI.
@@ -61,7 +61,8 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Impactos e riscos:** A ordem importa: o código novo consulta `status`; publicá-lo antes das migrations quebra a recepção. Sem rollback automático: reverter exige apagar colunas e recriar as UNIQUE. A coluna `notes` (observações livres) pode conter dados pessoais e continua fora da anonimização. Eventos `updated` assumem `actor = 'reception'` (única origem de edições hoje). Cancelamentos antigos já foram perdidos e não podem ser reconstruídos.
 - **Não fazer / evitar regressão:** Não voltar a apagar reservas; não esquecer `status = 'active'` em qualquer nova consulta de ocupação; não gravar PII em `reservation_events`; não renomear os índices únicos sem atualizar `uniqueViolationKind()`.
 - **Ordem de publicação:** 1) aplicar as 3 migrations no Supabase, na ordem do nome; 2) publicar o código.
-- **Pendências:** Fase 3 (camada Power BI) agora tem dados confiáveis para ler; decidir se `notes` entra na anonimização.
+- **Aplicado em produção:** 08/11/2026, projeto Supabase `valle-dincanto-piscina`, na ordem `login_attempts` (Fase 1), `reservations_soft_delete`, `lgpd_anonymize_null`, `reservations_audit` e `fix_function_search_path` (funções com `search_path` vazio, por aviso do verificador de segurança). Conferido no banco real: 2 reservas ativas, 2 anonimizadas com `NULL`, 2 eventos históricos, índices parciais, triggers e job LGPD novo; teste ponta a ponta revertido por rollback sem deixar dados. O versionamento do Supabase registra esses nomes com timestamps próprios, diferentes dos arquivos do repositório.
+- **Pendências:** Publicar o código (PRs #4 e #5) com `SESSION_SECRET` na Vercel; Fase 3 (camada Power BI); decidir se `notes` entra na anonimização.
 - **Referências:** `REVISAO_TECNICA.md` (F2, F3, F6, F13), `ROADMAP_CORRECOES.md`.
 
 ### 2026-09-30 — Texto dos horários da piscina
