@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import {
@@ -21,10 +21,18 @@ import {
 } from "@/lib/reservations";
 import { validateStayAndSlot } from "@/lib/reservation-slot-validation";
 import {
-  RECEPTION_COOKIE,
-  RECEPTION_COOKIE_VALUE,
+  endReceptionSession,
   readReceptionAuthed,
+  startReceptionSession,
 } from "@/lib/reception-auth";
+import { getSessionSecret, passwordsMatch } from "@/lib/reception-session";
+import {
+  clientIpFromHeaders,
+  hashClientKey,
+  isLoginBlocked,
+  loginWindowStartIso,
+  LOGIN_WINDOW_MINUTES,
+} from "@/lib/login-rate-limit";
 import { getValidatedGuestStay } from "@/app/actions/stays";
 
 function isPostgresUniqueViolation(err: unknown): boolean {
@@ -49,23 +57,64 @@ export async function loginReception(
   if (!expected) {
     return { ok: false, error: "Defina RECEPTION_PASSWORD no servidor." };
   }
-  if (password !== expected) {
+  const secret = getSessionSecret();
+  if (!secret) {
+    return {
+      ok: false,
+      error: "Defina SESSION_SECRET (mínimo 32 caracteres) no servidor.",
+    };
+  }
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return { ok: false, error: supabaseConfigErrorMessage() };
+  }
+
+  const clientKey = hashClientKey(clientIpFromHeaders(await headers()), secret);
+
+  // Falha fechada: sem conseguir consultar o limite, não autentica.
+  const { count, error: countError } = await supabase
+    .from("login_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("client_key", clientKey)
+    .gte("attempted_at", loginWindowStartIso());
+  if (countError) {
+    console.error("[loginReception] rate limit", countError.message);
+    return { ok: false, error: "Não foi possível validar o login. Tente novamente." };
+  }
+  if (isLoginBlocked(count ?? 0)) {
+    return {
+      ok: false,
+      error: `Muitas tentativas. Aguarde ${LOGIN_WINDOW_MINUTES} minutos e tente novamente.`,
+    };
+  }
+
+  if (!passwordsMatch(password, expected)) {
+    const { error: insertError } = await supabase
+      .from("login_attempts")
+      .insert({ client_key: clientKey });
+    if (insertError) {
+      console.error("[loginReception] registro de falha", insertError.message);
+    }
+    // Limpeza oportunista de registros com mais de 1 dia.
+    await supabase
+      .from("login_attempts")
+      .delete()
+      .lt("attempted_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     return { ok: false, error: "Senha incorreta." };
   }
-  const jar = await cookies();
-  jar.set(RECEPTION_COOKIE, RECEPTION_COOKIE_VALUE, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 12,
-    path: "/",
-  });
+
+  await supabase.from("login_attempts").delete().eq("client_key", clientKey);
+  if (!(await startReceptionSession())) {
+    return {
+      ok: false,
+      error: "Defina SESSION_SECRET (mínimo 32 caracteres) no servidor.",
+    };
+  }
   return { ok: true };
 }
 
 export async function logoutReception(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(RECEPTION_COOKIE);
+  await endReceptionSession();
 }
 
 export async function getReceptionAuthState(): Promise<boolean> {
@@ -110,7 +159,8 @@ export async function getReservationDaySummary(
       .from("reservations")
       .select("slot_start, apartment_number")
       .eq("reservation_date", parsed.data)
-      .eq("facility", f.data);
+      .eq("facility", f.data)
+      .eq("status", "active");
 
     if (error) throw error;
 
@@ -178,6 +228,7 @@ export async function getReservationsForDate(
       .select("*")
       .eq("reservation_date", parsed.data)
       .eq("facility", f.data)
+      .eq("status", "active")
       .order("slot_start", { ascending: true });
 
     if (error) throw error;
@@ -208,7 +259,8 @@ async function assertSlotAndApartmentFree(
     .from("reservations")
     .select("slot_start, apartment_number")
     .eq("facility", params.facility)
-    .eq("reservation_date", params.reservationDate);
+    .eq("reservation_date", params.reservationDate)
+    .eq("status", "active");
 
   if (error) throw error;
 
@@ -385,13 +437,8 @@ export async function createReceptionReservation(input: {
     guestWhatsapp,
     guestName,
   } = parsed.data;
-  const guestCheckoutDate = reservationDate;
-  const v = validateStayAndSlot(
-    facility,
-    reservationDate,
-    guestCheckoutDate,
-    slotStart
-  );
+  // Balcão não informa check-out: grava NULL em vez de inventar um valor.
+  const v = validateStayAndSlot(facility, reservationDate, null, slotStart);
   if (v) {
     return { ok: false, error: v, code: "validation" };
   }
@@ -425,7 +472,7 @@ export async function createReceptionReservation(input: {
         reservation_date: reservationDate,
         slot_start: normSlot,
         apartment_number: apartmentNumber.trim(),
-        guest_checkout_date: guestCheckoutDate,
+        guest_checkout_date: null,
         guest_whatsapp: guestWhatsapp,
         guest_name: guestName,
         created_by: "reception",
@@ -673,7 +720,8 @@ export async function markMessageAsSent(
   }
 }
 
-export async function deleteReservation(id: string): Promise<ActionResult> {
+/** Cancela a reserva mantendo a linha no banco (soft delete) e liberando horário/apartamento. */
+export async function cancelReservation(id: string): Promise<ActionResult> {
   if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };
   }
@@ -683,8 +731,8 @@ export async function deleteReservation(id: string): Promise<ActionResult> {
     return { ok: false, error: "Reserva inválida.", code: "validation" };
   }
 
-  const supabaseDel = getAdminClient();
-  if (!supabaseDel) {
+  const supabaseCancel = getAdminClient();
+  if (!supabaseCancel) {
     return {
       ok: false,
       error: supabaseConfigErrorMessage(),
@@ -693,12 +741,26 @@ export async function deleteReservation(id: string): Promise<ActionResult> {
   }
 
   try {
-    const { error } = await supabaseDel
+    const { data, error } = await supabaseCancel
       .from("reservations")
-      .delete()
-      .eq("id", idParsed.data);
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: "reception",
+      })
+      .eq("id", idParsed.data)
+      .eq("status", "active")
+      .select("id")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      return {
+        ok: false,
+        error: "Reserva não encontrada ou já cancelada.",
+        code: "validation",
+      };
+    }
 
     return { ok: true };
   } catch (e) {

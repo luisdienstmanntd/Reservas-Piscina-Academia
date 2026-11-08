@@ -90,4 +90,9 @@ export type ReservationRow = {
   created_at: string;
   created_by: string;
   notes: string | null;
+  status: "active" | "cancelled";
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  updated_at: string;
+  anonymized: boolean;
 };

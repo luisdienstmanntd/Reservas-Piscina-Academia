@@ -49,6 +49,40 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos
+
+- **Status:** Concluído (migrations aplicadas em produção; deploy do código pendente)
+- **Área:** Reservas, banco de dados, LGPD e auditoria
+- **Pedido:** Executar a Fase 2 do `ROADMAP_CORRECOES.md` (itens 2.1 a 2.5).
+- **Por que foi pedido:** Dado apagado não volta: cada cancelamento destruía a linha (F2), reservas de balcão gravavam checkout falso (F3), não havia `updated_at` nem trilha (F6) e a LGPD gravava `''` (F13). Isso inviabiliza taxa de cancelamento e demanda real no Power BI.
+- **Decisão:** (2.1) Colunas `status` (`active`/`cancelled`), `cancelled_at`, `cancelled_by` com CHECK de consistência; as duas UNIQUE viraram índices únicos parciais `WHERE status = 'active'`, mantendo os nomes antigos (assim `uniqueViolationKind()` segue válido). (2.2) `deleteReservation` virou `cancelReservation` (UPDATE só em reservas ativas); `getReservationDaySummary`, `assertSlotAndApartmentFree` e `getReservationsForDate` filtram `status = 'active'`. (2.3) Balcão grava `guest_checkout_date = NULL`; `validateStayAndSlot` aceita `null` e pula só a checagem de check-out. (2.4) `updated_at` via trigger e tabela `reservation_events` (`created`, `updated`, `cancelled`, `anonymized`) alimentada por trigger, com histórico retroativo de `created`; os eventos guardam só o NOME dos campos alterados, nunca nome/WhatsApp/observações. (2.5) Coluna `anonymized`; o job grava `NULL` em nome e WhatsApp; linhas já anonimizadas foram convertidas.
+- **O que foi feito:** migrations `20261108100000_reservations_soft_delete.sql`, `20261108110000_lgpd_anonymize_null.sql` e `20261108120000_reservations_audit.sql` (e `setup_supabase_cloud.sql`); `src/app/actions/reservations.ts`, `src/lib/reservation-slot-validation.ts`, `src/lib/reservations.ts`, `src/app/recepcao/reception-dashboard.tsx`.
+- **Validação:** 80 testes unitários, ESLint, `tsc` aprovados. Migrations aplicadas em um PostgreSQL 16 local sobre dados legados (incluindo linhas já anonimizadas): conflito de slot e de apartamento entre ativas, liberação após cancelar, CHECK de consistência, eventos corretos e job LGPD com `NULL`. Esse teste achou e corrigiu um bug no trigger (concatenação de array) antes da entrega. `pg_cron` foi simulado; o teste de integração novo (TESTE 3) foi escrito mas NÃO executado (exige Supabase local).
+- **Impactos e riscos:** A ordem importa: o código novo consulta `status`; publicá-lo antes das migrations quebra a recepção. Sem rollback automático: reverter exige apagar colunas e recriar as UNIQUE. A coluna `notes` (observações livres) pode conter dados pessoais e continua fora da anonimização. Eventos `updated` assumem `actor = 'reception'` (única origem de edições hoje). Cancelamentos antigos já foram perdidos e não podem ser reconstruídos.
+- **Não fazer / evitar regressão:** Não voltar a apagar reservas; não esquecer `status = 'active'` em qualquer nova consulta de ocupação; não gravar PII em `reservation_events`; não renomear os índices únicos sem atualizar `uniqueViolationKind()`.
+- **Ordem de publicação:** 1) aplicar as 3 migrations no Supabase, na ordem do nome; 2) publicar o código.
+- **Aplicado em produção:** 08/11/2026, projeto Supabase `valle-dincanto-piscina`, na ordem `login_attempts` (Fase 1), `reservations_soft_delete`, `lgpd_anonymize_null`, `reservations_audit` e `fix_function_search_path` (funções com `search_path` vazio, por aviso do verificador de segurança). Conferido no banco real: 2 reservas ativas, 2 anonimizadas com `NULL`, 2 eventos históricos, índices parciais, triggers e job LGPD novo; teste ponta a ponta revertido por rollback sem deixar dados. O histórico (`supabase_migrations.schema_migrations`) foi alinhado aos arquivos do repositório: as 5 versões aplicadas pelo painel foram renomeadas para as versões dos arquivos e as 7 migrations antigas, feitas à mão, foram registradas como aplicadas (equivale a `supabase migration repair --status applied`). Com isso há 12 registros no banco e 12 arquivos no repositório depois do merge dos PRs #4 e #5, e `supabase db push` não deve tentar reaplicar nada. Correção de `search_path` virou o arquivo `20261108130000_fix_function_search_path.sql`.
+- **Pendências:** Publicar o código (PRs #4 e #5) com `SESSION_SECRET` na Vercel; Fase 3 (camada Power BI); decidir se `notes` entra na anonimização.
+- **Referências:** `REVISAO_TECNICA.md` (F2, F3, F6, F13), `ROADMAP_CORRECOES.md`.
+
+### 2026-11-08 — Fase 1 do roadmap: segurança da recepção
+
+- **Status:** Concluído (PR #4 mergeado em 08/11/2026; migration `login_attempts` aplicada; `SESSION_SECRET` cadastrada na Vercel; falta confirmar o login no site no ar)
+- **Área:** Autenticação, banco de dados e middleware
+- **Pedido:** Executar a Fase 1 do `ROADMAP_CORRECOES.md` (itens 1.1, 1.2 e 1.3).
+- **Por que foi pedido:** A revisão técnica (F1, F4, F10, F11) mostrou que qualquer pessoa obtinha acesso à recepção.
+- **Problema observado:** O cookie `reception_auth=1` não tinha assinatura nem validade no servidor; o login não limitava tentativas; o middleware podia ficar preso na consulta ao Supabase.
+- **Causa:** A autorização era `cookie === "1"`; sem rate limit; `fetch` sem timeout.
+- **Decisão:** (1.1) Cookie `<expiraEmMs>.<HMAC-SHA256>` validado com `timingSafeEqual` e expiração conferida no servidor (12h). Exige `SESSION_SECRET` com 32+ caracteres; sem ele, o login é recusado. (1.2) Tabela `login_attempts` com hash HMAC do IP (sem IP em texto puro); 5 falhas em 15 minutos bloqueiam, inclusive com a senha certa; senha correta zera as falhas; registros com mais de 1 dia são apagados. Se o banco não responder, o login falha fechado. (1.3) `AbortSignal.timeout(5000)` no middleware; estouro = token não validado. Senha comparada em tempo constante.
+- **O que foi feito:** `src/lib/reception-session.ts`, `src/lib/login-rate-limit.ts`, `src/lib/reception-auth.ts`, `loginReception`/`logoutReception` em `src/app/actions/reservations.ts`, `src/middleware.ts`, migration `20261108000000_login_attempts.sql` (e `setup_supabase_cloud.sql`), `.env.template`.
+- **Resultado:** `reception_auth=1` passa a ser rejeitado; a 6ª tentativa errada em 15 min é bloqueada com mensagem clara.
+- **Validação:** 88 testes unitários (15 novos: assinatura, adulteração, expiração, segredo fraco, rate limit e ação de login), ESLint, `tsc` e `next build` aprovados. Migration e login real não testados contra um Supabase.
+- **Impactos e riscos:** Ao publicar, todas as sessões atuais da recepção caem e será preciso entrar de novo. O limite é por IP: atrás de NAT compartilhado (rede do hotel), 5 erros bloqueiam todos os dispositivos da rede por 15 min; trocar de IP contorna o limite por origem. Não há limite global.
+- **Não fazer / evitar regressão:** Não voltar a aceitar valor fixo no cookie; não gravar IP em texto puro; não usar `SESSION_SECRET` curto; não desativar a falha fechada do rate limit.
+- **Ordem de publicação:** 1) cadastrar `SESSION_SECRET` na Vercel (`openssl rand -hex 32`); 2) aplicar a migration no Supabase; 3) publicar o código. Publicar o código antes da migration trava o login.
+- **Pendências:** Itens acima; Fase 2 (soft delete).
+- **Referências:** `REVISAO_TECNICA.md` §1.1–1.4, `ROADMAP_CORRECOES.md`.
+
 ### 2026-11-08 — README alinhado ao estado real do projeto
 
 - **Status:** Concluído
@@ -56,7 +90,7 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Pedido:** Ler o projeto e atualizá-lo no GitHub.
 - **Problema observado:** O README prometia itens inexistentes: autenticação Firebase, 6+ tabelas, quatro views de analytics (`v_daily_occupancy` etc.), notificações WhatsApp automáticas, "40+ testes" e CI/CD como pendência. Também apontava para `ia.navegacao.md` (o arquivo real é `ia.navegation.md`) e não citava a falha de segurança do cookie da recepção.
 - **Causa:** Texto escrito antes da implementação e não revisado depois.
-- **Decisão:** Documentar apenas o que existe no código e remeter o restante ao `ROADMAP_CORRECOES.md`. Nenhuma mudança de código.
+- **Decisão:** Documentar apenas o que existe no código e remeter o restante ao `ROADMAP_CORRECOES.md`. Nenhuma mudança de código. Antes do merge, o README foi atualizado de novo para refletir as Fases 1 e 2 já mergeadas (segurança da recepção, 4 tabelas, 95 testes, cancelamento sem apagar).
 - **O que foi feito:** Reescritas as seções de funcionalidades, stack, dados & análise, segurança, documentação e próximos passos do `README.md`.
 - **Validação:** 73 testes unitários, ESLint e `tsc --noEmit` aprovados antes da edição; testes de integração e E2E não executados (dependem de Supabase/navegador).
 - **Impactos e riscos:** Nenhum em runtime. O README agora declara como pendentes as falhas F1–F3 da revisão técnica; continuam sem correção.

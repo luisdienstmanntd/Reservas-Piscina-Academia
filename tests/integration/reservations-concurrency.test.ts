@@ -181,4 +181,67 @@ describe("reservas — concorrência (Supabase local)", () => {
       ).toBe(true);
     }
   });
+
+  it("TESTE 3: cancelar mantém a linha, libera slot/apartamento e permite reservar de novo", async () => {
+    if (!supabase) throw new Error("Cliente Supabase não inicializado.");
+    const base = {
+      facility: "pool",
+      reservation_date: FIXTURE_DATE,
+      slot_start: "16:00:00",
+      apartment_number: "101",
+      guest_checkout_date: null,
+      created_by: "reception",
+    };
+
+    const first = await supabase.from("reservations").insert(base).select("id").single();
+    expect(first.error).toBeNull();
+    const firstId = first.data!.id as string;
+
+    // Enquanto ativa, outro apartamento não pega o mesmo slot.
+    const clash = await supabase
+      .from("reservations")
+      .insert({ ...base, apartment_number: "102" });
+    expect(isUniqueViolation(clash.error)).toBe(true);
+
+    const cancel = await supabase
+      .from("reservations")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: "reception",
+      })
+      .eq("id", firstId)
+      .eq("status", "active")
+      .select("id")
+      .maybeSingle();
+    expect(cancel.error).toBeNull();
+    expect(cancel.data?.id).toBe(firstId);
+
+    // Slot e apartamento voltam a ficar livres.
+    const again = await supabase.from("reservations").insert({ ...base }).select("id").single();
+    expect(again.error).toBeNull();
+    expect(again.data!.id).not.toBe(firstId);
+
+    // A linha cancelada continua no banco, com histórico.
+    const kept = await supabase
+      .from("reservations")
+      .select("status, cancelled_at, cancelled_by, guest_checkout_date")
+      .eq("id", firstId)
+      .single();
+    expect(kept.data).toMatchObject({
+      status: "cancelled",
+      cancelled_by: "reception",
+      guest_checkout_date: null,
+    });
+    expect(kept.data!.cancelled_at).toBeTruthy();
+
+    const events = await supabase
+      .from("reservation_events")
+      .select("event_type")
+      .eq("reservation_id", firstId);
+    expect((events.data ?? []).map((e) => e.event_type).sort()).toEqual([
+      "cancelled",
+      "created",
+    ]);
+  });
 });

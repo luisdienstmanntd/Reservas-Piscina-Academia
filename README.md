@@ -143,7 +143,7 @@ npm install
 
 # 3. Configurar env
 cp .env.template .env.local
-# Editar .env.local com suas credenciais Supabase
+# Editar .env.local com suas credenciais Supabase, RECEPTION_PASSWORD e SESSION_SECRET (32+ caracteres)
 
 # 4. Rodar localmente
 npm run dev
@@ -183,22 +183,25 @@ nem altera reservas.
 ## 📊 Dados & Análise
 
 ### Estado atual
-- **Tabelas:** 2 (`reservations`, `active_stays`), em 7 migrations (`supabase/migrations/`).
-- **Testes:** 73 testes unitários (Vitest) + integração de concorrência + E2E (Playwright).
+- **Tabelas:** 4 (`reservations`, `active_stays`, `reservation_events`, `login_attempts`), em 12 migrations (`supabase/migrations/`).
+- **Testes:** 95 testes unitários (Vitest) + integração de concorrência e cancelamento + E2E (Playwright).
+- **Histórico preservado:** cancelar uma reserva só a marca como `cancelled` (com data e autor); a linha permanece no banco.
+- **Auditoria:** `updated_at` em toda reserva e a tabela `reservation_events` (criada, editada, cancelada, anonimizada), sem dados pessoais.
 - **Camada analítica:** ainda **não implementada** (sem views, sem schema `analytics`, sem role de leitura para BI). Está planejada na Fase 3 do [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md).
 
-### Limitações conhecidas (afetam análises)
-- Cancelar uma reserva apaga a linha (DELETE físico): não há histórico de cancelamentos.
-- Reservas de balcão gravam `guest_checkout_date` igual à data da reserva (valor artificial).
-- Não há vínculo reserva ↔ estadia nem `updated_at`/auditoria.
+### Limitações conhecidas
+- Sem vínculo reserva ↔ estadia (`stay_id`) para medir a conversão do link.
+- Reservas de balcão não têm data de check-out (`NULL`), por não ser informada.
+- As observações livres (`notes`) podem conter dados pessoais e não entram na anonimização LGPD.
 
-Detalhes e plano de correção em [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md).
+Detalhes e plano em [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md).
 
 ### Exemplo de consulta (já possível hoje)
 ```sql
 SELECT facility, reservation_date, COUNT(*) AS total
 FROM reservations
-WHERE reservation_date > CURRENT_DATE - INTERVAL '30 days'
+WHERE status = 'active'
+  AND reservation_date > CURRENT_DATE - INTERVAL '30 days'
 GROUP BY 1, 2
 ORDER BY 2 DESC;
 ```
@@ -247,10 +250,10 @@ Veja `supabase/migrations/` para o histórico completo de schema.
 ## 🔐 Segurança & Conformidade
 
 - ✅ **Banco:** RLS ativo; acesso apenas via Server Actions com service role
-- ✅ **Dados:** LGPD (anonimização automática diária via `pg_cron`)
+- ✅ **Dados:** LGPD (anonimização automática diária via `pg_cron`, grava `NULL` e marca `anonymized`)
 - ✅ **Validação:** Zod (server-side) + constraints no banco
 - ✅ **HTTPS:** Vercel (automático)
-- ⚠️ **Recepção:** login por senha com cookie **não assinado** e sem limite de tentativas — correção prioritária (Fase 1 do [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md))
+- ✅ **Recepção:** senha + cookie assinado (HMAC, validade de 12h) e limite de 5 tentativas erradas a cada 15 min por IP (exige `SESSION_SECRET`)
 
 ---
 
@@ -258,7 +261,7 @@ Veja `supabase/migrations/` para o histórico completo de schema.
 
 ### Desenvolvimento (ver [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md))
 - [ ] Fase 1 — Segurança: cookie assinado, rate limit no login, timeout no middleware
-- [ ] Fase 2 — Soft delete de reservas, checkout honesto no balcão, `updated_at`/auditoria
+- [x] Fase 2 — Cancelamento sem apagar, checkout honesto no balcão, `updated_at`/auditoria, LGPD com `NULL`
 - [ ] Fase 4 — Bloquear horário já passado, datas por string, restringir consulta do hóspede
 - [ ] Aprofundar testes E2E ([`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md))
 - [x] Keep-alive do Supabase via GitHub Actions
@@ -297,4 +300,4 @@ MIT — Use livremente
 
 **Status:** ✅ Produção | 📚 Aprendizado contínuo | 🎓 ADS/DevClub
 
-*Último update: Novembro 2026*
+*Último update: Novembro 2026 (Fases 1 e 2 do roadmap concluídas)*

@@ -31,16 +31,17 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 RECEPTION_PASSWORD=sua-senha-recepcao
+SESSION_SECRET=gere-com-openssl-rand-hex-32
 ```
 
 Reinicie o servidor de desenvolvimento (`npm run dev`) após alterar `.env.local`.
 
-- **Hóspede:** aplique também a migração `20260410120000_active_stays.sql` (ou use `setup_supabase_cloud.sql` completo) para a tabela `active_stays` usada pelos tokens de acesso.
+- **Hóspede:** aplique também a migração `20260410120000_active_stays.sql` e, para o limite de tentativas de login, `20261108000000_login_attempts.sql` (ou use `setup_supabase_cloud.sql` completo) para a tabela `active_stays` usada pelos tokens de acesso.
 
 ## 5. Deploy na Vercel
 
 1. Conecte o repositório na Vercel.
-2. Em **Settings → Environment Variables**, adicione as mesmas variáveis (incluindo `SUPABASE_SERVICE_ROLE_KEY` como **Secret** e `RECEPTION_PASSWORD`).
+2. Em **Settings → Environment Variables**, adicione as mesmas variáveis (incluindo `SUPABASE_SERVICE_ROLE_KEY` como **Secret** `RECEPTION_PASSWORD` e `SESSION_SECRET`, com 32+ caracteres).
 3. Faça um novo deploy.
 
 O middleware na Vercel usa `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para validar tokens na REST API: pedidos a **`/?token=…`** (definição do cookie e redirect para a home) e a **`/hospede/*`** (cookie obrigatório).
@@ -69,3 +70,12 @@ O primeiro segundo `INSERT` viola `reservations_date_slot_unique`; o segundo par
 - Não importe `SUPABASE_SERVICE_ROLE_KEY` em componentes com `"use client"`.
 
 Quando o schema estiver aplicado e o `.env.local` preenchido, o código da aplicação pode usar o cliente admin do Supabase nas server actions para criar/listar/cancelar reservas.
+
+## Migrations da Fase 2 (cancelamento sem apagar, auditoria, LGPD)
+
+Aplique **antes** de publicar o código que as usa, na ordem do nome:
+
+1. `20261108100000_reservations_soft_delete.sql`
+2. `20261108110000_lgpd_anonymize_null.sql` (requer `pg_cron`, já usado pela migration LGPD anterior)
+3. `20261108120000_reservations_audit.sql`
+
