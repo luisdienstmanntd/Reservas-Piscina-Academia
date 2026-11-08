@@ -34,6 +34,8 @@ Resultado: Processo automatizado + dados estruturados + aprendizado prático.
 | **Validação** | Zod | Type inference |
 | **Deploy** | Vercel | Zero config Next.js |
 | **Testes** | Vitest, Playwright | Confiança no código |
+| **Telefones** | libphonenumber-js | Valida BR (DDD) e internacionais (E.164) |
+| **CI** | GitHub Actions | Keep-alive do Supabase (plano Free) |
 
 ---
 
@@ -76,8 +78,8 @@ Reservas-Piscina-Academia/
 
 ### Sistema
 - ✅ Validação de conflitos (horário/lotação)
-- ✅ Autenticação (Firebase/Supabase)
-- ✅ Notificações (WhatsApp)
+- ✅ Acesso do hóspede por link com token de estadia; recepção com senha
+- ✅ Mensagens de WhatsApp via links `wa.me` (envio manual pela recepção, sem API)
 - ✅ Conformidade LGPD
 
 ---
@@ -141,7 +143,7 @@ npm install
 
 # 3. Configurar env
 cp .env.template .env.local
-# Editar .env.local com suas credenciais Supabase
+# Editar .env.local com suas credenciais Supabase, RECEPTION_PASSWORD e SESSION_SECRET (32+ caracteres)
 
 # 4. Rodar localmente
 npm run dev
@@ -180,43 +182,32 @@ nem altera reservas.
 
 ## 📊 Dados & Análise
 
-### Estrutura para Análise
-- **Tabelas:** 6+ (reservations, stays, users, facilities, logs)
-- **Queries:** 15+ operações CRUD + **queries analytics**
-- **Validações:** 20+ Zod schemas
-- **Testes:** 40+ casos
-- **Logs estruturados:** Todas ações registradas
+### Estado atual
+- **Tabelas:** 4 (`reservations`, `active_stays`, `reservation_events`, `login_attempts`), em 12 migrations (`supabase/migrations/`).
+- **Testes:** 95 testes unitários (Vitest) + integração de concorrência e cancelamento + E2E (Playwright).
+- **Histórico preservado:** cancelar uma reserva só a marca como `cancelled` (com data e autor); a linha permanece no banco.
+- **Auditoria:** `updated_at` em toda reserva e a tabela `reservation_events` (criada, editada, cancelada, anonimizada), sem dados pessoais.
+- **Camada analítica:** ainda **não implementada** (sem views, sem schema `analytics`, sem role de leitura para BI). Está planejada na Fase 3 do [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md).
 
-### Recursos para Dados
+### Limitações conhecidas
+- Sem vínculo reserva ↔ estadia (`stay_id`) para medir a conversão do link.
+- Reservas de balcão não têm data de check-out (`NULL`), por não ser informada.
+- As observações livres (`notes`) podem conter dados pessoais e não entram na anonimização LGPD.
+
+Detalhes e plano em [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md).
+
+### Exemplo de consulta (já possível hoje)
 ```sql
--- Exemplo: Análise de ocupação por horário
-SELECT 
-  date_trunc('hour', reservation_date) as hour,
-  facility,
-  COUNT(*) as total_reservations,
-  COUNT(DISTINCT user_id) as unique_guests
+SELECT facility, reservation_date, COUNT(*) AS total
 FROM reservations
-WHERE reservation_date > NOW() - INTERVAL '30 days'
+WHERE status = 'active'
+  AND reservation_date > CURRENT_DATE - INTERVAL '30 days'
 GROUP BY 1, 2
-ORDER BY 1 DESC;
-
--- Views criadas para analytics
-- v_daily_occupancy
-- v_guest_behavior
-- v_facility_performance
-- v_time_series_bookings
+ORDER BY 2 DESC;
 ```
 
-### Dados Disponíveis para Análise
-- ✅ Horários mais procurados (ocupação)
-- ✅ Padrões de hóspede (quem/quando)
-- ✅ Taxa ocupação por facility
-- ✅ Cancelamentos (pattern analysis)
-- ✅ Previsão de demanda
-- ✅ Relatório de capacidade
-
 ### SQL Migrations
-Veja `supabase/migrations/` para histórico completo de schema (7+ migrations com evolução de dados).
+Veja `supabase/migrations/` para o histórico completo de schema.
 
 ---
 
@@ -248,36 +239,38 @@ Veja `supabase/migrations/` para histórico completo de schema (7+ migrations co
 
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — Como contribuir
 - [`docs/SUPABASE_SETUP.md`](./docs/SUPABASE_SETUP.md) — Database
-- [`ia.navegacao.md`](./ia.navegacao.md) — Navegação do código
+- [`ia.navegation.md`](./ia.navegation.md) — Navegação do código
 - [`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md) — Testes
+- [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md) — Falhas conhecidas e plano de correção
+- [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md) — Revisão técnica completa
+- [`productlog.md`](./productlog.md) — Histórico de decisões do produto
 
 ---
 
 ## 🔐 Segurança & Conformidade
 
-- ✅ **Auth:** Supabase + Row Level Security
-- ✅ **Dados:** LGPD (anonimização automática)
-- ✅ **Validação:** Zod (server-side)
+- ✅ **Banco:** RLS ativo; acesso apenas via Server Actions com service role
+- ✅ **Dados:** LGPD (anonimização automática diária via `pg_cron`, grava `NULL` e marca `anonymized`)
+- ✅ **Validação:** Zod (server-side) + constraints no banco
 - ✅ **HTTPS:** Vercel (automático)
-- ✅ **Variáveis:** Env protegidas
+- ✅ **Recepção:** senha + cookie assinado (HMAC, validade de 12h) e limite de 5 tentativas erradas a cada 15 min por IP (exige `SESSION_SECRET`)
 
 ---
 
 ## 📈 Próximos Passos (Dev + Dados)
 
-### Desenvolvimento
-- [ ] Aprofundar testes E2E (Fase 4)
-- [ ] CI/CD (GitHub Actions)
-- [ ] Migração PostgreSQL (Neon/Supabase)
+### Desenvolvimento (ver [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md))
+- [x] Fase 1 — Segurança: cookie assinado, rate limit no login, timeout no middleware
+- [x] Fase 2 — Cancelamento sem apagar, checkout honesto no balcão, `updated_at`/auditoria, LGPD com `NULL`
+- [ ] Fase 4 — Bloquear horário já passado, datas por string, restringir consulta do hóspede
+- [ ] Aprofundar testes E2E ([`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md))
+- [x] Keep-alive do Supabase via GitHub Actions
 
-### Dados & Análise 🔥
-- [ ] Dashboard Power BI (ocupação, padrões)
+### Dados & Análise 🔥 (Fase 3 do roadmap)
+- [ ] Schema `analytics` + view `vw_reservas` sem dados pessoais
+- [ ] Role somente-leitura para Power BI
+- [ ] Dashboard Power BI (ocupação, cancelamentos, origem, antecedência)
 - [ ] Scripts Python para análise exploratória
-- [ ] Previsão de demanda (ML basics)
-- [ ] API de dados (export estruturado)
-- [ ] Análise de comportamento de hóspede
-- [ ] Relatório semanal automatizado
-- [ ] Integração com ferramentas BI
 
 ### Resultados
 - Sistema funcionando + **dados reais analisáveis**
@@ -307,4 +300,4 @@ MIT — Use livremente
 
 **Status:** ✅ Produção | 📚 Aprendizado contínuo | 🎓 ADS/DevClub
 
-*Último update: Julho 2026*
+*Último update: Novembro 2026 (Fases 1 e 2 do roadmap concluídas)*
