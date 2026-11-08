@@ -52,7 +52,8 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 
 - **Hoje:** `hotelCalendarDate()` em `src/lib/hotel-time.ts` (timezone **America/Sao_Paulo**).
 - **`validateStayAndSlot`:** data da reserva ≥ hoje; data da reserva ≤ `guestCheckoutDate`; slot ∈ lista permitida da instalação.
-- **Balcão:** o formulário não pede check-out; a action define `guest_checkout_date = reservationDate` só para satisfazer a validação acima.
+- **Balcão:** o formulário não pede check-out; a action grava `guest_checkout_date = NULL` e `validateStayAndSlot` pula só a checagem de check-out.
+- **Cancelamento:** `cancelReservation` faz UPDATE (`status = 'cancelled'`), nunca DELETE. Toda consulta de ocupação deve filtrar `status = 'active'`. Auditoria em `reservation_events` (sem PII).
 
 ### 3.5 Impossibilidade de conflito (horário + apto)
 

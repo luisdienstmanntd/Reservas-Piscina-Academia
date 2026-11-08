@@ -69,3 +69,12 @@ O primeiro segundo `INSERT` viola `reservations_date_slot_unique`; o segundo par
 - Não importe `SUPABASE_SERVICE_ROLE_KEY` em componentes com `"use client"`.
 
 Quando o schema estiver aplicado e o `.env.local` preenchido, o código da aplicação pode usar o cliente admin do Supabase nas server actions para criar/listar/cancelar reservas.
+
+## Migrations da Fase 2 (cancelamento sem apagar, auditoria, LGPD)
+
+Aplique **antes** de publicar o código que as usa, na ordem do nome:
+
+1. `20261108100000_reservations_soft_delete.sql`
+2. `20261108110000_lgpd_anonymize_null.sql` (requer `pg_cron`, já usado pela migration LGPD anterior)
+3. `20261108120000_reservations_audit.sql`
+

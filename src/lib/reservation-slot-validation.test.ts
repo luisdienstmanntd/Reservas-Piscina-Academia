@@ -37,4 +37,16 @@ describe("validateStayAndSlot", () => {
       validateStayAndSlot("gym", "2026-04-18", "2026-04-20", "3:0:0", today)
     ).toBeNull();
   });
+
+  it("sem check-out (balcão) pula a checagem de check-out, mas mantém as demais", () => {
+    expect(
+      validateStayAndSlot("pool", "2026-12-31", null, "14:00:00", today)
+    ).toBeNull();
+    expect(
+      validateStayAndSlot("pool", "2026-04-15", null, "14:00:00", today)
+    ).toBe("Não é possível reservar datas passadas.");
+    expect(
+      validateStayAndSlot("pool", "2026-04-18", null, "08:00:00", today)
+    ).toBe("Horário inválido.");
+  });
 });

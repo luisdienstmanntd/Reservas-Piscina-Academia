@@ -10,7 +10,7 @@ import { Eye, EyeOff, LogOut, Trash2 } from "lucide-react";
 
 import {
   createReceptionReservation,
-  deleteReservation,
+  cancelReservation,
   getReservationDaySummary,
   getReservationsForDate,
   loginReception,
@@ -431,7 +431,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     if (!pendingDelete) return;
     setDeleting(true);
     try {
-      const r = await deleteReservation(pendingDelete);
+      const r = await cancelReservation(pendingDelete);
       setPendingDelete(null);
       if (!r.ok) {
         toast.error(r.error);

@@ -49,6 +49,21 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos
+
+- **Status:** Concluído (publicação pendente: aplicar as 3 migrations ANTES do deploy)
+- **Área:** Reservas, banco de dados, LGPD e auditoria
+- **Pedido:** Executar a Fase 2 do `ROADMAP_CORRECOES.md` (itens 2.1 a 2.5).
+- **Por que foi pedido:** Dado apagado não volta: cada cancelamento destruía a linha (F2), reservas de balcão gravavam checkout falso (F3), não havia `updated_at` nem trilha (F6) e a LGPD gravava `''` (F13). Isso inviabiliza taxa de cancelamento e demanda real no Power BI.
+- **Decisão:** (2.1) Colunas `status` (`active`/`cancelled`), `cancelled_at`, `cancelled_by` com CHECK de consistência; as duas UNIQUE viraram índices únicos parciais `WHERE status = 'active'`, mantendo os nomes antigos (assim `uniqueViolationKind()` segue válido). (2.2) `deleteReservation` virou `cancelReservation` (UPDATE só em reservas ativas); `getReservationDaySummary`, `assertSlotAndApartmentFree` e `getReservationsForDate` filtram `status = 'active'`. (2.3) Balcão grava `guest_checkout_date = NULL`; `validateStayAndSlot` aceita `null` e pula só a checagem de check-out. (2.4) `updated_at` via trigger e tabela `reservation_events` (`created`, `updated`, `cancelled`, `anonymized`) alimentada por trigger, com histórico retroativo de `created`; os eventos guardam só o NOME dos campos alterados, nunca nome/WhatsApp/observações. (2.5) Coluna `anonymized`; o job grava `NULL` em nome e WhatsApp; linhas já anonimizadas foram convertidas.
+- **O que foi feito:** migrations `20261108100000_reservations_soft_delete.sql`, `20261108110000_lgpd_anonymize_null.sql` e `20261108120000_reservations_audit.sql` (e `setup_supabase_cloud.sql`); `src/app/actions/reservations.ts`, `src/lib/reservation-slot-validation.ts`, `src/lib/reservations.ts`, `src/app/recepcao/reception-dashboard.tsx`.
+- **Validação:** 80 testes unitários, ESLint, `tsc` aprovados. Migrations aplicadas em um PostgreSQL 16 local sobre dados legados (incluindo linhas já anonimizadas): conflito de slot e de apartamento entre ativas, liberação após cancelar, CHECK de consistência, eventos corretos e job LGPD com `NULL`. Esse teste achou e corrigiu um bug no trigger (concatenação de array) antes da entrega. `pg_cron` foi simulado; o teste de integração novo (TESTE 3) foi escrito mas NÃO executado (exige Supabase local).
+- **Impactos e riscos:** A ordem importa: o código novo consulta `status`; publicá-lo antes das migrations quebra a recepção. Sem rollback automático: reverter exige apagar colunas e recriar as UNIQUE. A coluna `notes` (observações livres) pode conter dados pessoais e continua fora da anonimização. Eventos `updated` assumem `actor = 'reception'` (única origem de edições hoje). Cancelamentos antigos já foram perdidos e não podem ser reconstruídos.
+- **Não fazer / evitar regressão:** Não voltar a apagar reservas; não esquecer `status = 'active'` em qualquer nova consulta de ocupação; não gravar PII em `reservation_events`; não renomear os índices únicos sem atualizar `uniqueViolationKind()`.
+- **Ordem de publicação:** 1) aplicar as 3 migrations no Supabase, na ordem do nome; 2) publicar o código.
+- **Pendências:** Fase 3 (camada Power BI) agora tem dados confiáveis para ler; decidir se `notes` entra na anonimização.
+- **Referências:** `REVISAO_TECNICA.md` (F2, F3, F6, F13), `ROADMAP_CORRECOES.md`.
+
 ### 2026-09-30 — Texto dos horários da piscina
 
 - **Status:** Concluído (publicação pendente)
