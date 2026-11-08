@@ -49,6 +49,24 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-08 — Fase 1 do roadmap: segurança da recepção
+
+- **Status:** Concluído (publicação pendente: exige `SESSION_SECRET` e a migration)
+- **Área:** Autenticação, banco de dados e middleware
+- **Pedido:** Executar a Fase 1 do `ROADMAP_CORRECOES.md` (itens 1.1, 1.2 e 1.3).
+- **Por que foi pedido:** A revisão técnica (F1, F4, F10, F11) mostrou que qualquer pessoa obtinha acesso à recepção.
+- **Problema observado:** O cookie `reception_auth=1` não tinha assinatura nem validade no servidor; o login não limitava tentativas; o middleware podia ficar preso na consulta ao Supabase.
+- **Causa:** A autorização era `cookie === "1"`; sem rate limit; `fetch` sem timeout.
+- **Decisão:** (1.1) Cookie `<expiraEmMs>.<HMAC-SHA256>` validado com `timingSafeEqual` e expiração conferida no servidor (12h). Exige `SESSION_SECRET` com 32+ caracteres; sem ele, o login é recusado. (1.2) Tabela `login_attempts` com hash HMAC do IP (sem IP em texto puro); 5 falhas em 15 minutos bloqueiam, inclusive com a senha certa; senha correta zera as falhas; registros com mais de 1 dia são apagados. Se o banco não responder, o login falha fechado. (1.3) `AbortSignal.timeout(5000)` no middleware; estouro = token não validado. Senha comparada em tempo constante.
+- **O que foi feito:** `src/lib/reception-session.ts`, `src/lib/login-rate-limit.ts`, `src/lib/reception-auth.ts`, `loginReception`/`logoutReception` em `src/app/actions/reservations.ts`, `src/middleware.ts`, migration `20261108000000_login_attempts.sql` (e `setup_supabase_cloud.sql`), `.env.template`.
+- **Resultado:** `reception_auth=1` passa a ser rejeitado; a 6ª tentativa errada em 15 min é bloqueada com mensagem clara.
+- **Validação:** 88 testes unitários (15 novos: assinatura, adulteração, expiração, segredo fraco, rate limit e ação de login), ESLint, `tsc` e `next build` aprovados. Migration e login real não testados contra um Supabase.
+- **Impactos e riscos:** Ao publicar, todas as sessões atuais da recepção caem e será preciso entrar de novo. O limite é por IP: atrás de NAT compartilhado (rede do hotel), 5 erros bloqueiam todos os dispositivos da rede por 15 min; trocar de IP contorna o limite por origem. Não há limite global.
+- **Não fazer / evitar regressão:** Não voltar a aceitar valor fixo no cookie; não gravar IP em texto puro; não usar `SESSION_SECRET` curto; não desativar a falha fechada do rate limit.
+- **Ordem de publicação:** 1) cadastrar `SESSION_SECRET` na Vercel (`openssl rand -hex 32`); 2) aplicar a migration no Supabase; 3) publicar o código. Publicar o código antes da migration trava o login.
+- **Pendências:** Itens acima; Fase 2 (soft delete).
+- **Referências:** `REVISAO_TECNICA.md` §1.1–1.4, `ROADMAP_CORRECOES.md`.
+
 ### 2026-09-30 — Texto dos horários da piscina
 
 - **Status:** Concluído (publicação pendente)
