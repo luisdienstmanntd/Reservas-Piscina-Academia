@@ -10,7 +10,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Objetivo:** Reservas de **uso exclusivo** (slots de **1 hora**) na **piscina** e na **academia**, com limite **1 reserva por apartamento por dia** **por instalação** (`pool` vs `gym`), e **1 reserva por horário** por instalação/dia.
 - **Público:**
   - **Hóspede:** link com **token de estadia** (`active_stays`, cookie `guest_token`); apartamento e check-out vêm do **servidor**; **WhatsApp obrigatório** + nome opcional + calendário da estadia + grid.
-  - **Recepção:** senha (`RECEPTION_PASSWORD`) + cookie HTTP-only `reception_auth`; **grade** ligada ao seletor “Dia (grade)” (abre em **hoje** ao login; criar reserva noutra data **não** altera esse dia). Formulário **balcão** (apto, data da reserva, horário, WhatsApp opcional, observações).
+  - **Recepção:** senha (`RECEPTION_PASSWORD`) + cookie HTTP-only `reception_auth` **assinado com HMAC** (`SESSION_SECRET`, validade 12h, `src/lib/reception-session.ts`); login limitado a 5 falhas/15 min por IP (`login_attempts`); **grade** ligada ao seletor “Dia (grade)” (abre em **hoje** ao login; criar reserva noutra data **não** altera esse dia). Formulário **balcão** (apto, data da reserva, horário, WhatsApp opcional, observações).
 
 ---
 

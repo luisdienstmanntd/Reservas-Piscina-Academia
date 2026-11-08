@@ -61,20 +61,20 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 ### Fase 1 — Segurança 🔒 *(urgente)*
 
-- [ ] **1.1 — Cookie da recepção assinado** *(resolve F1 + F10)*
+- [x] **1.1 — Cookie da recepção assinado** *(resolve F1 + F10)*
   - Criar `SESSION_SECRET` no `.env` (e na Vercel).
   - Valor do cookie: HMAC-SHA256 com expiração embutida; validar assinatura + expiração em `readReceptionAuthed()`.
   - ✅ Pronto quando: cookie manual `reception_auth=1` é rejeitado; sessão expira após 12h; login normal continua funcionando.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
-- [ ] **1.2 — Rate limit no login** *(resolve F4)*
+- [x] **1.2 — Rate limit no login** *(resolve F4)*
   - Tabela `login_attempts` no Supabase; máx. 5 falhas / 15 min; registrar tentativas.
   - ✅ Pronto quando: 6ª tentativa errada em 15 min é bloqueada com mensagem clara; teste cobre o bloqueio.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
-- [ ] **1.3 — Timeout no middleware** *(resolve F11)*
+- [x] **1.3 — Timeout no middleware** *(resolve F11)*
   - `AbortSignal.timeout(5000)` no `fetchStayFromSupabase`; falha = tratar como não validado.
-  - Concluído em: ____
+  - Concluído em: 08/11/2026
 
 ### Fase 2 — Estancar perda de dados 🗄️ *(antes de acumular mais histórico)*
 
@@ -143,8 +143,8 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 | Fase | Etapas | Concluídas | Status |
 |------|--------|------------|--------|
-| 1 — Segurança | 3 | 0 | ⏳ Não iniciada |
-| 2 — Dados | 5 | 5 | ✅ Concluída (aguarda aplicar migrations e deploy) |
+| 1 — Segurança | 3 | 3 | ✅ Concluída (mergeada; falta confirmar o login em produção) |
+| 2 — Dados | 5 | 5 | ✅ Concluída (migrations aplicadas; aguarda deploy) |
 | 3 — Power BI | 4 | 0 | ⏳ Não iniciada |
 | 4 — Funcional | 3 | 0 | ⏳ Não iniciada |
 | 5 — Operação | 6 | 0 | ⏳ Não iniciada |
