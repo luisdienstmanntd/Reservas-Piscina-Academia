@@ -260,7 +260,7 @@ Veja `supabase/migrations/` para o histórico completo de schema.
 ## 📈 Próximos Passos (Dev + Dados)
 
 ### Desenvolvimento (ver [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md))
-- [ ] Fase 1 — Segurança: cookie assinado, rate limit no login, timeout no middleware
+- [x] Fase 1 — Segurança: cookie assinado, rate limit no login, timeout no middleware
 - [x] Fase 2 — Cancelamento sem apagar, checkout honesto no balcão, `updated_at`/auditoria, LGPD com `NULL`
 - [ ] Fase 4 — Bloquear horário já passado, datas por string, restringir consulta do hóspede
 - [ ] Aprofundar testes E2E ([`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md))
