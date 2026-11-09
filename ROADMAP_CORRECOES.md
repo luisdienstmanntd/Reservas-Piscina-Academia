@@ -104,16 +104,16 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 ### Fase 3 — Camada Power BI 📊
 
-- [ ] **3.1 — Vínculo reserva ↔ estadia** *(preparado: `20261108140000_reservations_stay_id.sql` + `20261108160000_cleanup_orphan_stays_cron.sql` + código; não aplicado em produção)* *(resolve F5 + F12)*
+- [ ] **3.1 — Vínculo reserva ↔ estadia** *(migrations `20261108140000` e `20261108160000` aplicadas em produção; falta o merge do código que grava `stay_id`)* *(resolve F5 + F12)*
   - `stay_id uuid REFERENCES active_stays(id)` preenchido no fluxo do hóspede.
   - Limpeza de `active_stays` órfãs com +30 dias (não apagar estadias com reservas vinculadas).
   - Concluído em: ____
 
-- [ ] **3.2 — Schema `analytics` + view `vw_reservas`** *(preparado em `20261108150000_analytics_layer.sql`, com `vw_reservas`, `vw_estadias` e `vw_eventos`; não aplicado)* *(resolve F9, parte 1)*
+- [ ] **3.2 — Schema `analytics` + view `vw_reservas`** *(`20261108150000_analytics_layer.sql` aplicada em produção, com `vw_reservas`, `vw_estadias` e `vw_eventos`)* *(resolve F9, parte 1)*
   - View sem PII (sem nome/WhatsApp/notes), com colunas derivadas: dia da semana, hora, antecedência, origem, status. SQL pronto na REVISAO_TECNICA §3.1.
   - Concluído em: ____
 
-- [ ] **3.3 — Role `powerbi_reader` + conexão** *(role criada na mesma migration, sem senha; guia em [docs/POWERBI.md](docs/POWERBI.md))* *(resolve F9, parte 2)*
+- [ ] **3.3 — Role `powerbi_reader` + conexão** *(role criada em produção, sem senha, falta defini-la; guia em [docs/POWERBI.md](docs/POWERBI.md))* *(resolve F9, parte 2)*
   - Role somente-leitura restrita ao schema `analytics`; conectar Power BI via **Session Pooler** do Supabase, modo **Import** com atualização agendada.
   - ✅ Pronto quando: Power BI carrega `vw_reservas` com a role dedicada e a role não consegue ler `public.reservations`.
   - Concluído em: ____
@@ -145,7 +145,7 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 |------|--------|------------|--------|
 | 1 — Segurança | 3 | 3 | ✅ Concluída (mergeada; falta confirmar o login em produção) |
 | 2 — Dados | 5 | 5 | ✅ Concluída (migrations aplicadas; aguarda deploy) |
-| 3 — Power BI | 4 | 0 | 🟡 Preparada (arquivos prontos e testados localmente; falta aplicar em produção, criar a senha da role e montar o relatório) |
+| 3 — Power BI | 4 | 0 | 🟡 Migrations aplicadas em produção (09/11/2026); faltam a senha da role, o merge do código e o relatório |
 | 4 — Funcional | 3 | 0 | ⏳ Não iniciada |
 | 5 — Operação | 6 | 0 | ⏳ Não iniciada |
 

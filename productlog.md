@@ -49,9 +49,25 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-09 — Grade da recepção responsiva, sem rolagem lateral
+
+- **Status:** Concluído (publicação pendente)
+- **Área:** Recepção (interface)
+- **Pedido:** A planilha de reservas quebrava em telas menores. Ela não deve ter rolagem lateral nem rolagens internas; analisar um formato que distribua e mostre o conteúdo também em telas pequenas.
+- **Problema observado:** A grade era uma `<table>` com largura mínima de 1180 px dentro de um contêiner com `overflow-x-auto`: em telas menores gerava rolagem lateral e a coluna de ações (lixeira) ficava escondida. Cada horário livre ocupava uma linha inteira com 7 traços, e havia cabeçalho duplicado ("WhatsApp" e "whatsapp").
+- **Causa:** Layout desenhado só para telas largas, com largura mínima fixa nas colunas e nos campos.
+- **Decisão:** Dois formatos conforme a largura. Telas largas (a partir de 1280 px): linha única com colunas de largura definida (horário, apto + origem, hóspede, observações, WhatsApp, mensagens, cancelar), alinhadas entre as linhas. Telas menores: cada reserva vira um cartão, com horário e lixeira na primeira linha, apto e origem na segunda, nome e WhatsApp lado a lado e observações na largura toda. Horários livres consecutivos são agrupados em uma linha só ("14h00 – 16h00 · Livre · 2 horários"; academia vazia = "Dia todo"). Nenhum contêiner com rolagem interna: o que passa da tela rola com a própria página.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx` (nova lista de reservas e linha de reserva; campos sem largura mínima/máxima), `src/components/reception-wa-actions.tsx` (botões em duas colunas no cartão, alinhados à direita na grade), `src/lib/reservation-grid.ts` (agrupamento de horários livres) e teste.
+- **Resultado:** Sem rolagem lateral em 360, 414, 768, 1024, 1280, 1366 e 1920 px, na piscina e na academia. A grade da piscina com 4 reservas caiu de 1180 px de largura mínima para 452 px de altura em tela larga; a academia com 6 reservas ocupa 590 px.
+- **Validação:** 98 testes unitários, ESLint, `tsc` e `next build` aprovados. Medição automatizada no navegador (Playwright) nas 7 larguras, com a aplicação real e um servidor falso no lugar do Supabase: nenhuma rolagem lateral da página, nenhum elemento vazando do cartão, nenhuma área com rolagem interna; prints conferidos a olho. Não testado em celular de verdade.
+- **Impactos e riscos:** A rolagem vertical da página não some por completo: um dia com muitas reservas (ex.: piscina cheia, 12 reservas) continua mais alto que uma tela de celular. Horários livres agora aparecem agrupados, não um por um; reservar continua pelo formulário de balcão. O formato em cartão vale abaixo de 1280 px, inclusive tablet deitado (1024 px).
+- **Não fazer / evitar regressão:** Não voltar a usar largura mínima fixa (`min-w-[...]`) ou `overflow-x-auto` na grade; não usar largura `auto` na coluna das mensagens (desalinha as linhas); todo campo novo da linha precisa de `min-w-0` e largura 100%.
+- **Pendências:** Conferir no celular real depois da publicação.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/lib/reservation-grid.ts`.
+
 ### 2026-11-08 — Fase 3 do roadmap: camada de dados para o Power BI (preparada, não aplicada)
 
-- **Status:** Em andamento (arquivos prontos e testados localmente; falta aplicar em produção)
+- **Status:** Em andamento (migrations aplicadas em produção em 09/11/2026; faltam a senha da role, o merge do código e o relatório)
 - **Área:** Banco de dados, análise de dados e documentação
 - **Pedido:** Excluir todas as reservas existentes no banco e preparar a Fase 3.
 - **Por que foi pedido:** Começar o histórico analítico do zero, sem dados de teste, e deixar o banco pronto para o Power BI.
@@ -60,7 +76,8 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Validação:** 97 testes unitários, ESLint, `tsc` aprovados. Cadeia completa de migrations aplicada em um PostgreSQL 16 local com dados de exemplo: a role lê as 3 views e recebe `permission denied` em todas as tabelas de `public`; `anon` e `authenticated` não entram no schema; nenhuma coluna das views tem dado pessoal ou token; a limpeza só apaga estadia vencida sem reserva; apagar estadia não apaga a reserva. `pg_cron` simulado. As medidas DAX e a conexão real com o Power BI NÃO foram executadas.
 - **Impactos e riscos:** A exclusão das reservas é permanente (o plano gratuito do Supabase não tem backup automático). Ordem de publicação obrigatória: aplicar a migration `20261108140000` ANTES do código, senão a reserva do hóspede falha por falta da coluna `stay_id`. As views usam as permissões do dono (necessário para a role não ler `public`); o schema `analytics` não é exposto pela API do Supabase. `apartamento` nas views é só o número do quarto. Reservas anteriores ao campo `stay_id` não terão vínculo (hoje não há nenhuma).
 - **Não fazer / evitar regressão:** Não dar `GRANT` em tabelas de `public` para `powerbi_reader`; não incluir nome, WhatsApp, observações ou `token` nas views; não conectar o Power BI com `service_role`; não gravar a senha da role no repositório.
-- **Pendências:** Aplicar as 3 migrations em produção (ordem do nome) e só depois publicar o código; definir a senha da role; montar o relatório no Power BI; decidir se `notes` entra na anonimização; item 5.6 (tabela `apartments`) segue na Fase 5.
+- **Aplicado em produção:** 09/11/2026, projeto Supabase `valle-dincanto-piscina`, na ordem `20261108140000`, `20261108150000` e `20261108160000`, a pedido do responsável. Conferido no banco real: coluna `stay_id` criada, 3 views em `analytics` sem nenhuma coluna de dado pessoal, job `cleanup_orphan_stays` agendado, role `powerbi_reader` criada SEM senha (não consegue entrar). Teste em transação desfeita: a role lê as 3 views (3 reservas, 5 estadias, 3 eventos) e recebe `permission denied` em `reservations`, `active_stays`, `login_attempts` e `reservation_events`; `anon` também é barrado. O verificador de segurança do Supabase não apontou nada novo. O histórico (`schema_migrations`) foi alinhado aos nomes dos arquivos: 15 registros no banco e 15 arquivos no repositório. As 3 reservas existentes não foram tocadas (as migrations só adicionam). O código antigo continua compatível: a coluna nova aceita `NULL`.
+- **Pendências:** Definir a senha da role (`ALTER ROLE powerbi_reader WITH PASSWORD '...'`, por quem administra o banco); mergear o PR #6 (o código passa a gravar `stay_id`; só serve depois das migrations, que já estão aplicadas); montar o relatório no Power BI; decidir se `notes` entra na anonimização; item 5.6 (tabela `apartments`) segue na Fase 5.
 - **Referências:** `docs/POWERBI.md`, `REVISAO_TECNICA.md` §3, `ROADMAP_CORRECOES.md`.
 
 ### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos

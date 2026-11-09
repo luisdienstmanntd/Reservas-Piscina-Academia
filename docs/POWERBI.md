@@ -4,11 +4,11 @@ Guia da Fase 3 do [`ROADMAP_CORRECOES.md`](../ROADMAP_CORRECOES.md). O Power BI 
 
 ## 1. Antes de conectar (uma vez só, na ordem)
 
-1. Aplicar no Supabase, **antes de publicar o código desta fase**, as migrations na ordem do nome:
+1. **Já aplicado em produção em 09/11/2026** (ordem do nome; em um projeto novo, aplique antes de publicar o código desta fase):
    1. `20261108140000_reservations_stay_id.sql`
    2. `20261108150000_analytics_layer.sql`
    3. `20261108160000_cleanup_orphan_stays_cron.sql` (precisa do `pg_cron`, já usado pelo job LGPD)
-2. Definir a senha da role no **SQL Editor** do Supabase. A role nasce sem senha e não consegue entrar enquanto isso não for feito:
+2. **Pendente:** definir a senha da role no **SQL Editor** do Supabase. A role nasce sem senha e não consegue entrar enquanto isso não for feito:
 
 ```sql
 ALTER ROLE powerbi_reader WITH PASSWORD '<senha-forte-gerada-por-voce>';

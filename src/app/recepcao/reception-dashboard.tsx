@@ -33,6 +33,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { buildGridItems, freeRangeLabel } from "@/lib/reservation-grid";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -129,7 +131,7 @@ function ReceptionGuestWhatsappCell({
       type="tel"
       inputMode="tel"
       autoComplete="tel"
-      className="h-8 min-w-[8rem] max-w-[12rem] border-border bg-white font-mono text-xs lg:min-w-[10rem] lg:max-w-[14rem] lg:text-sm"
+      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs xl:h-8"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
@@ -181,7 +183,7 @@ function ReceptionGuestNameCell({
   return (
     <Input
       ref={inputRef}
-      className="h-8 min-w-[7rem] max-w-[11rem] border-border bg-white text-sm lg:min-w-[9rem] lg:max-w-[13rem]"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
@@ -236,7 +238,7 @@ function ReceptionNotesCell({
   return (
     <Input
       ref={inputRef}
-      className="h-8 w-full min-w-[9rem] max-w-[18rem] border-border bg-white text-xs lg:text-sm"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
       title={value || "Observações"}
       value={value}
       onChange={(e) => setValue(e.target.value)}
@@ -246,6 +248,103 @@ function ReceptionNotesCell({
       aria-label="Observações da reserva"
       maxLength={2000}
     />
+  );
+}
+
+/** Colunas da grade em telas largas (xl+). Abaixo disso cada reserva vira um cartão. */
+const GRID_TEMPLATE =
+  "xl:grid-cols-[7.5rem_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_18rem_2.25rem]";
+const GRID = `xl:grid xl:items-center xl:gap-x-3 ${GRID_TEMPLATE}`;
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mb-0.5 block text-xs text-muted-foreground xl:hidden">
+      {children}
+    </span>
+  );
+}
+
+function FreeSlotsRow({ slots }: { slots: string[] }) {
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 rounded-md border border-dashed border-border/70 px-3 py-1.5 text-sm xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0">
+      <span className="whitespace-nowrap font-medium tabular-nums xl:w-[7.5rem]">
+        {freeRangeLabel(slots)}
+      </span>
+      <span className="text-muted-foreground">
+        Livre{slots.length > 1 ? ` · ${slots.length} horários` : ""}
+      </span>
+    </li>
+  );
+}
+
+function ReservationSlotRow({
+  slot,
+  row,
+  onChanged,
+  onAskCancel,
+}: {
+  slot: string;
+  row: ReservationRow;
+  onChanged: () => void;
+  onAskCancel: (id: string) => void;
+}) {
+  const label = slotLabel(slot);
+
+  return (
+    <li
+      className={cn(
+        "space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm",
+        "xl:space-y-0 xl:rounded-none xl:border-0 xl:border-b xl:border-border/60 xl:bg-transparent xl:px-0 xl:py-2 xl:shadow-none",
+        GRID
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 xl:contents">
+        <span className="order-1 whitespace-nowrap font-medium tabular-nums xl:order-1">
+          {label}
+        </span>
+        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto xl:order-2 xl:flex-col xl:items-start xl:gap-0.5">
+          <span className="font-mono text-base xl:text-lg">
+            <span className="font-sans text-sm text-muted-foreground xl:hidden">
+              Apto{" "}
+            </span>
+            {row.apartment_number}
+          </span>
+          <Badge
+            variant={row.created_by === "reception" ? "secondary" : "outline"}
+          >
+            {row.created_by === "reception" ? "Recepção" : "Hóspede"}
+          </Badge>
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="order-2 ml-auto size-9 p-0 text-destructive hover:text-destructive sm:order-3 xl:order-7 xl:ml-0"
+          onClick={() => onAskCancel(row.id)}
+          title="Cancelar reserva"
+        >
+          <Trash2 className="size-4" />
+          <span className="sr-only">Cancelar</span>
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] xl:contents">
+        <div className="order-1 min-w-0 xl:order-3">
+          <FieldLabel>Hóspede</FieldLabel>
+          <ReceptionGuestNameCell row={row} onSaved={onChanged} />
+        </div>
+        <div className="order-3 col-span-2 min-w-0 sm:col-span-1 xl:order-4">
+          <FieldLabel>Observações</FieldLabel>
+          <ReceptionNotesCell row={row} onSaved={onChanged} />
+        </div>
+        <div className="order-2 min-w-0 xl:order-5">
+          <FieldLabel>WhatsApp</FieldLabel>
+          <ReceptionGuestWhatsappCell row={row} onSaved={onChanged} />
+        </div>
+      </div>
+      <div className="xl:order-6">
+        <ReceptionWaActions row={row} onUpdated={onChanged} />
+      </div>
+    </li>
   );
 }
 
@@ -661,116 +760,43 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
         <Card className="border-border/80 shadow-sm">
           <CardContent
-            className="min-w-0 overflow-x-auto overscroll-x-contain px-2 pb-2 pt-4 [scrollbar-gutter:stable] sm:px-6 sm:pb-6 sm:pt-6"
+            className="px-2 pb-2 pt-4 sm:px-6 sm:pb-6 sm:pt-6"
             role="region"
             aria-label="Grade de reservas do dia"
           >
-            <table className="w-full min-w-[1180px] text-sm lg:min-w-[1240px] lg:text-[15px]">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">Horário</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">Apto</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">Hóspede</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">Observações</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">WhatsApp</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">whatsapp</th>
-                  <th className="pb-2 pr-4 font-medium lg:pr-5">Origem</th>
-                  <th className="pb-2 pr-2 font-medium text-right lg:pl-2">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
-                {slotList.map((slot) => {
-                  const norm = normalizeSlotStart(slot);
-                  const row = bySlot.get(norm);
-                  return (
-                    <tr key={slot} className="border-b border-border/60">
-                      <td className="py-3 pr-4 font-medium lg:py-3.5 lg:pr-5">
-                        {slotLabel(slot)}
-                      </td>
-                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
-                        {row ? (
-                          <span className="font-mono text-base lg:text-lg">
-                            {row.apartment_number}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 align-top lg:py-3.5 lg:pr-5">
-                        {row ? (
-                          <ReceptionGuestNameCell
-                            row={row}
-                            onSaved={() => void load()}
-                          />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="max-w-[min(280px,72vw)] py-3 pr-4 align-top sm:max-w-[280px] lg:max-w-xs lg:py-3.5 lg:pr-5 xl:max-w-sm">
-                        {row ? (
-                          <ReceptionNotesCell row={row} onSaved={() => void load()} />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 align-top lg:py-3.5 lg:pr-5">
-                        {row ? (
-                          <ReceptionGuestWhatsappCell
-                            row={row}
-                            onSaved={() => void load()}
-                          />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 align-middle lg:py-3.5 lg:pr-5">
-                        {row ? (
-                          <ReceptionWaActions
-                            row={row}
-                            onUpdated={() => void load()}
-                          />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 lg:py-3.5 lg:pr-5">
-                        {row ? (
-                          <Badge
-                            variant={
-                              row.created_by === "reception"
-                                ? "secondary"
-                                : "outline"
-                            }
-                          >
-                            {row.created_by === "reception"
-                              ? "Recepção"
-                              : "Hóspede"}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pl-2 text-right lg:py-3.5">
-                        {row && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive lg:h-9 lg:px-3"
-                            onClick={() => setPendingDelete(row.id)}
-                          >
-                            <Trash2 className="size-4" />
-                            <span className="sr-only">Cancelar</span>
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div
+              className={cn(
+                "hidden border-b pb-2 text-left text-sm font-medium",
+                "xl:grid xl:items-center xl:gap-x-3",
+                GRID_TEMPLATE
+              )}
+              aria-hidden
+            >
+              <span>Horário</span>
+              <span>Apto</span>
+              <span>Hóspede</span>
+              <span>Observações</span>
+              <span>WhatsApp</span>
+              <span className="text-right">Mensagens</span>
+              <span />
+            </div>
+            <ul className="space-y-2 xl:space-y-0">
+              {buildGridItems(slotList, (slot) =>
+                bySlot.get(normalizeSlotStart(slot))
+              ).map((item) =>
+                item.kind === "free" ? (
+                  <FreeSlotsRow key={item.slots[0]} slots={item.slots} />
+                ) : (
+                  <ReservationSlotRow
+                    key={item.slot}
+                    slot={item.slot}
+                    row={item.row}
+                    onChanged={() => void load()}
+                    onAskCancel={setPendingDelete}
+                  />
+                )
+              )}
+            </ul>
           </CardContent>
         </Card>
 

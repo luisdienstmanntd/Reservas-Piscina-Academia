@@ -187,7 +187,7 @@ nem altera reservas.
 - **Testes:** 97 testes unitários (Vitest) + integração de concorrência e cancelamento + E2E (Playwright).
 - **Histórico preservado:** cancelar uma reserva só a marca como `cancelled` (com data e autor); a linha permanece no banco.
 - **Auditoria:** `updated_at` em toda reserva e a tabela `reservation_events` (criada, editada, cancelada, anonimizada), sem dados pessoais.
-- **Camada analítica:** preparada na Fase 3 (schema `analytics` com views sem dados pessoais e role de leitura para o Power BI), mas **ainda não aplicada em produção**. Guia em [`docs/POWERBI.md`](./docs/POWERBI.md).
+- **Camada analítica:** pronta na Fase 3 (schema `analytics` com views sem dados pessoais e role de leitura para o Power BI), e as migrations já estão aplicadas em produção; falta definir a senha da role e montar o relatório. Guia em [`docs/POWERBI.md`](./docs/POWERBI.md).
 
 ### Limitações conhecidas
 - Sem vínculo reserva ↔ estadia (`stay_id`) para medir a conversão do link.

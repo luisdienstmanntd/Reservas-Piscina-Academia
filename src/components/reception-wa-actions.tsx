@@ -85,7 +85,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
     "Preencha o WhatsApp ao criar a reserva (balcão) para abrir o WhatsApp Web aqui.";
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5 lg:gap-2">
+    <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap xl:justify-end">
       <Button
         type="button"
         size="sm"
@@ -93,7 +93,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         disabled={!hasPhone || confirmDone || pending !== null}
         title={hasPhone ? "Enviar confirmação (WhatsApp Web)" : noPhoneTitle}
         className={cn(
-          "h-8 gap-1 px-2 text-xs lg:h-9 lg:px-3 lg:text-sm",
+          "h-9 gap-1 px-3 text-sm xl:h-8",
           hasPhone &&
             !confirmDone &&
             "bg-green-600 text-white hover:bg-green-700"
@@ -110,7 +110,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         disabled={!hasPhone || warnDone || pending !== null}
         title={hasPhone ? "Aviso 10 min antes do fim" : noPhoneTitle}
         className={cn(
-          "h-8 gap-1 px-2 text-xs lg:h-9 lg:px-3 lg:text-sm",
+          "h-9 gap-1 px-3 text-sm xl:h-8",
           hasPhone &&
             showWarningPulse &&
             "animate-pulse border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
