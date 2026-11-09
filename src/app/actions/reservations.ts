@@ -126,7 +126,13 @@ export async function getReservationDaySummary(
   reservationDate: string,
   facility: Facility
 ): Promise<
-  | { ok: true; occupiedSlots: string[]; apartmentsBooked: string[] }
+  | {
+      ok: true;
+      occupiedSlots: string[];
+      apartmentsBooked: string[];
+      /** Hora do servidor: a tela usa para decidir o que já passou, sem depender do relógio do aparelho. */
+      serverNowMs: number;
+    }
   | { ok: false; error: string }
 > {
   const parsed = isoYmdDateSchema.safeParse(reservationDate);
@@ -171,7 +177,7 @@ export async function getReservationDaySummary(
     const apartmentsBooked = [
       ...new Set(rows.map((r) => String(r.apartment_number).trim())),
     ];
-    return { ok: true, occupiedSlots, apartmentsBooked };
+    return { ok: true, occupiedSlots, apartmentsBooked, serverNowMs: Date.now() };
   } catch (e) {
     console.error(e);
     return {

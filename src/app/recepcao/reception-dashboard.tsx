@@ -35,6 +35,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { buildGridItems, freeRangeLabel } from "@/lib/reservation-grid";
+import {
+  SLOT_BLOCK_LABEL,
+  SLOT_BLOCK_MESSAGE,
+  isSlotEnded,
+  slotBlockReason,
+} from "@/lib/slot-availability";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -264,14 +270,23 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FreeSlotsRow({ slots }: { slots: string[] }) {
+function FreeSlotsRow({ slots, past }: { slots: string[]; past: boolean }) {
+  const count = slots.length > 1 ? ` · ${slots.length} horários` : "";
   return (
-    <li className="flex flex-wrap items-center gap-x-3 rounded-md border border-dashed border-border/70 px-3 py-1.5 text-sm xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0">
+    <li
+      className={cn(
+        "flex flex-wrap items-center gap-x-3 rounded-md border border-dashed px-3 py-1.5 text-sm xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0",
+        past
+          ? "border-border/50 bg-muted/50 text-muted-foreground"
+          : "border-border/70"
+      )}
+    >
       <span className="whitespace-nowrap font-medium tabular-nums xl:w-[7.5rem]">
         {freeRangeLabel(slots)}
       </span>
-      <span className="text-muted-foreground">
-        Livre{slots.length > 1 ? ` · ${slots.length} horários` : ""}
+      <span className={past ? undefined : "text-muted-foreground"}>
+        {past ? SLOT_BLOCK_LABEL.past : "Livre"}
+        {count}
       </span>
     </li>
   );
@@ -367,6 +382,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const [dateStr, setDateStr] = useState(todayStr);
   const [rows, setRows] = useState<ReservationRow[]>([]);
+  /** Dia e instalação a que `rows` se refere (evita misturar dados de outra instalação). */
+  const [rowsKey, setRowsKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -385,7 +402,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     () => new Set()
   );
   const [formSummaryLoading, setFormSummaryLoading] = useState(false);
-  const [, setMinuteTick] = useState(0);
+  /** Diferença entre o relógio do servidor e o deste aparelho. */
+  const [serverSkewMs, setServerSkewMs] = useState(0);
+  const [minuteTick, setMinuteTick] = useState(0);
+  /** O usuário escolheu o horário à mão: nunca trocar sozinho por baixo dele. */
+  const slotPickedByUserRef = useRef(false);
+  const summaryReqRef = useRef(0);
 
   const [guestAccessApt, setGuestAccessApt] = useState("");
   const [guestAccessCheckout, setGuestAccessCheckout] = useState(todayStr);
@@ -411,36 +433,58 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     if (first) setNewSlot(first);
   }, [facility]);
 
+  const refreshFormSummary = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      const req = ++summaryReqRef.current;
+      if (!silent) setFormSummaryLoading(true);
+      try {
+        const r = await getReservationDaySummary(newReservationDate, facility);
+        if (req !== summaryReqRef.current) return; // resposta de uma consulta antiga
+        if (!r.ok) {
+          if (!silent) {
+            setFormOccupiedSlots(new Set());
+            setFormBookedApts(new Set());
+          }
+          return;
+        }
+        setServerSkewMs(r.serverNowMs - Date.now());
+        setFormOccupiedSlots(
+          new Set(r.occupiedSlots.map((s) => normalizeSlotStart(s)))
+        );
+        setFormBookedApts(new Set(r.apartmentsBooked));
+      } catch {
+        // Falha de rede numa atualização em segundo plano: mantém o que já está na tela.
+      } finally {
+        if (!silent && req === summaryReqRef.current) setFormSummaryLoading(false);
+      }
+    },
+    [newReservationDate, facility]
+  );
+
+  // Novo dia/instalação: nova escolha de horário (o usuário ainda não escolheu nada).
+  useEffect(() => {
+    slotPickedByUserRef.current = false;
+  }, [newReservationDate, facility]);
+
+  // Ocupação do formulário: ao abrir, a cada 20 s e ao voltar para a aba (outro usuário pode ter reservado).
   useEffect(() => {
     if (!authed) return;
-    let cancelled = false;
-    setFormSummaryLoading(true);
-    void (async () => {
-      const r = await getReservationDaySummary(newReservationDate, facility);
-      if (cancelled) return;
-      setFormSummaryLoading(false);
-      if (!r.ok) {
-        setFormOccupiedSlots(new Set());
-        setFormBookedApts(new Set());
-        return;
+    void refreshFormSummary();
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshFormSummary({ silent: true });
       }
-      const occ = new Set(
-        r.occupiedSlots.map((s) => normalizeSlotStart(s))
-      );
-      setFormOccupiedSlots(occ);
-      setFormBookedApts(new Set(r.apartmentsBooked));
-      const list = slotStartsFor(facility);
-      setNewSlot((prev) => {
-        const pn = normalizeSlotStart(prev);
-        if (!occ.has(pn)) return prev;
-        const firstFree = list.find((s) => !occ.has(normalizeSlotStart(s)));
-        return firstFree ?? prev;
-      });
-    })();
-    return () => {
-      cancelled = true;
     };
-  }, [authed, newReservationDate, facility]);
+    const id = window.setInterval(refreshIfVisible, 20_000);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    window.addEventListener("focus", refreshIfVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      window.removeEventListener("focus", refreshIfVisible);
+    };
+  }, [authed, refreshFormSummary]);
 
   const bySlot = useMemo(() => {
     const m = new Map<string, ReservationRow>();
@@ -470,6 +514,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           return;
         }
         setRows(r.rows);
+        setRowsKey(`${ymd}|${facility}`);
       } catch {
         if (!silent) toast.error("Falha de rede ao carregar reservas.");
       } finally {
@@ -537,7 +582,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         return;
       }
       toast.success("Reserva cancelada.");
-      await load();
+      await Promise.all([load(), refreshFormSummary({ silent: true })]);
     } catch {
       toast.error("Falha ao cancelar. Tente novamente.");
     } finally {
@@ -545,11 +590,42 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     }
   }
 
+  // Relógio do hotel: hora do servidor, atualizada a cada minuto.
+  const nowMs = Date.now() + serverSkewMs;
+  void minuteTick;
+
+  // Ocupação = consulta do formulário + grade já carregada (a grade atualiza a cada 30 s e após cada ação).
+  const formOccupied = useMemo(() => {
+    const set = new Set(formOccupiedSlots);
+    if (rowsKey === `${newReservationDate}|${facility}`) {
+      for (const r of rows) set.add(normalizeSlotStart(String(r.slot_start)));
+    }
+    return set;
+  }, [formOccupiedSlots, rows, rowsKey, newReservationDate, facility]);
+
+  const reasonForSlot = (slot: string) =>
+    slotBlockReason({
+      facility,
+      reservationDateYmd: newReservationDate,
+      slotStart: slot,
+      occupied: formOccupied,
+      apartmentBooked: false,
+      todayYmd: todayStr,
+      nowMs,
+    });
+  const slotReason = reasonForSlot(newSlot);
   const aptAlreadyBooked =
     Boolean(newApt) && formBookedApts.has(newApt.trim());
-  const slotAlreadyTaken = formOccupiedSlots.has(
-    normalizeSlotStart(newSlot)
-  );
+  const noFreeSlot = slotList.every((s) => reasonForSlot(s) !== null);
+
+  // Pré-seleciona o primeiro horário livre (só enquanto o usuário não escolheu um).
+  const firstFreeSlot = slotList.find((s) => reasonForSlot(s) === null);
+  useEffect(() => {
+    if (slotPickedByUserRef.current) return;
+    if (slotReason === null) return;
+    if (firstFreeSlot && firstFreeSlot !== newSlot) setNewSlot(firstFreeSlot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotReason, firstFreeSlot, newSlot]);
 
   async function onGenerateGuestAccess(e: React.FormEvent) {
     e.preventDefault();
@@ -590,8 +666,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       );
       return;
     }
-    if (slotAlreadyTaken) {
-      toast.error("Este horário já está reservado. Escolha outro.");
+    if (slotReason) {
+      toast.error(SLOT_BLOCK_MESSAGE[slotReason]);
       return;
     }
     const phone = guestWhatsappOptionalSchema.safeParse(newWhatsapp);
@@ -620,7 +696,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       setNewWhatsapp("");
       setNewNotes("");
       setNewReservationDate(hotelCalendarDate());
-      await load();
+      await Promise.all([load(), refreshFormSummary({ silent: true })]);
     } catch {
       toast.error("Falha ao salvar. Verifique a conexão.");
     } finally {
@@ -781,11 +857,17 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span />
             </div>
             <ul className="space-y-2 xl:space-y-0">
-              {buildGridItems(slotList, (slot) =>
-                bySlot.get(normalizeSlotStart(slot))
+              {buildGridItems(
+                slotList,
+                (slot) => bySlot.get(normalizeSlotStart(slot)),
+                (slot) => isSlotEnded(facility, dateStr, slot, todayStr, nowMs)
               ).map((item) =>
                 item.kind === "free" ? (
-                  <FreeSlotsRow key={item.slots[0]} slots={item.slots} />
+                  <FreeSlotsRow
+                    key={item.slots[0]}
+                    slots={item.slots}
+                    past={item.past}
+                  />
                 ) : (
                   <ReservationSlotRow
                     key={item.slot}
@@ -825,11 +907,20 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   onChange={(e) => setGuestAccessApt(e.target.value)}
                 >
                   <option value="">Selecione…</option>
-                  {ALLOWED_APARTMENT_NUMBERS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => {
+                    const booked = formBookedApts.has(n);
+                    return (
+                      <option
+                        key={n}
+                        value={n}
+                        disabled={booked}
+                        className={booked ? "text-muted-foreground" : undefined}
+                      >
+                        {n}
+                        {booked ? " — já tem reserva neste dia" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="space-y-2">
@@ -936,20 +1027,29 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   id="ns"
                   className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   value={newSlot}
-                  onChange={(e) => setNewSlot(e.target.value)}
+                  onChange={(e) => {
+                    slotPickedByUserRef.current = true;
+                    setNewSlot(e.target.value);
+                  }}
                 >
                   {slotList.map((s) => {
-                    const taken = formOccupiedSlots.has(
-                      normalizeSlotStart(s)
-                    );
+                    const reason = reasonForSlot(s);
                     return (
-                      <option key={s} value={s} disabled={taken}>
+                      <option
+                        key={s}
+                        value={s}
+                        disabled={reason !== null}
+                        className={reason ? "text-muted-foreground" : undefined}
+                      >
                         {slotLabel(s)}
-                        {taken ? " — ocupado" : ""}
+                        {reason ? ` — ${SLOT_BLOCK_LABEL[reason].toLowerCase()}` : ""}
                       </option>
                     );
                   })}
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  Horários em cinza estão indisponíveis (ocupados ou já passaram).
+                </p>
               </div>
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="nw">WhatsApp (opcional)</Label>
@@ -972,11 +1072,18 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   {PHONE_HINT}
                 </p>
               </div>
-              {(aptAlreadyBooked || slotAlreadyTaken) && (
-                <p className="text-destructive text-sm sm:col-span-2">
+              {(aptAlreadyBooked || slotReason || noFreeSlot) && (
+                <p
+                  className="text-destructive text-sm sm:col-span-2"
+                  role="alert"
+                >
                   {aptAlreadyBooked
                     ? "Este apartamento já possui reserva neste dia nesta instalação."
-                    : "Este horário já está ocupado. Selecione outro."}
+                    : slotReason
+                      ? noFreeSlot
+                        ? "Não há horários disponíveis neste dia."
+                        : SLOT_BLOCK_MESSAGE[slotReason]
+                      : "Não há horários disponíveis neste dia."}
                 </p>
               )}
               <div className="space-y-2 sm:col-span-2">
@@ -995,7 +1102,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                     creating ||
                     formSummaryLoading ||
                     aptAlreadyBooked ||
-                    slotAlreadyTaken
+                    slotReason !== null
                   }
                 >
                   {creating ? "Salvando…" : "Registrar reserva"}
