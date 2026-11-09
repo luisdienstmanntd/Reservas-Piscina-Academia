@@ -49,6 +49,22 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-09 — Grade da recepção responsiva, sem rolagem lateral
+
+- **Status:** Concluído (publicação pendente)
+- **Área:** Recepção (interface)
+- **Pedido:** A planilha de reservas quebrava em telas menores. Ela não deve ter rolagem lateral nem rolagens internas; analisar um formato que distribua e mostre o conteúdo também em telas pequenas.
+- **Problema observado:** A grade era uma `<table>` com largura mínima de 1180 px dentro de um contêiner com `overflow-x-auto`: em telas menores gerava rolagem lateral e a coluna de ações (lixeira) ficava escondida. Cada horário livre ocupava uma linha inteira com 7 traços, e havia cabeçalho duplicado ("WhatsApp" e "whatsapp").
+- **Causa:** Layout desenhado só para telas largas, com largura mínima fixa nas colunas e nos campos.
+- **Decisão:** Dois formatos conforme a largura. Telas largas (a partir de 1280 px): linha única com colunas de largura definida (horário, apto + origem, hóspede, observações, WhatsApp, mensagens, cancelar), alinhadas entre as linhas. Telas menores: cada reserva vira um cartão, com horário e lixeira na primeira linha, apto e origem na segunda, nome e WhatsApp lado a lado e observações na largura toda. Horários livres consecutivos são agrupados em uma linha só ("14h00 – 16h00 · Livre · 2 horários"; academia vazia = "Dia todo"). Nenhum contêiner com rolagem interna: o que passa da tela rola com a própria página.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx` (nova lista de reservas e linha de reserva; campos sem largura mínima/máxima), `src/components/reception-wa-actions.tsx` (botões em duas colunas no cartão, alinhados à direita na grade), `src/lib/reservation-grid.ts` (agrupamento de horários livres) e teste.
+- **Resultado:** Sem rolagem lateral em 360, 414, 768, 1024, 1280, 1366 e 1920 px, na piscina e na academia. A grade da piscina com 4 reservas caiu de 1180 px de largura mínima para 452 px de altura em tela larga; a academia com 6 reservas ocupa 590 px.
+- **Validação:** 98 testes unitários, ESLint, `tsc` e `next build` aprovados. Medição automatizada no navegador (Playwright) nas 7 larguras, com a aplicação real e um servidor falso no lugar do Supabase: nenhuma rolagem lateral da página, nenhum elemento vazando do cartão, nenhuma área com rolagem interna; prints conferidos a olho. Não testado em celular de verdade.
+- **Impactos e riscos:** A rolagem vertical da página não some por completo: um dia com muitas reservas (ex.: piscina cheia, 12 reservas) continua mais alto que uma tela de celular. Horários livres agora aparecem agrupados, não um por um; reservar continua pelo formulário de balcão. O formato em cartão vale abaixo de 1280 px, inclusive tablet deitado (1024 px).
+- **Não fazer / evitar regressão:** Não voltar a usar largura mínima fixa (`min-w-[...]`) ou `overflow-x-auto` na grade; não usar largura `auto` na coluna das mensagens (desalinha as linhas); todo campo novo da linha precisa de `min-w-0` e largura 100%.
+- **Pendências:** Conferir no celular real depois da publicação.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/lib/reservation-grid.ts`.
+
 ### 2026-11-08 — Fase 2 do roadmap: preservar histórico e dados honestos
 
 - **Status:** Concluído (migrations aplicadas em produção; deploy do código pendente)
