@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-09 — Endereço oficial do app
+
+- **Status:** Decisão (a confirmar: mover o domínio na Vercel)
+- **Área:** Infraestrutura e documentação
+- **Pedido:** O app deve responder em `agendamentosvallledincanto.vercel.app` (recepção em `/recepcao`) e o README deve citar o endereço oficial.
+- **Problema observado:** Existem dois projetos da Vercel ligados ao repositório: `agendamentos-piscina-academia` (produção, com as variáveis atuais, domínio `valle-dincanto-piscina.vercel.app`) e o projeto antigo `piscina`, dono do endereço usado no celular. Cada projeto tem variáveis próprias; só o primeiro tem o `SESSION_SECRET` e a senha atual da recepção. O README citava um terceiro endereço, desatualizado.
+- **Decisão:** Endereço oficial: `https://agendamentosvallledincanto.vercel.app`. Para isso, o domínio precisa ser removido do projeto antigo e adicionado ao projeto de produção (Settings → Domains), com o endereço antigo `valle-dincanto-piscina.vercel.app` redirecionando para ele. Depois, desligar o Git do projeto antigo.
+- **O que foi feito:** README atualizado (endereço oficial e da recepção). A mudança de domínio na Vercel é feita pelo responsável: a conexão usada nesta sessão pertence a outra conta e não enxerga os projetos.
+- **Validação:** O endereço não pôde ser aberto a partir desta sessão (rede bloqueada para `vercel.app`); confirmar manualmente no celular e no PC.
+- **Impactos e riscos:** Se o domínio ainda estiver no projeto antigo, o README aponta para um site com configuração antiga (login pode falhar). Links de hóspedes já enviados com o endereço antigo continuam válidos se os dois sites usam o mesmo banco.
+- **Não fazer / evitar regressão:** Não manter dois projetos da Vercel servindo o mesmo repositório com variáveis diferentes; não gerar links de hóspede por um endereço que não seja o oficial.
+- **Pendências:** Mover o domínio (passos 1 a 4 combinados) e conferir `/recepcao` no celular e no PC.
+- **Referências:** `README.md`.
+
 ### 2026-11-09 — Grade da recepção responsiva, sem rolagem lateral
 
 - **Status:** Concluído (publicação pendente)

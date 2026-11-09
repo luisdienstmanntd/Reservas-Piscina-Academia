@@ -293,7 +293,8 @@ MIT — Use livremente
 
 ## 🔗 Links
 
-- **Live:** https://valle-piscina-academia.vercel.app
+- **Endereço oficial:** https://agendamentosvallledincanto.vercel.app
+- **Recepção:** https://agendamentosvallledincanto.vercel.app/recepcao (os links dos hóspedes são gerados a partir do endereço em que a recepção está logada; use sempre este)
 - **Repositório:** https://github.com/luisdienstmanntd/Reservas-Piscina-Academia
 - **Autor:** [Luis Dienstmann](https://github.com/luisdienstmanntd)
 
