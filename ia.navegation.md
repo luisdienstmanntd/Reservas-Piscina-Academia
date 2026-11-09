@@ -53,6 +53,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Hoje:** `hotelCalendarDate()` em `src/lib/hotel-time.ts` (timezone **America/Sao_Paulo**).
 - **`validateStayAndSlot`:** data da reserva ≥ hoje; data da reserva ≤ `guestCheckoutDate`; slot ∈ lista permitida da instalação.
 - **Balcão:** o formulário não pede check-out; a action grava `guest_checkout_date = NULL` e `validateStayAndSlot` pula só a checagem de check-out.
+- **Estadia ↔ reserva:** reservas do link gravam `stay_id` (id de `active_stays`); balcão fica `NULL`. O Power BI lê só o schema `analytics` (`vw_reservas`, `vw_estadias`, `vw_eventos`) com a role `powerbi_reader`; nunca adicionar PII nem `token` a essas views.
 - **Cancelamento:** `cancelReservation` faz UPDATE (`status = 'cancelled'`), nunca DELETE. Toda consulta de ocupação deve filtrar `status = 'active'`. Auditoria em `reservation_events` (sem PII).
 
 ### 3.5 Impossibilidade de conflito (horário + apto)

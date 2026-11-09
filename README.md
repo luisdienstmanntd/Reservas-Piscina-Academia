@@ -184,10 +184,10 @@ nem altera reservas.
 
 ### Estado atual
 - **Tabelas:** 4 (`reservations`, `active_stays`, `reservation_events`, `login_attempts`), em 12 migrations (`supabase/migrations/`).
-- **Testes:** 95 testes unitários (Vitest) + integração de concorrência e cancelamento + E2E (Playwright).
+- **Testes:** 97 testes unitários (Vitest) + integração de concorrência e cancelamento + E2E (Playwright).
 - **Histórico preservado:** cancelar uma reserva só a marca como `cancelled` (com data e autor); a linha permanece no banco.
 - **Auditoria:** `updated_at` em toda reserva e a tabela `reservation_events` (criada, editada, cancelada, anonimizada), sem dados pessoais.
-- **Camada analítica:** ainda **não implementada** (sem views, sem schema `analytics`, sem role de leitura para BI). Está planejada na Fase 3 do [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md).
+- **Camada analítica:** pronta na Fase 3 (schema `analytics` com views sem dados pessoais e role de leitura para o Power BI), e as migrations já estão aplicadas em produção; falta definir a senha da role e montar o relatório. Guia em [`docs/POWERBI.md`](./docs/POWERBI.md).
 
 ### Limitações conhecidas
 - Sem vínculo reserva ↔ estadia (`stay_id`) para medir a conversão do link.
@@ -242,6 +242,7 @@ Veja `supabase/migrations/` para o histórico completo de schema.
 - [`ia.navegation.md`](./ia.navegation.md) — Navegação do código
 - [`ROADMAP_TESTES.md`](./ROADMAP_TESTES.md) — Testes
 - [`ROADMAP_CORRECOES.md`](./ROADMAP_CORRECOES.md) — Falhas conhecidas e plano de correção
+- [`docs/POWERBI.md`](./docs/POWERBI.md) — Conexão, modelo e relatório do Power BI
 - [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md) — Revisão técnica completa
 - [`productlog.md`](./productlog.md) — Histórico de decisões do produto
 
@@ -267,8 +268,8 @@ Veja `supabase/migrations/` para o histórico completo de schema.
 - [x] Keep-alive do Supabase via GitHub Actions
 
 ### Dados & Análise 🔥 (Fase 3 do roadmap)
-- [ ] Schema `analytics` + view `vw_reservas` sem dados pessoais
-- [ ] Role somente-leitura para Power BI
+- [ ] Schema `analytics` + views sem dados pessoais (preparado, falta aplicar em produção)
+- [ ] Role somente-leitura para Power BI (preparada, falta definir a senha)
 - [ ] Dashboard Power BI (ocupação, cancelamentos, origem, antecedência)
 - [ ] Scripts Python para análise exploratória
 

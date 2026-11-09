@@ -367,6 +367,7 @@ export async function createGuestReservation(input: {
         slot_start: normSlot,
         apartment_number: apartmentNumber.trim(),
         guest_checkout_date: guestCheckoutDate,
+        stay_id: stay.id,
         guest_whatsapp: guestWhatsapp,
         guest_name: guestName,
         created_by: "guest",

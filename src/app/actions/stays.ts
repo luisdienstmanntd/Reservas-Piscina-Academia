@@ -17,6 +17,8 @@ import {
 } from "@/lib/supabase/admin";
 
 export type ValidatedGuestStay = {
+  /** Id da estadia (active_stays.id), gravado em reservations.stay_id. */
+  id: string;
   apartmentNumber: string;
   checkoutDate: string;
 };
@@ -36,7 +38,7 @@ export async function getValidatedGuestStay(): Promise<
 
   const { data, error } = await supabase
     .from("active_stays")
-    .select("apartment_number, checkout_date")
+    .select("id, apartment_number, checkout_date")
     .eq("token", token)
     .maybeSingle();
 
@@ -49,7 +51,7 @@ export async function getValidatedGuestStay(): Promise<
   const today = hotelTodayYmd();
   if (!isCheckoutStillValid(checkoutDate, today)) return null;
 
-  return { apartmentNumber, checkoutDate };
+  return { id: String(data.id), apartmentNumber, checkoutDate };
 }
 
 /**
