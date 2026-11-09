@@ -60,4 +60,21 @@ describe("slotBlockReason", () => {
   it("aceita formatos de horário sem segundos", () => {
     expect(slotBlockReason({ ...base, slotStart: "20:00" })).toBe("occupied");
   });
+
+  it("fronteira exata: no instante em que o horário termina, ele passa a estar bloqueado", () => {
+    const base2 = { ...base, occupied: new Set<string>() };
+    const fim17 = Date.parse("2026-11-09T21:00:00Z"); // 18:00:00.000 no hotel = fim do horário 17h–18h
+    expect(slotBlockReason({ ...base2, slotStart: "17:00:00", nowMs: fim17 - 1 })).toBeNull();
+    expect(slotBlockReason({ ...base2, slotStart: "17:00:00", nowMs: fim17 })).toBe("past");
+    // o horário seguinte (18h–19h) está em andamento nesse instante e continua livre
+    expect(slotBlockReason({ ...base2, slotStart: "18:00:00", nowMs: fim17 })).toBeNull();
+  });
+
+  it("academia 00h–01h de hoje: ainda aceita às 00:30 e bloqueia a partir de 01:00", () => {
+    const base2 = { ...base, facility: "gym" as const, occupied: new Set<string>(), slotStart: "00:00:00" };
+    const meiaNoiteEMeia = Date.parse("2026-11-09T03:30:00Z"); // 00:30 no hotel
+    const uma = Date.parse("2026-11-09T04:00:00Z"); // 01:00 no hotel
+    expect(slotBlockReason({ ...base2, nowMs: meiaNoiteEMeia })).toBeNull();
+    expect(slotBlockReason({ ...base2, nowMs: uma })).toBe("past");
+  });
 });

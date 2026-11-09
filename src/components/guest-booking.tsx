@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -33,6 +33,11 @@ import {
   slotStartsFor,
   type Facility,
 } from "@/lib/reservations";
+import {
+  SLOT_BLOCK_LABEL,
+  SLOT_BLOCK_MESSAGE,
+  slotBlockReason,
+} from "@/lib/slot-availability";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -82,6 +87,10 @@ export function GuestBooking({
   const [occupied, setOccupied] = useState<Set<string>>(new Set());
   const [apartmentBookedThisDay, setApartmentBookedThisDay] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  /** Diferença entre o relógio do servidor e o deste aparelho (o "já passou" usa o relógio do hotel). */
+  const [serverSkewMs, setServerSkewMs] = useState(0);
+  const [, setMinuteTick] = useState(0);
+  const slotsReqRef = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [confirmedReservations, setConfirmedReservations] = useState<
     ConfirmedReservation[]
@@ -103,36 +112,57 @@ export function GuestBooking({
   }, [selectedDate, todayStr]);
 
   const loadOccupied = useCallback(
-    async (ymd: string) => {
-      setLoadingSlots(true);
+    async (ymd: string, options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      const req = ++slotsReqRef.current;
+      if (!silent) setLoadingSlots(true);
       try {
         const r = await getReservationDaySummary(ymd, facility);
+        if (req !== slotsReqRef.current) return; // resposta de uma consulta antiga
         if (!r.ok) {
-          toast.error(r.error);
+          if (!silent) toast.error(r.error);
           return;
         }
+        setServerSkewMs(r.serverNowMs - Date.now());
         setOccupied(
           new Set(r.occupiedSlots.map((s) => normalizeSlotStart(s)))
         );
-        setApartmentBookedThisDay(
-          apartment.length > 0 && r.apartmentsBooked.includes(apartment)
-        );
+        setApartmentBookedThisDay(r.ownApartmentBooked);
       } catch {
-        toast.error(
-          "Falha de rede ao carregar horários. Verifique a internet e tente de novo."
-        );
+        // Atualização em segundo plano que falhou: mantém o que já está na tela.
+        if (!silent) {
+          toast.error(
+            "Falha de rede ao carregar horários. Verifique a internet e tente de novo."
+          );
+        }
       } finally {
-        setLoadingSlots(false);
+        if (req === slotsReqRef.current) setLoadingSlots(false);
       }
     },
-    [facility, apartment]
+    [facility]
   );
 
   useEffect(() => {
     if (step !== 3 || !selectedDate) return;
     const ymd = format(selectedDate, "yyyy-MM-dd");
     void loadOccupied(ymd);
-  }, [step, selectedDate, loadOccupied, apartment]);
+    // Outro hóspede pode reservar enquanto esta tela está aberta: atualiza em segundo plano.
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadOccupied(ymd, { silent: true });
+      }
+    };
+    const refreshId = window.setInterval(refreshIfVisible, 20_000);
+    const clockId = window.setInterval(() => setMinuteTick((n) => n + 1), 30_000);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    window.addEventListener("focus", refreshIfVisible);
+    return () => {
+      window.clearInterval(refreshId);
+      window.clearInterval(clockId);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      window.removeEventListener("focus", refreshIfVisible);
+    };
+  }, [step, selectedDate, loadOccupied]);
 
   function submitIdentify(e: React.FormEvent) {
     e.preventDefault();
@@ -184,17 +214,25 @@ export function GuestBooking({
     setStep(3);
   }
 
+  /** Motivo pelo qual o horário está indisponível agora (ou `null` se pode reservar). */
+  function reasonFor(slot: string, ymd: string) {
+    const nowMs = Date.now() + serverSkewMs;
+    return slotBlockReason({
+      facility,
+      reservationDateYmd: ymd,
+      slotStart: slot,
+      occupied,
+      apartmentBooked: apartmentBookedThisDay,
+      todayYmd: hotelCalendarDate(new Date(nowMs)),
+      nowMs,
+    });
+  }
+
   async function pickSlot(slot: string) {
     if (!selectedDate || submitting) return;
-    if (apartmentBookedThisDay) {
-      toast.error(
-        "Limite diário atingido. Para reservar mais de 1 horário nesta data, consulte a recepção."
-      );
-      return;
-    }
-    const norm = normalizeSlotStart(slot);
-    if (occupied.has(norm)) {
-      toast.error("Este horário já está reservado. Escolha outro.");
+    const reason = reasonFor(slot, format(selectedDate, "yyyy-MM-dd"));
+    if (reason) {
+      toast.error(SLOT_BLOCK_MESSAGE[reason]);
       return;
     }
     const ymd = format(selectedDate, "yyyy-MM-dd");
@@ -209,8 +247,12 @@ export function GuestBooking({
       });
       if (!r.ok) {
         toast.error(r.error);
-        if (r.code === "conflict" || r.code === "network") {
-          await loadOccupied(ymd);
+        if (
+          r.code === "conflict" ||
+          r.code === "network" ||
+          r.code === "validation"
+        ) {
+          await loadOccupied(ymd, { silent: true });
         }
         return;
       }
@@ -405,39 +447,66 @@ export function GuestBooking({
                       Carregando…
                     </p>
                   ) : (
-                    <ul className={cn("grid gap-1.5", gridCols)}>
-                      {slots.map((slot) => {
-                        const norm = normalizeSlotStart(slot);
-                        const taken =
-                          apartmentBookedThisDay || occupied.has(norm);
-                        return (
-                          <li key={slot}>
-                            <button
-                              type="button"
-                              disabled={taken || submitting}
-                              onClick={() => void pickSlot(slot)}
-                              className={cn(
-                                "flex min-h-[2.5rem] w-full flex-col items-center justify-center rounded-md border px-0.5 py-1 text-center text-[9px] leading-tight font-semibold transition-[transform,opacity] sm:min-h-[2.75rem] sm:text-[10px]",
-                                taken
-                                  ? "border-slot-occupied bg-slot-occupied text-slot-occupied-fg cursor-not-allowed"
-                                  : "border-slot-available/50 bg-slot-available text-slot-available-fg active:scale-[0.97]"
-                              )}
-                            >
-                              <span className="tabular-nums">
-                                {slotLabel(slot)}
-                              </span>
-                              {taken ? (
-                                <span className="mt-0.5 text-[8px] opacity-90">
-                                  {apartmentBookedThisDay
-                                    ? "Apto."
-                                    : "Ocup."}
+                    <>
+                      <p
+                        className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-snug"
+                        aria-hidden
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <span className="inline-block size-3 rounded-sm border border-slot-available/50 bg-slot-available" />
+                          Disponível
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="inline-block size-3 rounded-sm border border-slot-occupied bg-slot-occupied" />
+                          Cinza = indisponível
+                        </span>
+                      </p>
+                      <ul className={cn("grid gap-1.5", gridCols)}>
+                        {slots.map((slot) => {
+                          const reason = reasonFor(
+                            slot,
+                            format(selectedDate, "yyyy-MM-dd")
+                          );
+                          const taken = reason !== null;
+                          const label = slotLabel(slot);
+                          return (
+                            <li key={slot}>
+                              <button
+                                type="button"
+                                disabled={taken || submitting}
+                                onClick={() => void pickSlot(slot)}
+                                aria-label={
+                                  reason
+                                    ? `${label}, indisponível: ${SLOT_BLOCK_LABEL[reason].toLowerCase()}`
+                                    : `${label}, disponível`
+                                }
+                                title={reason ? SLOT_BLOCK_MESSAGE[reason] : undefined}
+                                className={cn(
+                                  "flex min-h-[2.75rem] w-full flex-col items-center justify-center rounded-md border px-0.5 py-1 text-center text-[10px] leading-tight font-semibold transition-[transform,opacity] sm:min-h-[3rem] sm:text-[11px]",
+                                  taken
+                                    ? "border-slot-occupied bg-slot-occupied text-slot-occupied-fg cursor-not-allowed"
+                                    : "border-slot-available/50 bg-slot-available text-slot-available-fg active:scale-[0.97]"
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "tabular-nums",
+                                    taken && "line-through decoration-1"
+                                  )}
+                                >
+                                  {label}
                                 </span>
-                              ) : null}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                                {reason ? (
+                                  <span className="mt-0.5 text-[10px] font-medium">
+                                    {SLOT_BLOCK_LABEL[reason]}
+                                  </span>
+                                ) : null}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
                   )}
                 </CardContent>
               </Card>

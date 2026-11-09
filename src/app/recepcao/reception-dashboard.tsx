@@ -456,7 +456,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       } catch {
         // Falha de rede numa atualização em segundo plano: mantém o que já está na tela.
       } finally {
-        if (!silent && req === summaryReqRef.current) setFormSummaryLoading(false);
+        if (req === summaryReqRef.current) setFormSummaryLoading(false);
       }
     },
     [newReservationDate, facility]
@@ -535,11 +535,17 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   useEffect(() => {
     if (!authed) return;
-    const id = window.setInterval(() => {
+    const refreshIfVisible = () => {
       if (pauseGridPollRef.current) return;
+      if (document.visibilityState !== "visible") return;
       void load(undefined, { silent: true });
-    }, 30_000);
-    return () => window.clearInterval(id);
+    };
+    const id = window.setInterval(refreshIfVisible, 30_000);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, [authed, load]);
 
   async function onLogin(e: React.FormEvent) {
@@ -593,6 +599,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   // Relógio do hotel: hora do servidor, atualizada a cada minuto.
   const nowMs = Date.now() + serverSkewMs;
   void minuteTick;
+  const hotelToday = hotelCalendarDate(new Date(nowMs));
 
   // Ocupação = consulta do formulário + grade já carregada (a grade atualiza a cada 30 s e após cada ação).
   const formOccupied = useMemo(() => {
@@ -610,7 +617,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       slotStart: slot,
       occupied: formOccupied,
       apartmentBooked: false,
-      todayYmd: todayStr,
+      todayYmd: hotelToday,
       nowMs,
     });
   const slotReason = reasonForSlot(newSlot);
@@ -624,7 +631,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     if (slotPickedByUserRef.current) return;
     if (slotReason === null) return;
     if (firstFreeSlot && firstFreeSlot !== newSlot) setNewSlot(firstFreeSlot);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slotReason, firstFreeSlot, newSlot]);
 
   async function onGenerateGuestAccess(e: React.FormEvent) {
@@ -696,6 +702,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       setNewWhatsapp("");
       setNewNotes("");
       setNewReservationDate(hotelCalendarDate());
+      slotPickedByUserRef.current = false; // o horário escolhido acabou de ser ocupado: pré-seleciona o próximo livre
       await Promise.all([load(), refreshFormSummary({ silent: true })]);
     } catch {
       toast.error("Falha ao salvar. Verifique a conexão.");
@@ -860,7 +867,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               {buildGridItems(
                 slotList,
                 (slot) => bySlot.get(normalizeSlotStart(slot)),
-                (slot) => isSlotEnded(facility, dateStr, slot, todayStr, nowMs)
+                (slot) => isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)
               ).map((item) =>
                 item.kind === "free" ? (
                   <FreeSlotsRow
@@ -907,20 +914,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   onChange={(e) => setGuestAccessApt(e.target.value)}
                 >
                   <option value="">Selecione…</option>
-                  {ALLOWED_APARTMENT_NUMBERS.map((n) => {
-                    const booked = formBookedApts.has(n);
-                    return (
-                      <option
-                        key={n}
-                        value={n}
-                        disabled={booked}
-                        className={booked ? "text-muted-foreground" : undefined}
-                      >
-                        {n}
-                        {booked ? " — já tem reserva neste dia" : ""}
-                      </option>
-                    );
-                  })}
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-2">
@@ -990,11 +988,20 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   onChange={(e) => setNewApt(e.target.value)}
                 >
                   <option value="">Selecione…</option>
-                  {ALLOWED_APARTMENT_NUMBERS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => {
+                    const booked = formBookedApts.has(n);
+                    return (
+                      <option
+                        key={n}
+                        value={n}
+                        disabled={booked}
+                        className={booked ? "text-muted-foreground" : undefined}
+                      >
+                        {n}
+                        {booked ? " — já tem reserva neste dia" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-1">

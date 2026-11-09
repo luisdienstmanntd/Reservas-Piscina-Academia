@@ -129,7 +129,10 @@ export async function getReservationDaySummary(
   | {
       ok: true;
       occupiedSlots: string[];
+      /** Apartamentos com reserva no dia. Só a recepção recebe a lista; o hóspede recebe `[]`. */
       apartmentsBooked: string[];
+      /** O apartamento do próprio hóspede (da estadia validada no servidor) já tem reserva neste dia? Sempre `false` para a recepção. */
+      ownApartmentBooked: boolean;
       /** Hora do servidor: a tela usa para decidir o que já passou, sem depender do relógio do aparelho. */
       serverNowMs: number;
     }
@@ -144,7 +147,9 @@ export async function getReservationDaySummary(
     return { ok: false, error: "Instalação inválida." };
   }
 
-  if (!(await readReceptionAuthed())) {
+  const isReception = await readReceptionAuthed();
+  let ownApartment: string | null = null;
+  if (!isReception) {
     const stay = await getValidatedGuestStay();
     if (!stay) {
       return {
@@ -153,6 +158,7 @@ export async function getReservationDaySummary(
           "Acesso indisponível. Use o link enviado pela recepção ou peça um novo.",
       };
     }
+    ownApartment = stay.apartmentNumber;
   }
 
   const supabase = getAdminClient();
@@ -177,7 +183,15 @@ export async function getReservationDaySummary(
     const apartmentsBooked = [
       ...new Set(rows.map((r) => String(r.apartment_number).trim())),
     ];
-    return { ok: true, occupiedSlots, apartmentsBooked, serverNowMs: Date.now() };
+    return {
+      ok: true,
+      occupiedSlots,
+      // Privacidade: o hóspede não vê quais outros apartamentos reservaram.
+      apartmentsBooked: isReception ? apartmentsBooked : [],
+      ownApartmentBooked:
+        ownApartment !== null && apartmentsBooked.includes(ownApartment.trim()),
+      serverNowMs: Date.now(),
+    };
   } catch (e) {
     console.error(e);
     return {

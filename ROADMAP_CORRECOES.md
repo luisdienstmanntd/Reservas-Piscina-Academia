@@ -124,9 +124,9 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 
 ### Fase 4 — Correções funcionais 🧭
 
-- [ ] **4.1 — Bloquear slot já passado no dia atual** *(resolve F7)* — cuidado com o slot `00:00`. Decidir se vale também para balcão. — Concluído em: ____
+- [x] **4.1 — Bloquear slot já passado no dia atual** *(resolve F7; feito em 09/11/2026 para hóspede e balcão; o bloco 00h–01h da piscina ficou de fora até o produto definir a semântica)* — Concluído em: 09/11/2026
 - [ ] **4.2 — Datas por string no guest-booking** *(resolve F8)* — eliminar `format()` no fuso do navegador. — Concluído em: ____
-- [ ] **4.3 — Restringir consulta do hóspede** *(resolve F14)* — datas dentro da estadia; booleano em vez de lista de aptos. — Concluído em: ____
+- [ ] **4.3 — Restringir consulta do hóspede** *(resolve F14; parte feita em 09/11/2026: o hóspede não recebe mais a lista de apartamentos, só `ownApartmentBooked`; falta restringir às datas da estadia)* — datas dentro da estadia; booleano em vez de lista de aptos. — Concluído em: ____
 
 ### Fase 5 — Crescimento e operação ⚙️
 
@@ -134,7 +134,7 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 - [ ] **5.2 — Sentry (actions + client)** *(F18)* — Concluído em: ____
 - [ ] **5.3 — Backup externo semanal** *(F19)* — `pg_dump` via GitHub Action ou plano pago. — Concluído em: ____
 - [ ] **5.4 — Cookie de estadia assinado no middleware** *(F16)* — elimina consulta ao banco por request. — Concluído em: ____
-- [ ] **5.5 — Polimento** *(F17, F20, F21, F22, F23, F24)* — polling pausado com aba oculta; `env.ts` com Zod; renomear coluna; remover deprecated/índice redundante; comentar semântica das flags. — Concluído em: ____
+- [ ] **5.5 — Polimento** *(F17, F20, F21, F22, F23, F24)* — polling pausado com aba oculta (feito em 09/11/2026); `env.ts` com Zod; renomear coluna; remover deprecated/índice redundante; comentar semântica das flags. — Concluído em: ____
 - [ ] **5.6 — Tabela `apartments` como dimensão** *(F25)* — Concluído em: ____
 
 ---
