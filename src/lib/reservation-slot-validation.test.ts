@@ -49,4 +49,27 @@ describe("validateStayAndSlot", () => {
       validateStayAndSlot("pool", "2026-04-18", null, "08:00:00", today)
     ).toBe("Horário inválido.");
   });
+
+  describe("horário que já passou (hoje)", () => {
+    const hoje = "2026-11-09";
+    const agora = Date.parse("2026-11-09T21:30:00Z"); // 18:30 no hotel
+
+    it("recusa horário que já terminou", () => {
+      expect(
+        validateStayAndSlot("pool", hoje, "2026-11-12", "17:00:00", hoje, agora)
+      ).toBe("Este horário já passou. Escolha outro.");
+    });
+    it("aceita o horário em andamento e os futuros", () => {
+      expect(validateStayAndSlot("pool", hoje, "2026-11-12", "18:00:00", hoje, agora)).toBeNull();
+      expect(validateStayAndSlot("pool", hoje, "2026-11-12", "21:00:00", hoje, agora)).toBeNull();
+    });
+    it("aceita o mesmo horário em um dia futuro", () => {
+      expect(validateStayAndSlot("pool", "2026-11-10", "2026-11-12", "14:00:00", hoje, agora)).toBeNull();
+    });
+    it("vale também para a reserva de balcão (sem check-out)", () => {
+      expect(validateStayAndSlot("gym", hoje, null, "08:00:00", hoje, agora)).toBe(
+        "Este horário já passou. Escolha outro."
+      );
+    });
+  });
 });
