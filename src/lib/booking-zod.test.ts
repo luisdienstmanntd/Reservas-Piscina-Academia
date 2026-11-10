@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FORBIDDEN_TEXT,
   createGuestSchema,
   createReceptionSchema,
   facilitySchema,
+  isValidCalendarYmd,
   isoYmdDateSchema,
   reservationApartmentSchema,
   stayApartmentSchema,
@@ -104,14 +106,45 @@ describe("createReceptionSchema", () => {
     if (r.success) expect(r.data.guestWhatsapp).toBeNull();
   });
 
-  it("notas respeitam tamanho máximo", () => {
-    const r = createReceptionSchema.safeParse({
-      facility: "gym",
+  it("notas respeitam tamanho máximo (2000, igual à edição na grade)", () => {
+    const base = {
+      facility: "gym" as const,
       apartmentNumber: "202",
       reservationDate: "2026-04-16",
       slotStart: "08:00:00",
-      notes: "x".repeat(501),
-    });
-    expect(r.success).toBe(false);
+    };
+    expect(createReceptionSchema.safeParse({ ...base, notes: "x".repeat(2000) }).success).toBe(true);
+    expect(createReceptionSchema.safeParse({ ...base, notes: "x".repeat(2001) }).success).toBe(false);
   });
 });
+
+describe("data de calendário e texto seguro", () => {
+  it("rejeita datas que não existem (antes viravam erro 500 no banco)", () => {
+    for (const d of ["2026-13-45", "2027-02-30", "2026-12-32", "2026-00-10", "2026-02-29"]) {
+      expect(isValidCalendarYmd(d)).toBe(false);
+      expect(isoYmdDateSchema.safeParse(d).success).toBe(false);
+    }
+  });
+  it("aceita datas reais, inclusive 29/02 em ano bissexto", () => {
+    for (const d of ["2026-11-10", "2028-02-29", "2026-12-31", "2999-01-01"]) {
+      expect(isoYmdDateSchema.safeParse(d).success).toBe(true);
+    }
+  });
+  it("FORBIDDEN_TEXT pega controle, byte nulo e inversão, mas não acento, emoji nem quebra de linha", () => {
+    for (const bad of ["a\u0000b", "a\u0007b", "a\u202Eb", "a\u2066b", "a\u007Fb"]) {
+      expect(FORBIDDEN_TEXT.test(bad)).toBe(true);
+    }
+    for (const ok of ["José da Conceição", "Aniversário 🎂", "linha 1\nlinha 2\tcom tab", "Ana-Maria D'Ávila"]) {
+      expect(FORBIDDEN_TEXT.test(ok)).toBe(false);
+    }
+  });
+
+  it("observações de balcão: até 2000 caracteres (igual à edição na grade), com mensagem em português", () => {
+    const base = { facility: "pool" as const, apartmentNumber: "101", reservationDate: "2999-01-01", slotStart: "15:00:00" };
+    expect(createReceptionSchema.safeParse({ ...base, notes: "a".repeat(2000) }).success).toBe(true);
+    const r = createReceptionSchema.safeParse({ ...base, notes: "a".repeat(2001) });
+    expect(r.success).toBe(false);
+    expect(!r.success && r.error.issues[0].message).toMatch(/2000 caracteres/);
+  });
+});
+

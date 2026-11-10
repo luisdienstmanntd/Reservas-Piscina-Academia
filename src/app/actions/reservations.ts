@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import {
+  FORBIDDEN_TEXT,
+  FORBIDDEN_TEXT_MESSAGE,
   guestWhatsappOptionalSchema,
   createGuestSchema,
   createReceptionSchema,
@@ -155,7 +157,13 @@ export async function getReservationDaySummary(
   const isReception = await readReceptionAuthed();
   let ownApartment: string | null = null;
   if (!isReception) {
-    const stay = await getValidatedGuestStay();
+    let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+    try {
+      stay = await getValidatedGuestStay();
+    } catch (e) {
+      console.error(e);
+      return { ok: false, error: SYSTEM_UNAVAILABLE_MESSAGE };
+    }
     if (!stay) {
       return {
         ok: false,
@@ -309,6 +317,9 @@ async function assertSlotAndApartmentFree(
   return { ok: true };
 }
 
+const SYSTEM_UNAVAILABLE_MESSAGE =
+  "Sistema temporariamente indisponível. Seu acesso continua válido: tente de novo em instantes.";
+
 const GUEST_DAILY_LIMIT_MESSAGE =
   "Limite diário atingido. Para reservar mais de 1 horário nesta data, consulte a recepção.";
 
@@ -323,7 +334,13 @@ export async function createGuestReservation(input: {
   guestWhatsapp: string;
   guestName?: string;
 }): Promise<ActionResult<{ id: string }>> {
-  const stay = await getValidatedGuestStay();
+  let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: SYSTEM_UNAVAILABLE_MESSAGE, code: "network" };
+  }
   if (!stay) {
     return {
       ok: false,
@@ -372,13 +389,23 @@ export async function createGuestReservation(input: {
     };
   }
 
-  const free = await assertSlotAndApartmentFree(supabaseGuest, {
-    facility,
-    reservationDate,
-    normSlot,
-    apartmentNumber,
-    apartmentConflictMessage: GUEST_DAILY_LIMIT_MESSAGE,
-  });
+  let free: Awaited<ReturnType<typeof assertSlotAndApartmentFree>>;
+  try {
+    free = await assertSlotAndApartmentFree(supabaseGuest, {
+      facility,
+      reservationDate,
+      normSlot,
+      apartmentNumber,
+      apartmentConflictMessage: GUEST_DAILY_LIMIT_MESSAGE,
+    });
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível verificar o horário. Tente novamente.",
+      code: "network",
+    };
+  }
   if (!free.ok) {
     return { ok: false, error: free.error, code: "conflict" };
   }
@@ -480,12 +507,22 @@ export async function createReceptionReservation(input: {
     };
   }
 
-  const freeRec = await assertSlotAndApartmentFree(supabaseRec, {
-    facility,
-    reservationDate,
-    normSlot,
-    apartmentNumber,
-  });
+  let freeRec: Awaited<ReturnType<typeof assertSlotAndApartmentFree>>;
+  try {
+    freeRec = await assertSlotAndApartmentFree(supabaseRec, {
+      facility,
+      reservationDate,
+      normSlot,
+      apartmentNumber,
+    });
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível verificar o horário. Tente novamente.",
+      code: "network",
+    };
+  }
   if (!freeRec.ok) {
     return { ok: false, error: freeRec.error, code: "conflict" };
   }
@@ -550,7 +587,13 @@ export async function updateReservationGuestName(
     return { ok: false, error: "Reserva inválida.", code: "validation" };
   }
 
+  if (guestName !== null && guestName !== undefined && typeof guestName !== "string") {
+    return { ok: false, error: "Nome inválido.", code: "validation" };
+  }
   const t = guestName === null || guestName === undefined ? "" : String(guestName).trim();
+  if (FORBIDDEN_TEXT.test(t)) {
+    return { ok: false, error: FORBIDDEN_TEXT_MESSAGE, code: "validation" };
+  }
   if (t.length > 200) {
     return {
       ok: false,
@@ -601,7 +644,13 @@ export async function updateReservationNotes(
     return { ok: false, error: "Reserva inválida.", code: "validation" };
   }
 
+  if (notes !== null && notes !== undefined && typeof notes !== "string") {
+    return { ok: false, error: "Observações inválidas.", code: "validation" };
+  }
   const t = notes === null || notes === undefined ? "" : String(notes).trim();
+  if (FORBIDDEN_TEXT.test(t)) {
+    return { ok: false, error: FORBIDDEN_TEXT_MESSAGE, code: "validation" };
+  }
   if (t.length > 2000) {
     return {
       ok: false,

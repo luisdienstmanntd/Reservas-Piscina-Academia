@@ -63,6 +63,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Pendências:** Rodada final de QA com a versão publicada; opcional: notificação do sistema operacional e aviso por WhatsApp/e-mail para quando ninguém estiver com a tela aberta.
 - **Referências:** `src/app/recepcao/new-reservation-alerts.tsx`, `src/lib/new-reservations.ts`.
 
+### 2026-11-10 — Atualização do Next.js por falhas de segurança
+
+- **Status:** Concluído (PR em rascunho; revalidado no teste integrado da versão final)
+- **Área:** Dependências e segurança
+- **Pedido:** Corrigir os achados da revisão de segurança antes da entrega.
+- **Problema observado:** `npm audit --omit=dev` marcava o Next.js 15.5.14 como **crítico** (falhas na otimização de imagens, desvio do middleware, negação de serviço em Server Actions, SSRF), além de 6 avisos altos em dependências indiretas.
+- **Decisão:** Atualizar para o Next.js 15.5.29 (última da série 15.5, sem mudança de versão maior) e rodar `npm audit fix` sem `--force`. O crítico deixa de existir.
+- **O que foi feito:** `next` e `eslint-config-next` para 15.5.29; `package-lock.json` com as atualizações indiretas compatíveis (nanoid, sharp, source-map-js, ws...).
+- **Resultado:** `npm audit` cai de 7 avisos (1 crítico, 6 altos) para 3 (1 moderado, 2 altos), todos aceitos e sem correção sem quebrar compatibilidade: (1) PostCSS aninhado dentro do Next: afeta o processamento de CSS na compilação, não roda em produção; só some com o Next 16. (2) Zod 3: consumo de memória ao validar coleções enormes; o limite de tamanho de requisição do Next contém o caso, e as entradas deste sistema são pequenas; só some com o Zod 4 (versão maior).
+- **Validação:** 122 testes unitários, ESLint, tsc e `next build` aprovados na versão nova.
+- **Impactos e riscos:** Atualização de correção (patch/minor) dentro da mesma série; risco baixo, mas o comportamento do build deve ser conferido na publicação.
+- **Pendências:** Planejar a migração para Next 16 e Zod 4 quando houver tempo para testá-las com calma.
+- **Referências:** `package.json`, `package-lock.json`.
+
 ### 2026-11-09 — Horários indisponíveis sempre em cinza, em todas as telas
 
 - **Status:** Concluído (publicação pendente)

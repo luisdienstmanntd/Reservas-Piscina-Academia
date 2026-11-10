@@ -400,6 +400,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [newWhatsapp, setNewWhatsapp] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const [creating, setCreating] = useState(false);
+  /** Trava imediata contra duplo clique em "Registrar reserva". */
+  const creatingRef = useRef(false);
   const [formOccupiedSlots, setFormOccupiedSlots] = useState<Set<string>>(
     () => new Set()
   );
@@ -685,6 +687,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (creatingRef.current) return;
     if (!newApt.trim()) {
       toast.error("Selecione o apartamento.");
       return;
@@ -704,6 +707,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       toast.error(phone.error.issues[0]?.message);
       return;
     }
+    creatingRef.current = true;
     setCreating(true);
     try {
       const r = await createReceptionReservation({
@@ -730,6 +734,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     } catch {
       toast.error("Falha ao salvar. Verifique a conexão.");
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
   }
@@ -1126,6 +1131,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 <Label htmlFor="nn">Observações</Label>
                 <Textarea
                   id="nn"
+                  maxLength={2000}
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   placeholder="Opcional: pedido especial, notas internas…"
