@@ -11,10 +11,14 @@ import {
   parseGuestTokenInput,
 } from "@/lib/guest-stay";
 import { readReceptionAuthed } from "@/lib/reception-auth";
+import { addDaysYmd } from "@/lib/hotel-time";
 import {
   getAdminClient,
   supabaseConfigErrorMessage,
 } from "@/lib/supabase/admin";
+
+/** Limite do check-out de um link de estadia (evita link praticamente eterno). */
+const MAX_STAY_DAYS = 90;
 
 export type ValidatedGuestStay = {
   /** Id da estadia (active_stays.id), gravado em reservations.stay_id. */
@@ -80,6 +84,12 @@ export async function generateStayToken(input: {
   const today = hotelTodayYmd();
   if (co.data < today) {
     return { ok: false, error: "Check-out não pode ser anterior a hoje." };
+  }
+  if (co.data > addDaysYmd(today, MAX_STAY_DAYS)) {
+    return {
+      ok: false,
+      error: `Check-out muito distante (máximo ${MAX_STAY_DAYS} dias).`,
+    };
   }
 
   const supabase = getAdminClient();

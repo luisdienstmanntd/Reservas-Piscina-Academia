@@ -21,7 +21,8 @@ describe("rate limit do login", () => {
     expect(loginWindowStartIso(now)).toBe("2026-11-08T11:45:00.000Z");
   });
 
-  it("lê o primeiro IP de x-forwarded-for", () => {
+  it("prefere o x-real-ip (definido pela plataforma) ao x-forwarded-for, que o cliente pode forjar", () => {
+    expect(clientIpFromHeaders(h({ "x-real-ip": "5.6.7.8", "x-forwarded-for": "9.9.9.9, 10.0.0.1" }))).toBe("5.6.7.8");
     expect(clientIpFromHeaders(h({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" }))).toBe("1.2.3.4");
     expect(clientIpFromHeaders(h({ "x-real-ip": "5.6.7.8" }))).toBe("5.6.7.8");
     expect(clientIpFromHeaders(h({}))).toBe("unknown");

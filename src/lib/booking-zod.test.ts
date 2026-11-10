@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FORBIDDEN_TEXT,
   createGuestSchema,
   createReceptionSchema,
   facilitySchema,
+  isValidCalendarYmd,
   isoYmdDateSchema,
   reservationApartmentSchema,
   stayApartmentSchema,
@@ -115,3 +117,26 @@ describe("createReceptionSchema", () => {
     expect(r.success).toBe(false);
   });
 });
+
+describe("data de calendário e texto seguro", () => {
+  it("rejeita datas que não existem (antes viravam erro 500 no banco)", () => {
+    for (const d of ["2026-13-45", "2027-02-30", "2026-12-32", "2026-00-10", "2026-02-29"]) {
+      expect(isValidCalendarYmd(d)).toBe(false);
+      expect(isoYmdDateSchema.safeParse(d).success).toBe(false);
+    }
+  });
+  it("aceita datas reais, inclusive 29/02 em ano bissexto", () => {
+    for (const d of ["2026-11-10", "2028-02-29", "2026-12-31", "2999-01-01"]) {
+      expect(isoYmdDateSchema.safeParse(d).success).toBe(true);
+    }
+  });
+  it("FORBIDDEN_TEXT pega controle, byte nulo e inversão, mas não acento, emoji nem quebra de linha", () => {
+    for (const bad of ["a\u0000b", "a\u0007b", "a\u202Eb", "a\u2066b", "a\u007Fb"]) {
+      expect(FORBIDDEN_TEXT.test(bad)).toBe(true);
+    }
+    for (const ok of ["José da Conceição", "Aniversário 🎂", "linha 1\nlinha 2\tcom tab", "Ana-Maria D'Ávila"]) {
+      expect(FORBIDDEN_TEXT.test(ok)).toBe(false);
+    }
+  });
+});
+

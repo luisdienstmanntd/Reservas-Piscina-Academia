@@ -389,3 +389,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA analytics GRANT SELECT ON TABLES TO powerbi_r
 
 -- A role não tem acesso a nada em public (as tabelas já têm RLS sem políticas).
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM powerbi_reader;
+
+-- ---- LGPD: notes também é apagado pela anonimização (o job pg_cron fica em 20261110100000_lgpd_anonymize_notes.sql) ----
