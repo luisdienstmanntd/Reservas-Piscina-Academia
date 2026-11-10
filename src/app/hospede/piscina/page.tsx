@@ -4,7 +4,12 @@ import { getValidatedGuestStay } from "@/app/actions/stays";
 import { GuestBooking } from "@/components/guest-booking";
 
 export default async function HospedePiscinaPage() {
-  const stay = await getValidatedGuestStay();
+  let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch {
+    redirect("/indisponivel"); // banco fora do ar: não é link inválido
+  }
   if (!stay) redirect("/acesso-negado");
 
   return (

@@ -39,3 +39,22 @@ describe("hotelTodayYmd", () => {
     expect(hotelTodayYmd(at)).toBe("2026-01-15");
   });
 });
+
+import { classifyStayLookup } from "./guest-stay";
+
+describe("classifyStayLookup", () => {
+  const today = "2026-11-10";
+  it("ok quando existe e vale", () => {
+    const r = classifyStayLookup(200, [{ apartment_number: "101", checkout_date: "2026-11-12" }], today);
+    expect(r.kind).toBe("ok");
+  });
+  it("invalid quando vazio ou vencido", () => {
+    expect(classifyStayLookup(200, [], today).kind).toBe("invalid");
+    expect(classifyStayLookup(200, [{ apartment_number: "1", checkout_date: "2026-11-01" }], today).kind).toBe("invalid");
+  });
+  it("error em 5xx, 401 ou corpo inesperado (nunca apaga sessão)", () => {
+    expect(classifyStayLookup(503, null, today).kind).toBe("error");
+    expect(classifyStayLookup(401, null, today).kind).toBe("error");
+    expect(classifyStayLookup(200, { message: "x" }, today).kind).toBe("error");
+  });
+});

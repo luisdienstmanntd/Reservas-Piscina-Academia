@@ -152,7 +152,13 @@ export async function getReservationDaySummary(
   const isReception = await readReceptionAuthed();
   let ownApartment: string | null = null;
   if (!isReception) {
-    const stay = await getValidatedGuestStay();
+    let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+    try {
+      stay = await getValidatedGuestStay();
+    } catch (e) {
+      console.error(e);
+      return { ok: false, error: SYSTEM_UNAVAILABLE_MESSAGE };
+    }
     if (!stay) {
       return {
         ok: false,
@@ -306,6 +312,9 @@ async function assertSlotAndApartmentFree(
   return { ok: true };
 }
 
+const SYSTEM_UNAVAILABLE_MESSAGE =
+  "Sistema temporariamente indisponível. Seu acesso continua válido: tente de novo em instantes.";
+
 const GUEST_DAILY_LIMIT_MESSAGE =
   "Limite diário atingido. Para reservar mais de 1 horário nesta data, consulte a recepção.";
 
@@ -320,7 +329,13 @@ export async function createGuestReservation(input: {
   guestWhatsapp: string;
   guestName?: string;
 }): Promise<ActionResult<{ id: string }>> {
-  const stay = await getValidatedGuestStay();
+  let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: SYSTEM_UNAVAILABLE_MESSAGE, code: "network" };
+  }
   if (!stay) {
     return {
       ok: false,
