@@ -51,15 +51,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-10 — Hóspede troca o horário de uma reserva já feita
 
-- **Status:** Em andamento (PR em rascunho; verificado em navegador real contra PostgreSQL local; **a migration `20261110200000_guest_reschedule.sql` ainda NÃO foi aplicada em produção**)
+- **Status:** Concluído (PR #18 mergeado; migration `20261110200000_guest_reschedule.sql` aplicada em produção em 10/11/2026 antes do merge)
 - **Área:** Reservas (hóspede), recepção, banco de dados
 - **Pedido:** Se o hóspede quiser trocar o horário de uma reserva, ele entra em "Agendar piscina/academia", escolhe a data, vê os horários e, ao tocar num horário livre (ex.: 22h), aparece "Deseja alterar a reserva para 22h às 23h?".
 - **Decisão:** O limite de 1 reserva por apartamento, instalação e dia continua. Com reserva no dia, os outros horários livres ficam tocáveis e servem para TROCAR (antes ficavam cinza com "limite diário"); o horário atual segue cinza. Só vale para reserva do próprio apartamento, feita por este link ou pela recepção; reserva de outra estadia do mesmo apartamento não pode ser trocada; reserva cujo horário já passou também não. A troca é um único UPDATE (o índice único garante que dois hóspedes não ficam no mesmo horário); os avisos de WhatsApp (confirmação/lembrete) voltam a "não enviados", porque falavam do horário antigo. A recepção é avisada ("Horário alterado: ...") pelo mesmo mecanismo de 10 s das reservas novas.
 - **O que foi feito:** `changeGuestReservation` e `ownSlot` no resumo do dia (`src/app/actions/reservations.ts`); troca na tela do hóspede com diálogo de confirmação (`src/components/guest-booking.tsx`); `kind: "changed"` nos avisos da recepção (`src/lib/new-reservations.ts`); migration que cria `reservations.guest_rescheduled_at` e faz a auditoria registrar mudança de `slot_start`/`reservation_date` com ator `guest`.
 - **Validação:** 166 testes, tsc e ESLint. Em navegador com PostgreSQL real (17 migrations): horário próprio e de outro apartamento em cinza; "Manter" não altera; "Alterar" troca para 22h, mantém 1 reserva ativa, zera os avisos, grava o evento `updated` com ator `guest` e `{slot_start}`, e a recepção foi avisada em 2 s.
-- **Impactos e riscos:** A migration é aditiva (coluna anulável + troca do corpo de uma função). O código tolera a migration ainda não aplicada: o aviso de trocas só falha em silêncio e a troca devolve "não foi possível alterar", sem afetar reservas novas. Aplicar a migration ANTES de usar a troca.
+- **Impactos e riscos:** A migration é aditiva (coluna anulável + troca do corpo de uma função). O código tolera a migration ainda não aplicada: o aviso de trocas só falha em silêncio e a troca devolve "não foi possível alterar", sem afetar reservas novas. A migration já está aplicada em produção (conferido: coluna `guest_rescheduled_at`, índice, função de auditoria nova com `search_path` vazio, 2 gatilhos ativos, 14 reservas intactas, histórico alinhado com a versão do arquivo).
 - **Não fazer / evitar regressão:** Não permitir mais de 1 reserva por dia para o hóspede; não trocar reserva de outra estadia; não apagar o aviso da recepção.
-- **Pendências:** Aplicar a migration em produção (aguarda autorização do responsável); conferir no site publicado depois.
+- **Pendências:** Conferir no site publicado, com um link real, a troca de horário e o aviso na recepção.
 - **Referências:** `supabase/migrations/20261110200000_guest_reschedule.sql`, `src/app/actions/reservations.ts`, `src/components/guest-booking.tsx`.
 
 ### 2026-11-10 — Hóspede não precisa informar nome e WhatsApp de novo
