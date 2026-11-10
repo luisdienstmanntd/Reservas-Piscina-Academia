@@ -146,18 +146,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-10 — LGPD: anonimização também apaga as observações
 
-- **Status:** Bloqueado (migration no repositório desde o PR #12, NÃO aplicada em produção; aguarda decisão do responsável)
+- **Status:** Concluído (migration aplicada em produção em 10/11/2026 por pedido do responsável)
 - **Área:** Banco de dados, LGPD
 - **Pedido:** Apagar também as observações (`notes`) das reservas na anonimização.
 - **Problema observado:** O job diário de anonimização limpava nome e WhatsApp, mas as observações, texto livre da recepção, podem conter dados pessoais (telefone de familiar, alergias, pedidos) e ficavam guardadas.
 - **Causa:** `notes` nunca entrou na rotina original.
 - **Decisão:** Depois do fim da estadia as observações não são mais necessárias, então são apagadas junto com nome e WhatsApp.
 - **O que foi feito:** `supabase/migrations/20261110100000_lgpd_anonymize_notes.sql`: (1) apaga as `notes` das reservas já anonimizadas, desligando os gatilhos de usuário durante a limpeza para não gerar eventos de auditoria falsos; (2) reagenda o job `lgpd_anonymize_reservations` (03:00 UTC) incluindo `notes = NULL`.
-- **Resultado:** Ainda não vigente em produção.
-- **Validação:** Testada no PostgreSQL 16 local durante o QA (a primeira versão falhou por um gatilho de auditoria; corrigida). Não executada em produção.
+- **Resultado:** Vigente em produção. Conferido depois de aplicar: job `lgpd_anonymize_reservations` ativo (`0 3 * * *`) com `notes = NULL`; os 2 gatilhos da tabela `reservations` ativos (nenhum desligado); 0 reservas anonimizadas com observação restante (já eram 0 antes: o banco estava com 14 reservas, nenhuma anonimizada com observação). Histórico de migrations alinhado com a versão `20261110100000` do arquivo.
+- **Validação:** Testada no PostgreSQL 16 local durante o QA (a primeira versão falhou por um gatilho de auditoria; corrigida) e aplicada em produção com as verificações acima.
 - **Impactos e riscos:** Apagar observações é irreversível. Exige `pg_cron` (já usado pelo job existente).
-- **Não fazer / evitar regressão:** Não aplicar sem o aval do responsável; não reabilitar gatilhos esquecendo o `ENABLE TRIGGER USER`.
-- **Pendências:** Aplicar em produção quando o responsável liberar e conferir o job em `cron.job`.
+- **Não fazer / evitar regressão:** Não remover `notes = NULL` do job; ao mexer em migrations que desligam gatilhos, sempre religar com `ENABLE TRIGGER USER` e conferir `tgenabled`.
+- **Pendências:** Conferir, depois da primeira execução às 03:00 UTC com reservas de estadias encerradas, que as observações foram apagadas.
 - **Referências:** `supabase/migrations/20261110100000_lgpd_anonymize_notes.sql`, PR #12.
 
 ### 2026-11-10 — Aviso de novas reservas para a recepção
