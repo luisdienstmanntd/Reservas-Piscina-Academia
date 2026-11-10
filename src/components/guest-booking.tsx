@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import {
+  purgeExpiredContacts,
+  readGuestContact,
+  saveGuestContact,
+} from "@/lib/guest-contact-storage";
 import { CalendarCheck, CalendarDays, ChevronLeft, Home } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -81,6 +86,8 @@ export function GuestBooking({
   const apartment = apartmentNumber.trim();
 
   const [step, setStep] = useState<Step>(1);
+  /** Só depois de checar os dados lembrados neste aparelho (evita piscar o formulário). */
+  const [contactChecked, setContactChecked] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -144,6 +151,32 @@ export function GuestBooking({
     [facility]
   );
 
+  // Se o hóspede já informou nome e WhatsApp nesta estadia, vai direto ao calendário.
+  useEffect(() => {
+    try {
+      purgeExpiredContacts(window.localStorage, hotelCalendarDate());
+      const saved = apartment
+        ? readGuestContact(
+            window.localStorage,
+            apartment,
+            guestCheckoutDate,
+            (w) => {
+              const p = guestWhatsappRequiredSchema.safeParse(w);
+              return p.success ? p.data : null;
+            }
+          )
+        : null;
+      if (saved && guestCheckoutDate >= hotelCalendarDate()) {
+        setGuestName(saved.name);
+        setWhatsapp(saved.whatsapp);
+        setStep(2);
+      }
+    } catch {
+      /* sem armazenamento: mostra a identificação normalmente */
+    }
+    setContactChecked(true);
+  }, [apartment, guestCheckoutDate]);
+
   useEffect(() => {
     if (step !== 3 || !selectedDate) return;
     const ymd = format(selectedDate, "yyyy-MM-dd");
@@ -182,6 +215,14 @@ export function GuestBooking({
       return;
     }
     setWhatsapp(phone.data);
+    try {
+      saveGuestContact(window.localStorage, apartment, guestCheckoutDate, {
+        name: guestName.trim(),
+        whatsapp: phone.data,
+      });
+    } catch {
+      /* sem armazenamento: segue sem lembrar */
+    }
     setCalendarBackTarget(1);
     setStep(2);
     setSelectedDate(undefined);
@@ -334,7 +375,7 @@ export function GuestBooking({
               </Button>
             )}
 
-            {step === 1 && (
+            {step === 1 && contactChecked && (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-0.5 p-3 pb-2">
                   <CardTitle className="font-serif text-charcoal text-base font-semibold">
