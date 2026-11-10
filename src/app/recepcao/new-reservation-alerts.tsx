@@ -19,6 +19,8 @@ const OFFLINE_AFTER_FAILURES = 2;
 
 const CURSOR_KEY = "valle.reception.newReservationsCursor";
 const SOUND_KEY = "valle.reception.alertSound";
+const UNREAD_KEY = "valle.reception.unreadAlerts";
+const UNREAD_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function readStorage(key: string): string | null {
   try {
@@ -62,7 +64,6 @@ export function useNewReservationAlerts({
   const failuresRef = useRef(0);
   const soundOnRef = useRef(true);
   const audioRef = useRef<AudioContext | null>(null);
-  const baseTitleRef = useRef<string | null>(null);
   const todayRef = useRef(todayYmd);
   const onFreshRef = useRef(onFresh);
   const onUnauthorizedRef = useRef(onUnauthorized);
@@ -78,6 +79,31 @@ export function useNewReservationAlerts({
       soundOnRef.current = false;
     }
     cursorRef.current = readStorage(CURSOR_KEY);
+    // Avisos ainda não vistos sobrevivem a F5 / fechar e reabrir a aba (até 24 h).
+    try {
+      const raw = readStorage(UNREAD_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        const limit = Date.now() - UNREAD_MAX_AGE_MS;
+        const kept = (parsed as NewReservationItem[]).filter(
+          (i) =>
+            i &&
+            typeof i.id === "string" &&
+            new Date(i.created_at).getTime() >= limit
+        );
+        if (kept.length > 0) {
+          kept.forEach((i) => seenRef.current.add(i.id));
+          unreadRef.current = kept;
+          setUnread(kept);
+        }
+      }
+    } catch {
+      /* armazenamento corrompido: ignora */
+    }
+  }, []);
+
+  const persistUnread = useCallback((list: NewReservationItem[]) => {
+    writeStorage(UNREAD_KEY, JSON.stringify(list));
   }, []);
 
   const ensureAudio = useCallback((): AudioContext | null => {
@@ -176,6 +202,7 @@ export function useNewReservationAlerts({
       if (fresh.length > 0) {
         unreadRef.current = next;
         setUnread(next);
+        persistUnread(next);
         const shown = fresh.slice(0, 3);
         for (const item of shown) {
           toast.success("Nova reserva", {
@@ -197,7 +224,7 @@ export function useNewReservationAlerts({
     } finally {
       inFlightRef.current = false;
     }
-  }, [beep]);
+  }, [beep, persistUnread]);
 
   // Verificação periódica (também com a aba em segundo plano) e ao voltar para a aba.
   useEffect(() => {
@@ -218,25 +245,40 @@ export function useNewReservationAlerts({
     };
   }, [enabled, poll]);
 
-  // Título da aba com o contador (visível mesmo com outra aba na frente).
+  // Título da aba com o contador. O Next pode reescrever o <title> depois da carga:
+  // um observador reaplica o contador sempre que isso acontecer.
   useEffect(() => {
-    if (baseTitleRef.current === null) baseTitleRef.current = document.title;
-    const base = baseTitleRef.current;
-    document.title = unread.length > 0 ? `(${unread.length}) Novas reservas` : base;
+    const titleEl = document.querySelector("title");
+    const n = unread.length;
+    const compute = (t: string) => {
+      const clean = t.replace(/^\(\d+\) Novas reservas · /, "");
+      return n > 0 ? `(${n}) Novas reservas · ${clean}` : clean;
+    };
+    const apply = () => {
+      const next = compute(document.title);
+      if (document.title !== next) document.title = next;
+    };
+    apply();
+    if (!titleEl) return;
+    const mo = new MutationObserver(apply);
+    mo.observe(titleEl, { childList: true, characterData: true, subtree: true });
     return () => {
-      document.title = base;
+      mo.disconnect();
+      document.title = document.title.replace(/^\(\d+\) Novas reservas · /, "");
     };
   }, [unread.length]);
 
   const dismiss = useCallback((id: string) => {
     unreadRef.current = unreadRef.current.filter((i) => i.id !== id);
     setUnread(unreadRef.current);
-  }, []);
+    persistUnread(unreadRef.current);
+  }, [persistUnread]);
 
   const dismissAll = useCallback(() => {
     unreadRef.current = [];
     setUnread([]);
-  }, []);
+    persistUnread([]);
+  }, [persistUnread]);
 
   const toggleSound = useCallback(() => {
     const next = !soundOnRef.current;
