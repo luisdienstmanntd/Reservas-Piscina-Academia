@@ -135,10 +135,17 @@ export async function getReceptionAuthState(): Promise<boolean> {
   return readReceptionAuthed();
 }
 
-/** Slots já ocupados e apartamentos que já têm reserva nesse dia (por instalação). */
+/**
+ * Slots já ocupados e apartamentos que já têm reserva nesse dia (por instalação).
+ *
+ * `asGuest: true` (a tela do hóspede sempre envia) responde COMO hóspede mesmo que o navegador também tenha a
+ * sessão da recepção (quem testa os dois lados no mesmo navegador): senão a tela do hóspede receberia a visão da
+ * recepção, sem a reserva própria. É seguro: o modo hóspede só devolve MENOS informação (nunca a lista de apartamentos).
+ */
 export async function getReservationDaySummary(
   reservationDate: string,
-  facility: Facility
+  facility: Facility,
+  options?: { asGuest?: boolean }
 ): Promise<
   | {
       ok: true;
@@ -163,7 +170,7 @@ export async function getReservationDaySummary(
     return { ok: false, error: "Instalação inválida." };
   }
 
-  const isReception = await readReceptionAuthed();
+  const isReception = options?.asGuest ? false : await readReceptionAuthed();
   let ownApartment: string | null = null;
   let ownStayId: string | null = null;
   if (!isReception) {
