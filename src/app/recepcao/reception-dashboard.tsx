@@ -36,6 +36,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { buildGridItems, freeRangeLabel } from "@/lib/reservation-grid";
 import {
+  NewReservationBanner,
+  useNewReservationAlerts,
+} from "@/app/recepcao/new-reservation-alerts";
+import type { NewReservationItem } from "@/lib/new-reservations";
+import {
   SLOT_BLOCK_LABEL,
   SLOT_BLOCK_MESSAGE,
   isSlotEnded,
@@ -601,6 +606,24 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   void minuteTick;
   const hotelToday = hotelCalendarDate(new Date(nowMs));
 
+  // Aviso de novas reservas (qualquer dia/instalação): faixa, toast, som e contador no título da aba.
+  const newReservationAlerts = useNewReservationAlerts({
+    enabled: authed,
+    todayYmd: hotelToday,
+    onFresh: () => {
+      void load(undefined, { silent: true });
+      void refreshFormSummary({ silent: true });
+    },
+    onUnauthorized: () => {
+      setAuthed(false);
+      toast.error("Sessão da recepção expirada. Entre de novo.");
+    },
+  });
+  function viewNewReservation(item: NewReservationItem) {
+    setFacility(item.facility === "gym" ? "gym" : "pool");
+    setDateStr(item.reservation_date);
+  }
+
   // Ocupação = consulta do formulário + grade já carregada (a grade atualiza a cada 30 s e após cada ação).
   const formOccupied = useMemo(() => {
     const set = new Set(formOccupiedSlots);
@@ -815,6 +838,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             </Button>
           </div>
         </header>
+
+        <NewReservationBanner
+          alerts={newReservationAlerts}
+          todayYmd={hotelToday}
+          onView={viewNewReservation}
+        />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:gap-6">
           <div className="min-w-0 space-y-1">
