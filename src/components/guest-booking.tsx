@@ -14,9 +14,21 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
+  changeGuestReservation,
   createGuestReservation,
   getReservationDaySummary,
 } from "@/app/actions/reservations";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { hourRangeLabel } from "@/lib/my-reservations";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -93,6 +105,10 @@ export function GuestBooking({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [occupied, setOccupied] = useState<Set<string>>(new Set());
   const [apartmentBookedThisDay, setApartmentBookedThisDay] = useState(false);
+  /** Horário da reserva do próprio hóspede neste dia (pode ser trocada por outro horário livre). */
+  const [ownSlot, setOwnSlot] = useState<string | null>(null);
+  /** Horário escolhido para a troca, aguardando o "sim" do hóspede. */
+  const [pendingChange, setPendingChange] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   /** Diferença entre o relógio do servidor e o deste aparelho (o "já passou" usa o relógio do hotel). */
   const [serverSkewMs, setServerSkewMs] = useState(0);
@@ -137,6 +153,7 @@ export function GuestBooking({
           new Set(r.occupiedSlots.map((s) => normalizeSlotStart(s)))
         );
         setApartmentBookedThisDay(r.ownApartmentBooked);
+        setOwnSlot(r.ownSlot ? normalizeSlotStart(r.ownSlot) : null);
       } catch {
         // Atualização em segundo plano que falhou: mantém o que já está na tela.
         if (!silent) {
@@ -265,7 +282,8 @@ export function GuestBooking({
       reservationDateYmd: ymd,
       slotStart: slot,
       occupied,
-      apartmentBooked: apartmentBookedThisDay,
+      // Com reserva própria no dia os outros horários livres servem para TROCAR (limite segue 1 por dia).
+      apartmentBooked: apartmentBookedThisDay && !ownSlot,
       todayYmd: hotelCalendarDate(new Date(nowMs)),
       nowMs,
     });
@@ -286,6 +304,11 @@ export function GuestBooking({
     const reason = reasonFor(slot, format(selectedDate, "yyyy-MM-dd"));
     if (reason) {
       toast.error(SLOT_BLOCK_MESSAGE[reason]);
+      return;
+    }
+    // Já tem reserva neste dia: em vez de criar outra, pergunta se quer trocar o horário.
+    if (ownSlot) {
+      setPendingChange(slot);
       return;
     }
     const ymd = format(selectedDate, "yyyy-MM-dd");
@@ -320,6 +343,44 @@ export function GuestBooking({
     } catch {
       toast.error(
         "Conexão interrompida. Sua seleção foi mantida — tente confirmar de novo."
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  async function confirmChange() {
+    const slot = pendingChange;
+    setPendingChange(null);
+    if (!slot || !selectedDate || !ownSlot || submittingRef.current) return;
+    const ymd = format(selectedDate, "yyyy-MM-dd");
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const r = await changeGuestReservation({
+        facility,
+        reservationDate: ymd,
+        slotStart: slot,
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        await loadOccupied(ymd, { silent: true });
+        return;
+      }
+      setConfirmedReservations((prev) => {
+        const next = [
+          ...prev.filter((x) => x.dateYmd !== ymd),
+          { dateYmd: ymd, slot },
+        ];
+        next.sort(sortConfirmed);
+        return next;
+      });
+      setStep(4);
+      toast.success("Reserva alterada!");
+    } catch {
+      toast.error(
+        "Conexão interrompida. Nada foi alterado — tente de novo."
       );
     } finally {
       submittingRef.current = false;
@@ -489,7 +550,12 @@ export function GuestBooking({
                   <p className={cn("text-muted-foreground text-[11px] leading-snug", facility === "pool" && "whitespace-pre-line text-justify [text-align-last:justify]")}>
                     {t.step3Hint}
                   </p>
-                  {apartmentBookedThisDay ? (
+                  {ownSlot ? (
+                    <p className="text-charcoal text-[11px] font-medium leading-snug">
+                      Você já tem reserva neste dia ({hourRangeLabel(ownSlot)}).
+                      Para trocar o horário, toque em outro horário livre.
+                    </p>
+                  ) : apartmentBookedThisDay ? (
                     <p className="text-destructive text-[11px] font-medium leading-snug">
                       Limite diário atingido. Para reservar mais de 1 horário
                       nesta data, consulte a recepção.
@@ -616,6 +682,33 @@ export function GuestBooking({
           Dúvidas, fale conosco através do ramal 9
         </p>
       </footer>
+
+      <AlertDialog
+        open={pendingChange !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingChange(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Deseja alterar a reserva para{" "}
+              {pendingChange ? hourRangeLabel(pendingChange) : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {ownSlot
+                ? `Seu horário atual (${hourRangeLabel(ownSlot)}) será liberado para outros hóspedes.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter o horário atual</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmChange()}>
+              Alterar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

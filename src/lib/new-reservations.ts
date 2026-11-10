@@ -9,11 +9,13 @@ export type NewReservationItem = {
   apartment_number: string;
   created_by: string;
   created_at: string;
+  /** "changed" = o hóspede trocou o horário de uma reserva existente (o `id` inclui o instante da troca). */
+  kind?: "new" | "changed";
 };
 
 /** Só reservas feitas pelo hóspede disparam aviso (a recepção já sabe das que ela mesma cria). */
 export function isAlertable(item: NewReservationItem): boolean {
-  return item.created_by === "guest";
+  return item.kind === "changed" || item.created_by === "guest";
 }
 
 function dayWord(reservationDate: string, todayYmd: string): string {
@@ -28,7 +30,8 @@ function dayWord(reservationDate: string, todayYmd: string): string {
 /** Ex.: "Piscina · hoje · 20h00 – 21h00 · Apto 211". */
 export function alertLabel(item: NewReservationItem, todayYmd: string): string {
   const place = item.facility === "gym" ? "Academia" : "Piscina";
-  return `${place} · ${dayWord(item.reservation_date, todayYmd)} · ${slotLabel(item.slot_start)} · Apto ${item.apartment_number}`;
+  const base = `${place} · ${dayWord(item.reservation_date, todayYmd)} · ${slotLabel(item.slot_start)} · Apto ${item.apartment_number}`;
+  return item.kind === "changed" ? `Horário alterado: ${base}` : base;
 }
 
 /**

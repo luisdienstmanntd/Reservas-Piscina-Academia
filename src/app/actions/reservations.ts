@@ -9,6 +9,7 @@ import {
   guestWhatsappOptionalSchema,
   createGuestSchema,
   createReceptionSchema,
+  changeGuestSchema,
   facilitySchema,
   isoYmdDateSchema,
 } from "@/lib/booking-zod";
@@ -22,6 +23,7 @@ import {
   type ReservationRow,
 } from "@/lib/reservations";
 import { validateStayAndSlot } from "@/lib/reservation-slot-validation";
+import { isSlotEnded } from "@/lib/slot-availability";
 import {
   MAX_LOOKBACK_MS,
   OVERLAP_MS,
@@ -145,6 +147,8 @@ export async function getReservationDaySummary(
       apartmentsBooked: string[];
       /** O apartamento do próprio hóspede (da estadia validada no servidor) já tem reserva neste dia? Sempre `false` para a recepção. */
       ownApartmentBooked: boolean;
+      /** Horário da reserva do próprio hóspede neste dia (pode ser trocada); `null` se não há ou não é desta estadia. */
+      ownSlot: string | null;
       /** Hora do servidor: a tela usa para decidir o que já passou, sem depender do relógio do aparelho. */
       serverNowMs: number;
     }
@@ -161,6 +165,7 @@ export async function getReservationDaySummary(
 
   const isReception = await readReceptionAuthed();
   let ownApartment: string | null = null;
+  let ownStayId: string | null = null;
   if (!isReception) {
     let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
     try {
@@ -177,6 +182,7 @@ export async function getReservationDaySummary(
       };
     }
     ownApartment = stay.apartmentNumber;
+    ownStayId = stay.id;
   }
 
   const supabase = getAdminClient();
@@ -187,7 +193,7 @@ export async function getReservationDaySummary(
   try {
     const { data, error } = await supabase
       .from("reservations")
-      .select("slot_start, apartment_number")
+      .select("slot_start, apartment_number, stay_id")
       .eq("reservation_date", parsed.data)
       .eq("facility", f.data)
       .eq("status", "active");
@@ -201,9 +207,19 @@ export async function getReservationDaySummary(
     const apartmentsBooked = [
       ...new Set(rows.map((r) => String(r.apartment_number).trim())),
     ];
+    // Só devolve o horário do próprio hóspede (reserva da recepção ou deste link), nunca de outros.
+    const own =
+      ownApartment === null
+        ? undefined
+        : rows.find(
+            (r) =>
+              String(r.apartment_number).trim() === ownApartment.trim() &&
+              (!r.stay_id || String(r.stay_id) === ownStayId)
+          );
     return {
       ok: true,
       occupiedSlots,
+      ownSlot: own ? normalizeSlotStart(String(own.slot_start)) : null,
       // Privacidade: o hóspede não vê quais outros apartamentos reservaram.
       apartmentsBooked: isReception ? apartmentsBooked : [],
       ownApartmentBooked:
@@ -459,6 +475,140 @@ export async function createGuestReservation(input: {
       ok: false,
       error:
         "Não foi possível concluir a reserva (rede ou servidor). Os seus dados continuam no formulário — tente novamente.",
+      code: "network",
+    };
+  }
+}
+
+/**
+ * O hóspede troca o horário de uma reserva que já fez (mesma instalação e mesmo dia).
+ * Um único UPDATE: ou o horário novo é dele, ou nada muda (o índice único impede dois hóspedes no mesmo horário).
+ * Zera os avisos de WhatsApp (os enviados falavam do horário antigo) e marca a troca para a recepção ser avisada.
+ */
+export async function changeGuestReservation(input: {
+  facility: Facility;
+  reservationDate: string;
+  slotStart: string;
+}): Promise<ActionResult<{ id: string }>> {
+  let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: SYSTEM_UNAVAILABLE_MESSAGE, code: "network" };
+  }
+  if (!stay) {
+    return {
+      ok: false,
+      error:
+        "Acesso indisponível ou estadia expirada. Peça um novo link na recepção.",
+      code: "validation",
+    };
+  }
+
+  const parsed = changeGuestSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      code: "validation",
+    };
+  }
+  const { facility, reservationDate, slotStart } = parsed.data;
+  const v = validateStayAndSlot(
+    facility,
+    reservationDate,
+    stay.checkoutDate,
+    slotStart
+  );
+  if (v) return { ok: false, error: v, code: "validation" };
+  const newSlot = normalizeSlotStart(slotStart);
+
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return { ok: false, error: supabaseConfigErrorMessage(), code: "validation" };
+  }
+
+  try {
+    const { data: current, error: findError } = await supabase
+      .from("reservations")
+      .select("id, slot_start, stay_id")
+      .eq("apartment_number", stay.apartmentNumber.trim())
+      .eq("facility", facility)
+      .eq("reservation_date", reservationDate)
+      .eq("status", "active")
+      .maybeSingle();
+    if (findError) throw findError;
+
+    // Sem reserva neste dia, ou reserva de outra estadia do mesmo apartamento: não há o que trocar.
+    if (!current || (current.stay_id && String(current.stay_id) !== stay.id)) {
+      return {
+        ok: false,
+        error: "Você não tem reserva nesta data para alterar.",
+        code: "validation",
+      };
+    }
+
+    const oldSlot = normalizeSlotStart(String(current.slot_start));
+    if (oldSlot === newSlot) {
+      return {
+        ok: false,
+        error: "Este já é o horário da sua reserva.",
+        code: "validation",
+      };
+    }
+    if (
+      isSlotEnded(
+        facility,
+        reservationDate,
+        oldSlot,
+        hotelCalendarDate(),
+        Date.now()
+      )
+    ) {
+      return {
+        ok: false,
+        error: "Esta reserva já passou e não pode ser alterada.",
+        code: "validation",
+      };
+    }
+
+    const { data: updated, error } = await supabase
+      .from("reservations")
+      .update({
+        slot_start: newSlot,
+        guest_rescheduled_at: new Date().toISOString(),
+        confirmation_sent: false,
+        warning_sent: false,
+      })
+      .eq("id", current.id)
+      .eq("status", "active")
+      .eq("slot_start", current.slot_start)
+      .select("id");
+    if (error) throw error;
+    if (!updated || updated.length === 0) {
+      // Alguém (recepção) mexeu na reserva entre a leitura e a troca.
+      return {
+        ok: false,
+        error: "Sua reserva mudou. Atualize a página e tente de novo.",
+        code: "conflict",
+      };
+    }
+    return { ok: true, data: { id: String(updated[0].id) } };
+  } catch (e) {
+    // O UPDATE só muda o horário: a única unicidade que pode quebrar é a do horário.
+    if (isPostgresUniqueViolation(e)) {
+      return {
+        ok: false,
+        error:
+          "Este horário acabou de ser reservado por outro hóspede. Escolha outro.",
+        code: "conflict",
+      };
+    }
+    console.error(e);
+    return {
+      ok: false,
+      error: "Não foi possível alterar a reserva. Tente novamente.",
       code: "network",
     };
   }
@@ -892,7 +1042,36 @@ export async function listNewReservations(since: string | null): Promise<
       .order("created_at", { ascending: true })
       .limit(50);
     if (error) throw error;
-    return { ok: true, items: (data ?? []) as NewReservationItem[], cursor };
+    const items: NewReservationItem[] = (data ?? []).map((r) => ({
+      ...(r as NewReservationItem),
+      kind: "new" as const,
+    }));
+
+    // Trocas de horário feitas pelo hóspede. Falha aqui não pode derrubar o aviso de reservas novas.
+    try {
+      const { data: changed, error: changedError } = await supabase
+        .from("reservations")
+        .select(
+          "id, facility, reservation_date, slot_start, apartment_number, created_by, created_at, guest_rescheduled_at"
+        )
+        .eq("status", "active")
+        .gte("guest_rescheduled_at", from)
+        .order("guest_rescheduled_at", { ascending: true })
+        .limit(50);
+      if (changedError) throw changedError;
+      for (const r of changed ?? []) {
+        const row = r as NewReservationItem & { guest_rescheduled_at: string };
+        items.push({
+          ...row,
+          // O id inclui o instante da troca: cada troca avisa uma vez, mesmo da mesma reserva.
+          id: `${row.id}~${row.guest_rescheduled_at}`,
+          kind: "changed",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return { ok: true, items, cursor };
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Não foi possível verificar novas reservas." };
