@@ -230,6 +230,16 @@ export function GuestBooking({
     });
   }
 
+  /** Horários que já passaram não aparecem para o hóspede; os demais bloqueados ficam só em cinza. */
+  const visibleSlots = selectedDate
+    ? slots
+        .map((slot) => ({
+          slot,
+          reason: reasonFor(slot, format(selectedDate, "yyyy-MM-dd")),
+        }))
+        .filter((x) => x.reason !== "past")
+    : [];
+
   async function pickSlot(slot: string) {
     if (!selectedDate || submitting || submittingRef.current) return;
     const reason = reasonFor(slot, format(selectedDate, "yyyy-MM-dd"));
@@ -465,12 +475,14 @@ export function GuestBooking({
                           Cinza = indisponível
                         </span>
                       </p>
+                      {visibleSlots.length === 0 ? (
+                        <p className="text-muted-foreground py-3 text-center text-xs">
+                          Não há mais horários disponíveis hoje. Escolha outro
+                          dia.
+                        </p>
+                      ) : null}
                       <ul className={cn("grid gap-1.5", gridCols)}>
-                        {slots.map((slot) => {
-                          const reason = reasonFor(
-                            slot,
-                            format(selectedDate, "yyyy-MM-dd")
-                          );
+                        {visibleSlots.map(({ slot, reason }) => {
                           const taken = reason !== null;
                           const label = slotLabel(slot);
                           return (
@@ -484,7 +496,6 @@ export function GuestBooking({
                                     ? `${label}, indisponível: ${SLOT_BLOCK_LABEL[reason].toLowerCase()}`
                                     : `${label}, disponível`
                                 }
-                                title={reason ? SLOT_BLOCK_MESSAGE[reason] : undefined}
                                 className={cn(
                                   "flex min-h-[2.75rem] w-full flex-col items-center justify-center rounded-md border px-0.5 py-1 text-center text-[10px] leading-tight font-semibold transition-[transform,opacity] sm:min-h-[3rem] sm:text-[11px]",
                                   taken
@@ -492,19 +503,7 @@ export function GuestBooking({
                                     : "border-slot-available/50 bg-slot-available text-slot-available-fg active:scale-[0.97]"
                                 )}
                               >
-                                <span
-                                  className={cn(
-                                    "tabular-nums",
-                                    taken && "line-through decoration-1"
-                                  )}
-                                >
-                                  {label}
-                                </span>
-                                {reason ? (
-                                  <span className="mt-0.5 text-[10px] font-medium">
-                                    {SLOT_BLOCK_LABEL[reason]}
-                                  </span>
-                                ) : null}
+                                <span className="tabular-nums">{label}</span>
                               </button>
                             </li>
                           );
