@@ -23,6 +23,11 @@ import {
 } from "@/lib/reservations";
 import { validateStayAndSlot } from "@/lib/reservation-slot-validation";
 import {
+  MAX_LOOKBACK_MS,
+  OVERLAP_MS,
+  type NewReservationItem,
+} from "@/lib/new-reservations";
+import {
   endReceptionSession,
   readReceptionAuthed,
   startReceptionSession,
@@ -840,5 +845,51 @@ export async function cancelReservation(id: string): Promise<ActionResult> {
       error: "Não foi possível cancelar. Tente novamente.",
       code: "network",
     };
+  }
+}
+
+/**
+ * Reservas novas (de qualquer dia e instalação) criadas depois de `since`, para a recepção ser avisada.
+ * Só a recepção pode chamar. Não devolve dados pessoais (sem nome nem WhatsApp).
+ * `since` nulo = só inicializa o marcador. O marcador devolvido (`cursor`) é a hora do servidor
+ * ANTES da consulta; a busca tem uma pequena sobreposição, e a tela descarta repetidas pelo id.
+ */
+export async function listNewReservations(since: string | null): Promise<
+  | { ok: true; items: NewReservationItem[]; cursor: string }
+  | { ok: false; error: string; unauthorized?: boolean }
+> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Sessão da recepção expirada.", unauthorized: true };
+  }
+  const nowMs = Date.now();
+  const cursor = new Date(nowMs).toISOString();
+  if (since === null) return { ok: true, items: [], cursor };
+
+  const sinceMs = Date.parse(since);
+  if (!Number.isFinite(sinceMs)) {
+    return { ok: false, error: "Marcador inválido." };
+  }
+  const from = new Date(
+    Math.max(sinceMs - OVERLAP_MS, nowMs - MAX_LOOKBACK_MS)
+  ).toISOString();
+
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, error: supabaseConfigErrorMessage() };
+
+  try {
+    const { data, error } = await supabase
+      .from("reservations")
+      .select(
+        "id, facility, reservation_date, slot_start, apartment_number, created_by, created_at"
+      )
+      .eq("status", "active")
+      .gte("created_at", from)
+      .order("created_at", { ascending: true })
+      .limit(50);
+    if (error) throw error;
+    return { ok: true, items: (data ?? []) as NewReservationItem[], cursor };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Não foi possível verificar novas reservas." };
   }
 }

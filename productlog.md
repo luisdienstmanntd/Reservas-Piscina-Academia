@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — Aviso de novas reservas para a recepção
+
+- **Status:** Em andamento (PR em rascunho; validado em navegador com banco real; falta a rodada final de QA)
+- **Área:** Recepção
+- **Pedido:** A recepção precisa SEMPRE saber quando entram novas reservas.
+- **Problema observado:** A grade atualizava a cada 30 s, em silêncio e só para o dia e a instalação que estavam na tela. Uma reserva de outro dia ou da outra instalação não aparecia, e nada avisava (sem som, contador ou destaque). Se a internet caísse, ninguém saberia que a tela estava parada.
+- **Decisão:** Verificação a cada 10 s, para qualquer dia e instalação (nova ação `listNewReservations`, só para a recepção, sem nome nem WhatsApp). Só reserva feita pelo hóspede gera aviso. Aviso = faixa verde "N novas reservas" com "Ver na grade" e "Marcar como vistas", toast, som de 3 tons (desligável; lembrado no navegador), contador no título da aba e indicador "Novas reservas verificadas às HH:MM:SS". Se a verificação falhar 2 vezes seguidas, aparece o alerta vermelho "Sem conexão com o sistema: novas reservas podem não ser avisadas". O marcador da última verificação fica no navegador (até 24 h), então quem abre a tela depois de um tempo vê o que entrou nesse intervalo. A busca tem sobreposição de 10 s e a tela descarta repetidas pelo id.
+- **O que foi feito:** `src/lib/new-reservations.ts`, `listNewReservations` em `src/app/actions/reservations.ts`, `src/app/recepcao/new-reservation-alerts.tsx` e ligação em `reception-dashboard.tsx`; testes unitários.
+- **Validação:** 131 testes unitários, ESLint, tsc. Em navegador real, contra PostgreSQL real, 17 verificações passam: aviso em 9,9 s para outra instalação e outro dia, texto correto, sem dados pessoais, título da aba, som, toast, reserva da própria recepção não avisa, "Ver na grade" troca instalação/dia, som desligado não toca mas avisa, alerta de queda de conexão, recuperação sem perder a reserva criada durante a queda, sessão expirada volta ao login, sem erros de console.
+- **Impactos e riscos:** Uma consulta leve a cada 10 s por aba da recepção aberta. Abas em segundo plano têm os temporizadores reduzidos pelo navegador (a verificação pode cair para cerca de 1 minuto depois de alguns minutos escondida); o aviso aparece ao voltar para a aba. O navegador só libera o som depois de um clique na página (a tela avisa quando o som está bloqueado). Se a recepção fechar o navegador, não há aviso (não é um aplicativo instalado nem notificação do sistema).
+- **Não fazer / evitar regressão:** Não colocar dados pessoais no aviso; não avisar a recepção das reservas que ela mesma cria; manter o alerta de "sem conexão".
+- **Pendências:** Rodada final de QA com a versão publicada; opcional: notificação do sistema operacional e aviso por WhatsApp/e-mail para quando ninguém estiver com a tela aberta.
+- **Referências:** `src/app/recepcao/new-reservation-alerts.tsx`, `src/lib/new-reservations.ts`.
+
 ### 2026-11-10 — Atualização do Next.js por falhas de segurança
 
 - **Status:** Concluído (PR em rascunho; revalidado no teste integrado da versão final)
