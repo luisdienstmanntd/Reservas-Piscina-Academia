@@ -92,6 +92,8 @@ export function GuestBooking({
   const [, setMinuteTick] = useState(0);
   const slotsReqRef = useRef(0);
   const [submitting, setSubmitting] = useState(false);
+  /** Trava imediata contra duplo toque (o estado `submitting` só muda na próxima renderização). */
+  const submittingRef = useRef(false);
   const [confirmedReservations, setConfirmedReservations] = useState<
     ConfirmedReservation[]
   >([]);
@@ -229,13 +231,14 @@ export function GuestBooking({
   }
 
   async function pickSlot(slot: string) {
-    if (!selectedDate || submitting) return;
+    if (!selectedDate || submitting || submittingRef.current) return;
     const reason = reasonFor(slot, format(selectedDate, "yyyy-MM-dd"));
     if (reason) {
       toast.error(SLOT_BLOCK_MESSAGE[reason]);
       return;
     }
     const ymd = format(selectedDate, "yyyy-MM-dd");
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const r = await createGuestReservation({
@@ -268,6 +271,7 @@ export function GuestBooking({
         "Conexão interrompida. Sua seleção foi mantida — tente confirmar de novo."
       );
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

@@ -11,10 +11,14 @@ import {
   parseGuestTokenInput,
 } from "@/lib/guest-stay";
 import { readReceptionAuthed } from "@/lib/reception-auth";
+import { addDaysYmd } from "@/lib/hotel-time";
 import {
   getAdminClient,
   supabaseConfigErrorMessage,
 } from "@/lib/supabase/admin";
+
+/** Limite do check-out de um link de estadia (evita link praticamente eterno). */
+const MAX_STAY_DAYS = 90;
 
 export type ValidatedGuestStay = {
   /** Id da estadia (active_stays.id), gravado em reservations.stay_id. */
@@ -25,6 +29,8 @@ export type ValidatedGuestStay = {
 
 /**
  * Lê o cookie `guest_token`, valida na BD e devolve apto + checkout (servidor).
+ * Devolve `null` quando não há estadia válida. LANÇA erro quando o banco não responde
+ * (quem chama deve mostrar "sistema indisponível", sem tratar como link inválido).
  */
 export async function getValidatedGuestStay(): Promise<
   ValidatedGuestStay | null
@@ -34,7 +40,8 @@ export async function getValidatedGuestStay(): Promise<
   if (!token) return null;
 
   const supabase = getAdminClient();
-  if (!supabase) return null;
+  // Falha de configuração ou do banco NÃO é "estadia inexistente": avisa quem chamou para mostrar "indisponível".
+  if (!supabase) throw new Error("banco não configurado");
 
   const { data, error } = await supabase
     .from("active_stays")
@@ -42,7 +49,8 @@ export async function getValidatedGuestStay(): Promise<
     .eq("token", token)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw new Error(`falha ao consultar a estadia: ${error.message}`);
+  if (!data) return null;
 
   const checkoutDate = String(data.checkout_date).slice(0, 10);
   const apartmentNumber = String(data.apartment_number).trim();
@@ -80,6 +88,12 @@ export async function generateStayToken(input: {
   const today = hotelTodayYmd();
   if (co.data < today) {
     return { ok: false, error: "Check-out não pode ser anterior a hoje." };
+  }
+  if (co.data > addDaysYmd(today, MAX_STAY_DAYS)) {
+    return {
+      ok: false,
+      error: `Check-out muito distante (máximo ${MAX_STAY_DAYS} dias).`,
+    };
   }
 
   const supabase = getAdminClient();

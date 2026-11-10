@@ -2,23 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   GUEST_TOKEN_COOKIE,
+  classifyStayLookup,
   hotelTodayYmd,
-  isCheckoutStillValid,
   parseGuestTokenInput,
+  type StayLookup,
 } from "@/lib/guest-stay";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 45;
-/** Tempo máximo da consulta ao Supabase; estourar = token tratado como não validado. */
+/** Tempo máximo da consulta ao Supabase; estourar = "sistema indisponível" (a sessão do hóspede é preservada). */
 const SUPABASE_TIMEOUT_MS = 5000;
 
-type StayRow = { apartment_number: string; checkout_date: string };
-
-async function fetchStayFromSupabase(
-  token: string
-): Promise<StayRow | null> {
+async function lookupStay(token: string): Promise<StayLookup> {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!base || !key) return null;
+  if (!base || !key) return { kind: "error" };
 
   const enc = encodeURIComponent(token);
   const url = `${base.replace(/\/$/, "")}/rest/v1/active_stays?token=eq.${enc}&select=apartment_number,checkout_date&limit=1`;
@@ -33,16 +30,16 @@ async function fetchStayFromSupabase(
       cache: "no-store",
       signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
-    const rows = (await res.json()) as StayRow[];
-    const row = rows[0];
-    if (!row) return null;
-    const checkout = String(row.checkout_date).slice(0, 10);
-    if (!isCheckoutStillValid(checkout, hotelTodayYmd())) return null;
-    return row;
+    const body = res.ok ? await res.json() : null;
+    return classifyStayLookup(res.status, body, hotelTodayYmd());
   } catch {
-    return null;
+    // Queda de rede ou lentidão (timeout): não é "estadia inexistente".
+    return { kind: "error" };
   }
+}
+
+function redirectIndisponivel(request: NextRequest) {
+  return NextResponse.redirect(new URL("/indisponivel", request.url));
 }
 
 function redirectAcessoNegado(request: NextRequest, clearCookie: boolean) {
@@ -74,10 +71,9 @@ export async function middleware(request: NextRequest) {
 
   /** Link mágico na raiz: grava cookie e envia para a home (escolha piscina/academia). */
   if (pathname === "/" && tokenParam) {
-    const row = await fetchStayFromSupabase(tokenParam);
-    if (!row) {
-      return redirectAcessoNegado(request, false);
-    }
+    const stay = await lookupStay(tokenParam);
+    if (stay.kind === "error") return redirectIndisponivel(request);
+    if (stay.kind === "invalid") return redirectAcessoNegado(request, false);
     const clean = new URL(request.url);
     clean.pathname = "/";
     clean.search = "";
@@ -91,10 +87,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (tokenParam) {
-    const row = await fetchStayFromSupabase(tokenParam);
-    if (!row) {
-      return redirectAcessoNegado(request, false);
-    }
+    const stay = await lookupStay(tokenParam);
+    if (stay.kind === "error") return redirectIndisponivel(request);
+    if (stay.kind === "invalid") return redirectAcessoNegado(request, false);
     const clean = request.nextUrl.clone();
     clean.searchParams.delete("token");
     const qs = clean.searchParams.toString();
@@ -111,10 +106,10 @@ export async function middleware(request: NextRequest) {
     return redirectAcessoNegado(request, false);
   }
 
-  const row = await fetchStayFromSupabase(cookieToken);
-  if (!row) {
-    return redirectAcessoNegado(request, true);
-  }
+  const stay = await lookupStay(cookieToken);
+  // Só uma resposta clara de "não existe/venceu" apaga a sessão; queda ou lentidão não.
+  if (stay.kind === "error") return redirectIndisponivel(request);
+  if (stay.kind === "invalid") return redirectAcessoNegado(request, true);
 
   return NextResponse.next();
 }

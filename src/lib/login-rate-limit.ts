@@ -17,8 +17,11 @@ export function loginWindowStartIso(nowMs: number = Date.now()): string {
 export function clientIpFromHeaders(headers: {
   get(name: string): string | null;
 }): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || headers.get("x-real-ip")?.trim() || "unknown";
+  // Na Vercel o x-real-ip é definido pela plataforma e não aceita valor enviado pelo cliente;
+  // o x-forwarded-for é o plano B (e pode ser forjado fora da Vercel).
+  const real = headers.get("x-real-ip")?.trim();
+  if (real) return real;
+  return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
 /** Só o hash do IP é gravado (LGPD: sem IP em texto puro). */

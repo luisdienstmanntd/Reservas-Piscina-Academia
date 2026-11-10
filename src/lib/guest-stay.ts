@@ -25,3 +25,29 @@ export function isCheckoutStillValid(
 ): boolean {
   return checkoutYmd >= todayYmd;
 }
+
+export type StayRow = { apartment_number: string; checkout_date: string };
+
+/**
+ * Resultado da consulta de uma estadia pelo token:
+ * - ok: existe e ainda vale;
+ * - invalid: o servidor respondeu com clareza que não existe ou já venceu (único caso em que a sessão do hóspede é apagada);
+ * - error: queda, lentidão, erro do servidor ou de configuração. NUNCA apaga a sessão do hóspede.
+ */
+export type StayLookup =
+  | { kind: "ok"; row: StayRow }
+  | { kind: "invalid" }
+  | { kind: "error" };
+
+export function classifyStayLookup(
+  httpStatus: number,
+  body: unknown,
+  todayYmd: string
+): StayLookup {
+  if (httpStatus !== 200 || !Array.isArray(body)) return { kind: "error" };
+  const row = body[0] as StayRow | undefined;
+  if (!row) return { kind: "invalid" };
+  const checkout = String(row.checkout_date).slice(0, 10);
+  if (!isCheckoutStillValid(checkout, todayYmd)) return { kind: "invalid" };
+  return { kind: "ok", row };
+}
