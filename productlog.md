@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — Troca de horário: o servidor passa a oferecer a troca (correção)
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador real contra PostgreSQL local; falta conferir no site publicado)
+- **Área:** Reservas (hóspede)
+- **Pedido:** Depois do PR #18, o responsável testou em produção: com reserva às 14h, ao tocar em outro horário livre apareceu o aviso "Limite diário atingido… consulte a recepção" em vez de "Deseja alterar…?". O comportamento esperado é: tocar num horário livre → "Deseja alterar o horário para …?" → "sim" troca; nunca mais de 1 hora por dia.
+- **Problema observado:** A tela decidia entre "reservar" e "trocar" só pelo estado carregado na página (`ownSlot`). Quando esse estado não indicava a reserva própria, a tela tentava criar uma segunda reserva e o servidor recusava com o aviso de limite.
+- **Causa:** Não foi possível reproduzir o estado exato de produção localmente (o acesso ao site publicado é bloqueado neste ambiente). O fluxo completo funcionou no teste local, então a correção elimina a dependência: a decisão passa a ser também do servidor.
+- **Decisão:** `createGuestReservation`, ao recusar porque o apartamento já tem reserva no dia (e ela é deste hóspede: feita pelo link ou pela recepção), devolve `existingSlot` com o horário atual. A tela então abre o diálogo "Deseja alterar a reserva para …?" em vez do aviso de limite. Reserva de outra estadia do mesmo apartamento continua só recusada. O limite de 1 reserva por dia não muda.
+- **O que foi feito:** `src/app/actions/reservations.ts` (`findOwnSlot`, `existingSlot` em `ActionResult`, tipo de conflito em `assertSlotAndApartmentFree`), `src/components/guest-booking.tsx`.
+- **Validação:** 170 testes, tsc e ESLint. Em navegador: fluxo normal (reservar 14h, voltar, tocar em livre → diálogo) e tela desatualizada (reserva própria criada depois de a tela carregar; tocar em 21h → diálogo, confirmar → 1 reserva ativa às 21h, sem aviso de limite).
+- **Não fazer / evitar regressão:** Não voltar a mostrar "limite diário" ao hóspede que apenas quer trocar o próprio horário; não criar segunda reserva no dia.
+- **Pendências:** Conferir em produção com o link real; se ainda falhar, enviar o link/horário e o que aparece na tela (a causa do estado desatualizado segue sem confirmação).
+- **Referências:** PR #18, `src/app/actions/reservations.ts`.
+
 ### 2026-11-10 — Hóspede troca o horário de uma reserva já feita
 
 - **Status:** Concluído (PR #18 mergeado; migration `20261110200000_guest_reschedule.sql` aplicada em produção em 10/11/2026 antes do merge)

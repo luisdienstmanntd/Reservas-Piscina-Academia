@@ -308,7 +308,9 @@ async function assertSlotAndApartmentFree(
     apartmentNumber: string;
     apartmentConflictMessage?: string;
   }
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  { ok: true } | { ok: false; error: string; kind: "slot" | "apartment" }
+> {
   const { data, error } = await supabase
     .from("reservations")
     .select("slot_start, apartment_number")
@@ -324,11 +326,13 @@ async function assertSlotAndApartmentFree(
       return {
         ok: false,
         error: "Este horário já está reservado. Escolha outro.",
+        kind: "slot",
       };
     }
     if (String(r.apartment_number).trim() === apt) {
       return {
         ok: false,
+        kind: "apartment",
         error:
           params.apartmentConflictMessage ??
           "Este apartamento já tem reserva neste dia nesta instalação. Limite: 1 hora por dia.",
@@ -346,7 +350,40 @@ const GUEST_DAILY_LIMIT_MESSAGE =
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }
-  | { ok: false; error: string; code?: "network" | "validation" | "conflict" };
+  | {
+      ok: false;
+      error: string;
+      code?: "network" | "validation" | "conflict";
+      /** Só em `createGuestReservation`: o apartamento já tem reserva neste dia, neste horário (a tela pergunta se quer TROCAR). */
+      existingSlot?: string;
+    };
+
+/**
+ * Horário da reserva ativa do próprio hóspede (mesmo apartamento, instalação e dia) que ele pode trocar:
+ * a feita por este link ou pela recepção (sem estadia). `null` se não há ou é de outra estadia.
+ */
+async function findOwnSlot(
+  supabase: NonNullable<ReturnType<typeof getAdminClient>>,
+  stay: { id: string; apartmentNumber: string },
+  facility: Facility,
+  reservationDate: string
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("reservations")
+      .select("slot_start, stay_id")
+      .eq("apartment_number", stay.apartmentNumber.trim())
+      .eq("facility", facility)
+      .eq("reservation_date", reservationDate)
+      .eq("status", "active")
+      .maybeSingle();
+    if (!data) return null;
+    if (data.stay_id && String(data.stay_id) !== stay.id) return null;
+    return normalizeSlotStart(String(data.slot_start));
+  } catch {
+    return null;
+  }
+}
 
 export async function createGuestReservation(input: {
   facility: Facility;
@@ -428,7 +465,17 @@ export async function createGuestReservation(input: {
     };
   }
   if (!free.ok) {
-    return { ok: false, error: free.error, code: "conflict" };
+    // O apartamento já tem reserva no dia: em vez de só recusar, informa o horário atual para a tela oferecer a TROCA.
+    const existingSlot =
+      free.kind === "apartment"
+        ? await findOwnSlot(supabaseGuest, stay, facility, reservationDate)
+        : null;
+    return {
+      ok: false,
+      error: free.error,
+      code: "conflict",
+      ...(existingSlot ? { existingSlot } : {}),
+    };
   }
 
   try {
@@ -463,10 +510,17 @@ export async function createGuestReservation(input: {
         };
       }
       if (kind === "apartment") {
+        const existingSlot = await findOwnSlot(
+          supabaseGuest,
+          stay,
+          facility,
+          reservationDate
+        );
         return {
           ok: false,
           error: GUEST_DAILY_LIMIT_MESSAGE,
           code: "conflict",
+          ...(existingSlot ? { existingSlot } : {}),
         };
       }
     }
