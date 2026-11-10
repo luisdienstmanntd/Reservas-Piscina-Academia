@@ -107,8 +107,11 @@ export function GuestBooking({
   const [apartmentBookedThisDay, setApartmentBookedThisDay] = useState(false);
   /** Horário da reserva do próprio hóspede neste dia (pode ser trocada por outro horário livre). */
   const [ownSlot, setOwnSlot] = useState<string | null>(null);
-  /** Horário escolhido para a troca, aguardando o "sim" do hóspede. */
-  const [pendingChange, setPendingChange] = useState<string | null>(null);
+  /** Troca aguardando o "sim" do hóspede: horário novo e horário atual (para o texto). Não depende de `ownSlot`. */
+  const [pendingChange, setPendingChange] = useState<{
+    slot: string;
+    from: string | null;
+  } | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   /** Diferença entre o relógio do servidor e o deste aparelho (o "já passou" usa o relógio do hotel). */
   const [serverSkewMs, setServerSkewMs] = useState(0);
@@ -308,7 +311,7 @@ export function GuestBooking({
     }
     // Já tem reserva neste dia: em vez de criar outra, pergunta se quer trocar o horário.
     if (ownSlot) {
-      setPendingChange(slot);
+      setPendingChange({ slot, from: ownSlot });
       return;
     }
     const ymd = format(selectedDate, "yyyy-MM-dd");
@@ -327,7 +330,7 @@ export function GuestBooking({
         if (r.existingSlot && normalizeSlotStart(r.existingSlot) !== normalizeSlotStart(slot)) {
           setOwnSlot(normalizeSlotStart(r.existingSlot));
           setApartmentBookedThisDay(true);
-          setPendingChange(slot);
+          setPendingChange({ slot, from: normalizeSlotStart(r.existingSlot) });
           void loadOccupied(ymd, { silent: true });
           return;
         }
@@ -359,9 +362,10 @@ export function GuestBooking({
   }
 
   async function confirmChange() {
-    const slot = pendingChange;
+    const slot = pendingChange?.slot;
     setPendingChange(null);
-    if (!slot || !selectedDate || !ownSlot || submittingRef.current) return;
+    // Só o horário novo importa aqui: o servidor localiza e confere a reserva atual.
+    if (!slot || !selectedDate || submittingRef.current) return;
     const ymd = format(selectedDate, "yyyy-MM-dd");
     submittingRef.current = true;
     setSubmitting(true);
@@ -701,12 +705,12 @@ export function GuestBooking({
           <AlertDialogHeader>
             <AlertDialogTitle>
               Deseja alterar a reserva para{" "}
-              {pendingChange ? hourRangeLabel(pendingChange) : ""}?
+              {pendingChange ? hourRangeLabel(pendingChange.slot) : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {ownSlot
-                ? `Seu horário atual (${hourRangeLabel(ownSlot)}) será liberado para outros hóspedes.`
-                : null}
+              {pendingChange?.from
+                ? `Seu horário atual (${hourRangeLabel(pendingChange.from)}) será liberado para outros hóspedes.`
+                : "Seu horário atual será liberado para outros hóspedes."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
