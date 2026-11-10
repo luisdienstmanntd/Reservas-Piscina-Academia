@@ -323,6 +323,14 @@ export function GuestBooking({
         guestName: guestName.trim() ? guestName : undefined,
       });
       if (!r.ok) {
+        // O servidor diz que o apartamento já tem reserva neste dia: oferece TROCAR em vez de só recusar.
+        if (r.existingSlot && normalizeSlotStart(r.existingSlot) !== normalizeSlotStart(slot)) {
+          setOwnSlot(normalizeSlotStart(r.existingSlot));
+          setApartmentBookedThisDay(true);
+          setPendingChange(slot);
+          void loadOccupied(ymd, { silent: true });
+          return;
+        }
         toast.error(r.error);
         if (
           r.code === "conflict" ||
