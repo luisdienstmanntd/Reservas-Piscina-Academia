@@ -49,9 +49,41 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — QA completo antes da entrega (testes, correções e carga)
+
+- **Status:** Concluído (PR #12 mergeado; aprovado com condições)
+- **Área:** Reservas, recepção, autenticação, segurança, infraestrutura
+- **Pedido:** Testar o site com agentes para colocá-lo em uso por hóspedes e recepção: etapas funcionais e sem erros, sem conflito de reservas, suporte a vários usuários simultâneos e recepção sempre avisada de novas reservas. Testar e aprovar.
+- **Problema observado:** Os agentes encontraram falhas de validação (datas impossíveis, texto com caracteres de controle, observações sem limite, estadia sem limite de dias), duplo clique criando requisição repetida, ausência de cabeçalhos de segurança, IP do login lido do cabeçalho errado e, na segunda rodada, o cookie do hóspede apagado por um erro momentâneo do banco (o hóspede via "estadia expirada" mesmo com o link válido).
+- **Causa:** O middleware tratava qualquer falha na consulta da estadia (queda, lentidão, erro 5xx) como "estadia inexistente" e apagava a sessão. As demais falhas eram validações ausentes.
+- **Decisão:** A sessão do hóspede só é apagada quando o servidor responde com clareza que a estadia não existe ou venceu (`classifyStayLookup`: ok / invalid / error). Em erro, o hóspede vai para `/indisponivel` e o link continua válido. `getValidatedGuestStay()` lança erro quando o banco falha (retorna `null` só quando não há estadia).
+- **O que foi feito:** `src/lib/booking-zod.ts` (datas reais, texto sem caracteres de controle, observações até 2000), limite de estadia de 90 dias em `stays.ts`, `x-real-ip` primeiro no rate limit, cabeçalhos de segurança em `next.config.ts` (X-Frame-Options, CSP frame-ancestors, nosniff, Referrer-Policy, Permissions-Policy), proteção contra duplo clique, `src/lib/guest-stay.ts` + `src/middleware.ts` + `src/app/indisponivel/page.tsx`. Na recepção, o contador no título da aba é reaplicado e os avisos não vistos sobrevivem a F5 (24 h).
+- **Resultado:** Ambiente de QA local com PostgreSQL 16 real e uma camada REST própria no lugar do PostgREST (download do PostgREST foi negado). Quatro agentes: funcional, concorrência, segurança e carga. Concorrência: 60 hóspedes no mesmo horário dão exatamente 1 vencedor e 59 recusas, em todas as rajadas. Carga (55 hóspedes + 3 recepcionistas por 5 min): 0 erros 5xx, 0 timeouts, 0 horários ou apartamentos duplicados, todas as 178 reservas vistas pela recepção em até 9,8 s.
+- **Validação:** 145 testes unitários, tsc, ESLint e `next build` aprovados na versão final. Em navegador: aviso em 6,9 s, contador sobrevive ao F5, "marcar como vistas" zera. Derrubar e subir o backend: hóspede vai para `/indisponivel`, mantém o cookie e volta a funcionar; token falso vai para `/acesso-negado`. Em produção, o fluxo foi confirmado pelo responsável após o deploy.
+- **Impactos e riscos:** Não foram medidos: desempenho real do Supabase/Vercel, redes e navegadores reais, duração acima de 5 min. A latência do aviso é limitada pelo intervalo de 10 s. Se o Vercel não repassar `x-real-ip`/`X-Forwarded-For` como esperado, o bloqueio por tentativas de login pode agrupar pessoas diferentes (não verificado).
+- **Não fazer / evitar regressão:** Não apagar o cookie `guest_token` em erro transitório; não exportar constantes (`export const`) de arquivos `"use server"`; não tratar erro de banco como "estadia não encontrada".
+- **Pendências:** Decisões do responsável: reserva retroativa pela recepção; semântica do horário 00h–01h da piscina; confirmar o cabeçalho de IP no Vercel.
+- **Referências:** PR #12, PR #10, PR #11; `src/middleware.ts`, `src/lib/guest-stay.ts`, `src/lib/booking-zod.ts`, `next.config.ts`.
+
+### 2026-11-10 — LGPD: anonimização também apaga as observações
+
+- **Status:** Bloqueado (migration no repositório desde o PR #12, NÃO aplicada em produção; aguarda decisão do responsável)
+- **Área:** Banco de dados, LGPD
+- **Pedido:** Apagar também as observações (`notes`) das reservas na anonimização.
+- **Problema observado:** O job diário de anonimização limpava nome e WhatsApp, mas as observações, texto livre da recepção, podem conter dados pessoais (telefone de familiar, alergias, pedidos) e ficavam guardadas.
+- **Causa:** `notes` nunca entrou na rotina original.
+- **Decisão:** Depois do fim da estadia as observações não são mais necessárias, então são apagadas junto com nome e WhatsApp.
+- **O que foi feito:** `supabase/migrations/20261110100000_lgpd_anonymize_notes.sql`: (1) apaga as `notes` das reservas já anonimizadas, desligando os gatilhos de usuário durante a limpeza para não gerar eventos de auditoria falsos; (2) reagenda o job `lgpd_anonymize_reservations` (03:00 UTC) incluindo `notes = NULL`.
+- **Resultado:** Ainda não vigente em produção.
+- **Validação:** Testada no PostgreSQL 16 local durante o QA (a primeira versão falhou por um gatilho de auditoria; corrigida). Não executada em produção.
+- **Impactos e riscos:** Apagar observações é irreversível. Exige `pg_cron` (já usado pelo job existente).
+- **Não fazer / evitar regressão:** Não aplicar sem o aval do responsável; não reabilitar gatilhos esquecendo o `ENABLE TRIGGER USER`.
+- **Pendências:** Aplicar em produção quando o responsável liberar e conferir o job em `cron.job`.
+- **Referências:** `supabase/migrations/20261110100000_lgpd_anonymize_notes.sql`, PR #12.
+
 ### 2026-11-10 — Aviso de novas reservas para a recepção
 
-- **Status:** Em andamento (PR em rascunho; validado em navegador com banco real; falta a rodada final de QA)
+- **Status:** Concluído (PR #10 mergeado em 10/11/2026; revalidado na rodada final de QA)
 - **Área:** Recepção
 - **Pedido:** A recepção precisa SEMPRE saber quando entram novas reservas.
 - **Problema observado:** A grade atualizava a cada 30 s, em silêncio e só para o dia e a instalação que estavam na tela. Uma reserva de outro dia ou da outra instalação não aparecia, e nada avisava (sem som, contador ou destaque). Se a internet caísse, ninguém saberia que a tela estava parada.
@@ -60,12 +92,12 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Validação:** 131 testes unitários, ESLint, tsc. Em navegador real, contra PostgreSQL real, 17 verificações passam: aviso em 9,9 s para outra instalação e outro dia, texto correto, sem dados pessoais, título da aba, som, toast, reserva da própria recepção não avisa, "Ver na grade" troca instalação/dia, som desligado não toca mas avisa, alerta de queda de conexão, recuperação sem perder a reserva criada durante a queda, sessão expirada volta ao login, sem erros de console.
 - **Impactos e riscos:** Uma consulta leve a cada 10 s por aba da recepção aberta. Abas em segundo plano têm os temporizadores reduzidos pelo navegador (a verificação pode cair para cerca de 1 minuto depois de alguns minutos escondida); o aviso aparece ao voltar para a aba. O navegador só libera o som depois de um clique na página (a tela avisa quando o som está bloqueado). Se a recepção fechar o navegador, não há aviso (não é um aplicativo instalado nem notificação do sistema).
 - **Não fazer / evitar regressão:** Não colocar dados pessoais no aviso; não avisar a recepção das reservas que ela mesma cria; manter o alerta de "sem conexão".
-- **Pendências:** Rodada final de QA com a versão publicada; opcional: notificação do sistema operacional e aviso por WhatsApp/e-mail para quando ninguém estiver com a tela aberta.
+- **Pendências:** Opcional: notificação do sistema operacional e aviso por WhatsApp/e-mail para quando ninguém estiver com a tela aberta.
 - **Referências:** `src/app/recepcao/new-reservation-alerts.tsx`, `src/lib/new-reservations.ts`.
 
 ### 2026-11-10 — Atualização do Next.js por falhas de segurança
 
-- **Status:** Concluído (PR em rascunho; revalidado no teste integrado da versão final)
+- **Status:** Concluído (PR #11 mergeado em 10/11/2026; revalidado no teste integrado da versão final)
 - **Área:** Dependências e segurança
 - **Pedido:** Corrigir os achados da revisão de segurança antes da entrega.
 - **Problema observado:** `npm audit --omit=dev` marcava o Next.js 15.5.14 como **crítico** (falhas na otimização de imagens, desvio do middleware, negação de serviço em Server Actions, SSRF), além de 6 avisos altos em dependências indiretas.
