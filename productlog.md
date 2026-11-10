@@ -49,6 +49,20 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — Troca de horário: o botão "Alterar" não fazia nada (correção)
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com toque, contra PostgreSQL local; falta conferir no site publicado)
+- **Área:** Reservas (hóspede)
+- **Pedido:** Depois do PR #19, o diálogo "Deseja alterar a reserva para …?" passou a aparecer, mas ao clicar em "Alterar" nada acontecia.
+- **Problema observado:** Pelos logs do Supabase de produção (18:06–18:07 UTC, apto 208): o diálogo veio do caminho novo do servidor (3 tentativas de criar reserva, cada uma seguida da busca da reserva própria) e depois do "Alterar" nenhuma troca chegou ao banco (nenhum PATCH, nenhuma busca de troca).
+- **Causa:** `confirmChange` exigia o horário atual guardado na tela (`ownSlot`) e desistia em silêncio sem ele. Logo depois de o diálogo abrir, a tela refaz a consulta do dia e essa consulta zerou `ownSlot` (a consulta de produção não trouxe o horário próprio). Por que a consulta do dia não trazia o horário próprio em produção continua sem explicação confirmada.
+- **Decisão:** A troca não depende do estado da tela: o diálogo guarda o horário novo e o atual (para o texto) em `pendingChange`, e "Alterar" chama o servidor só com o horário novo. O servidor localiza e confere a reserva atual (mesmo apartamento, instalação e dia; deste link ou da recepção; que não tenha passado) e faz o UPDATE.
+- **O que foi feito:** `src/components/guest-booking.tsx` (`pendingChange` com `slot` e `from`; `confirmChange` sem exigir `ownSlot`).
+- **Validação:** tsc e ESLint; em navegador com toque (iPhone emulado): reservar, voltar, tocar em outro horário, aguardar, "Alterar" → horário trocado e "Reserva alterada!"; e o cenário de tela desatualizada. Logs de produção usados para o diagnóstico.
+- **Não fazer / evitar regressão:** Nunca fazer um botão de confirmação desistir em silêncio: ou chama o servidor, ou mostra um aviso. Não exigir da tela dados que o servidor já valida.
+- **Pendências:** Conferir em produção; investigar por que a consulta do dia (`getReservationDaySummary`) não devolveu `ownSlot` ao hóspede em produção (a tela continua sem o aviso "Você já tem reserva neste dia" nesse caso, embora a troca funcione).
+- **Referências:** PR #18, PR #19, `src/components/guest-booking.tsx`.
+
 ### 2026-11-10 — Troca de horário: o servidor passa a oferecer a troca (correção)
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador real contra PostgreSQL local; falta conferir no site publicado)
