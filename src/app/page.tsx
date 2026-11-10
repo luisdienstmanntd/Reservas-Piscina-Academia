@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, Dumbbell } from "lucide-react";
+import { CalendarCheck, CalendarDays, Dumbbell } from "lucide-react";
+
+import { listMyReservations } from "@/app/actions/reservations";
+import { myReservationLabel } from "@/lib/my-reservations";
 
 import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
@@ -12,7 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function Home() {
+export default async function Home() {
+  // Reservas do próprio hóspede (vazio sem link válido ou se o banco falhar: a página segue normal).
+  const mine = await listMyReservations();
+  const myItems = mine.ok ? mine.items : [];
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-10 px-6 py-12 md:max-w-2xl">
@@ -33,6 +40,36 @@ export default function Home() {
             <p>Academia: 24h</p>
           </div>
         </div>
+
+        {myItems.length > 0 ? (
+          <section
+            aria-labelledby="minhas-reservas"
+            className="border-primary/25 bg-card w-full rounded-xl border p-4 shadow-md"
+          >
+            <h2
+              id="minhas-reservas"
+              className="text-primary flex items-center gap-2 font-serif text-base font-semibold text-charcoal"
+            >
+              <CalendarCheck className="size-5" aria-hidden />
+              {myItems.length === 1
+                ? "Sua reserva"
+                : "Suas reservas"}
+            </h2>
+            <ul className="mt-2 space-y-1.5">
+              {myItems.map((r) => (
+                <li
+                  key={r.id}
+                  className="text-charcoal text-sm leading-snug"
+                >
+                  {myReservationLabel(r)}
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Alterações na recepção (ramal 9).
+            </p>
+          </section>
+        ) : null}
 
         <div className="grid w-full gap-4 md:grid-cols-2">
           <Card className="border-border/80 bg-card shadow-md transition-shadow hover:shadow-lg">

@@ -41,6 +41,11 @@ import {
   LOGIN_WINDOW_MINUTES,
 } from "@/lib/login-rate-limit";
 import { getValidatedGuestStay } from "@/app/actions/stays";
+import {
+  upcomingReservations,
+  type MyReservation,
+} from "@/lib/my-reservations";
+import { hotelCalendarDate } from "@/lib/hotel-time";
 
 function isPostgresUniqueViolation(err: unknown): boolean {
   const o = err as { code?: string; message?: string };
@@ -892,4 +897,52 @@ export async function listNewReservations(since: string | null): Promise<
     console.error(e);
     return { ok: false, error: "Não foi possível verificar novas reservas." };
   }
+}
+
+/**
+ * Reservas ativas do hóspede (apto da estadia do link) de hoje até o check-out,
+ * para a página inicial. Só vê o próprio apartamento; inclui as feitas pela recepção
+ * (sem estadia) e as feitas por este link, e exclui as de outra estadia.
+ * Sem estadia válida devolve lista vazia; erro de banco devolve `ok:false`.
+ */
+export async function listMyReservations(): Promise<
+  { ok: true; items: MyReservation[] } | { ok: false }
+> {
+  let stay: Awaited<ReturnType<typeof getValidatedGuestStay>>;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch {
+    return { ok: false };
+  }
+  if (!stay) return { ok: true, items: [] };
+
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false };
+
+  const todayYmd = hotelCalendarDate();
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("id, facility, reservation_date, slot_start, stay_id")
+    .eq("apartment_number", stay.apartmentNumber)
+    .eq("status", "active")
+    .gte("reservation_date", todayYmd)
+    .lte("reservation_date", stay.checkoutDate)
+    .limit(100);
+  if (error || !data) return { ok: false };
+
+  const rows: MyReservation[] = data.flatMap((row) => {
+    // Reserva de outra estadia do mesmo apartamento não é deste hóspede.
+    if (row.stay_id && String(row.stay_id) !== stay.id) return [];
+    const f = facilitySchema.safeParse(row.facility);
+    if (!f.success) return [];
+    return [
+      {
+        id: String(row.id),
+        facility: f.data,
+        dateYmd: String(row.reservation_date).slice(0, 10),
+        slotStart: String(row.slot_start),
+      },
+    ];
+  });
+  return { ok: true, items: upcomingReservations(rows, todayYmd, Date.now()) };
 }
