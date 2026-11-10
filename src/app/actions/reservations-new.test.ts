@@ -20,7 +20,11 @@ function fakeDb() {
   q.eq = (c: string, v: unknown) => (calls.eq.push([c, v]), q);
   q.gte = (c: string, v: string) => ((calls.gte = [c, v]), q);
   q.order = () => q;
-  q.limit = (n: number) => ((calls.limit = n), Promise.resolve({ data: [{ id: "n1" }], error: null }));
+  // A 1ª consulta é das reservas novas (created_at); a 2ª, das trocas de horário (guest_rescheduled_at).
+  q.limit = (n: number) => (
+    (calls.limit = n),
+    Promise.resolve({ data: calls.gte?.[0] === "created_at" ? [{ id: "n1" }] : [], error: null })
+  );
   mocks.getAdminClient.mockReturnValue({ from: () => ({ select: (cols: string) => ((calls.select = cols), q) }) });
   return calls;
 }

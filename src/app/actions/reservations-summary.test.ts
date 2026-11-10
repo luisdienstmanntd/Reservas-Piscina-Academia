@@ -16,8 +16,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 import { getReservationDaySummary } from "./reservations";
 
 const ROWS = [
-  { slot_start: "14:00:00", apartment_number: "101" },
-  { slot_start: "16:00:00", apartment_number: "211" },
+  { slot_start: "14:00:00", apartment_number: "101", stay_id: null },
+  { slot_start: "16:00:00", apartment_number: "211", stay_id: "s1" },
 ];
 
 function fakeDb(eqs: Array<[string, unknown]> = []) {
@@ -42,6 +42,31 @@ describe("getReservationDaySummary: privacidade e hora do servidor", () => {
     expect(r).toMatchObject({ ok: true, apartmentsBooked: [], ownApartmentBooked: true });
     expect(eqs).toContainEqual(["status", "active"]);
     if (r.ok) expect(r.occupiedSlots).toEqual(["14:00:00", "16:00:00"]);
+  });
+
+  it("devolve só o horário da PRÓPRIA reserva (ownSlot) para a troca; nunca o de outros", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(false);
+    mocks.getValidatedGuestStay.mockResolvedValue({ id: "s1", apartmentNumber: "211", checkoutDate: "2099-01-02" });
+    fakeDb();
+    const r = await getReservationDaySummary("2099-01-01", "pool");
+    expect(r).toMatchObject({ ok: true, ownSlot: "16:00:00" });
+  });
+
+  it("reserva do mesmo apartamento feita em OUTRA estadia não pode ser trocada (ownSlot nulo)", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(false);
+    mocks.getValidatedGuestStay.mockResolvedValue({ id: "s2", apartmentNumber: "211", checkoutDate: "2099-01-02" });
+    fakeDb();
+    expect(await getReservationDaySummary("2099-01-01", "pool")).toMatchObject({
+      ok: true,
+      ownApartmentBooked: true,
+      ownSlot: null,
+    });
+  });
+
+  it("recepção nunca recebe ownSlot", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(true);
+    fakeDb();
+    expect(await getReservationDaySummary("2099-01-01", "pool")).toMatchObject({ ok: true, ownSlot: null });
   });
 
   it("hóspede cujo apartamento ainda não reservou recebe ownApartmentBooked=false", async () => {

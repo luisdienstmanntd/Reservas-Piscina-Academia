@@ -78,6 +78,13 @@ export const createGuestSchema = z.object({
   guestName: guestNameOptionalSchema,
 });
 
+/** Troca do horário de uma reserva já feita pelo hóspede (mesma instalação e dia). */
+export const changeGuestSchema = z.object({
+  facility: facilitySchema,
+  reservationDate: isoYmdDateSchema,
+  slotStart: z.string(),
+});
+
 export const guestWhatsappOptionalSchema = z
   .string()
   .nullish()

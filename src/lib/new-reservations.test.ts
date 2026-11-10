@@ -51,3 +51,27 @@ describe("aviso de novas reservas", () => {
     expect(seen.has("r1")).toBe(true);
   });
 });
+
+describe("troca de horário pelo hóspede", () => {
+  const changed = {
+    id: "r1~2099-01-01T10:00:00Z",
+    facility: "pool",
+    reservation_date: "2099-01-01",
+    slot_start: "22:00:00",
+    apartment_number: "211",
+    created_by: "reception",
+    created_at: "2098-12-30T10:00:00Z",
+    kind: "changed" as const,
+  };
+  it("avisa a recepção mesmo que a reserva original tenha sido criada por ela", () => {
+    expect(isAlertable(changed)).toBe(true);
+    expect(alertLabel(changed, "2099-01-01")).toMatch(/^Horário alterado: Piscina · hoje · 22h00 – 23h00 · Apto 211$/);
+  });
+  it("cada troca avisa uma vez (id inclui o instante)", () => {
+    const seen = new Set<string>();
+    expect(mergeNewItems([], [changed], seen).fresh).toHaveLength(1);
+    expect(mergeNewItems([], [changed], seen).fresh).toHaveLength(0);
+    const outra = { ...changed, id: "r1~2099-01-01T11:00:00Z" };
+    expect(mergeNewItems([], [outra], seen).fresh).toHaveLength(1);
+  });
+});
