@@ -106,15 +106,15 @@ describe("createReceptionSchema", () => {
     if (r.success) expect(r.data.guestWhatsapp).toBeNull();
   });
 
-  it("notas respeitam tamanho máximo", () => {
-    const r = createReceptionSchema.safeParse({
-      facility: "gym",
+  it("notas respeitam tamanho máximo (2000, igual à edição na grade)", () => {
+    const base = {
+      facility: "gym" as const,
       apartmentNumber: "202",
       reservationDate: "2026-04-16",
       slotStart: "08:00:00",
-      notes: "x".repeat(501),
-    });
-    expect(r.success).toBe(false);
+    };
+    expect(createReceptionSchema.safeParse({ ...base, notes: "x".repeat(2000) }).success).toBe(true);
+    expect(createReceptionSchema.safeParse({ ...base, notes: "x".repeat(2001) }).success).toBe(false);
   });
 });
 
