@@ -293,7 +293,7 @@ MIT — Use livremente
 
 ## 🔗 Links
 
-- **Live:** https://valle-piscina-academia.vercel.app
+- **Live:** https://agendamentosvalledincanto.vercel.app
 - **Repositório:** https://github.com/luisdienstmanntd/Reservas-Piscina-Academia
 - **Autor:** [Luis Dienstmann](https://github.com/luisdienstmanntd)
 
