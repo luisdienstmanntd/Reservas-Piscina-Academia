@@ -138,5 +138,13 @@ describe("data de calendário e texto seguro", () => {
       expect(FORBIDDEN_TEXT.test(ok)).toBe(false);
     }
   });
+
+  it("observações de balcão: até 2000 caracteres (igual à edição na grade), com mensagem em português", () => {
+    const base = { facility: "pool" as const, apartmentNumber: "101", reservationDate: "2999-01-01", slotStart: "15:00:00" };
+    expect(createReceptionSchema.safeParse({ ...base, notes: "a".repeat(2000) }).success).toBe(true);
+    const r = createReceptionSchema.safeParse({ ...base, notes: "a".repeat(2001) });
+    expect(r.success).toBe(false);
+    expect(!r.success && r.error.issues[0].message).toMatch(/2000 caracteres/);
+  });
 });
 

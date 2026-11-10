@@ -98,7 +98,7 @@ export const createReceptionSchema = z.object({
   slotStart: z.string(),
   notes: z
     .string()
-    .max(500)
+    .max(2000, "Observações muito longas (máx. 2000 caracteres).")
     .refine((s) => !FORBIDDEN_TEXT.test(s), FORBIDDEN_TEXT_MESSAGE)
     .optional(),
   guestWhatsapp: guestWhatsappOptionalSchema,
