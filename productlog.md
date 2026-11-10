@@ -49,6 +49,57 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — Hóspede troca o horário de uma reserva já feita
+
+- **Status:** Em andamento (PR em rascunho; verificado em navegador real contra PostgreSQL local; **a migration `20261110200000_guest_reschedule.sql` ainda NÃO foi aplicada em produção**)
+- **Área:** Reservas (hóspede), recepção, banco de dados
+- **Pedido:** Se o hóspede quiser trocar o horário de uma reserva, ele entra em "Agendar piscina/academia", escolhe a data, vê os horários e, ao tocar num horário livre (ex.: 22h), aparece "Deseja alterar a reserva para 22h às 23h?".
+- **Decisão:** O limite de 1 reserva por apartamento, instalação e dia continua. Com reserva no dia, os outros horários livres ficam tocáveis e servem para TROCAR (antes ficavam cinza com "limite diário"); o horário atual segue cinza. Só vale para reserva do próprio apartamento, feita por este link ou pela recepção; reserva de outra estadia do mesmo apartamento não pode ser trocada; reserva cujo horário já passou também não. A troca é um único UPDATE (o índice único garante que dois hóspedes não ficam no mesmo horário); os avisos de WhatsApp (confirmação/lembrete) voltam a "não enviados", porque falavam do horário antigo. A recepção é avisada ("Horário alterado: ...") pelo mesmo mecanismo de 10 s das reservas novas.
+- **O que foi feito:** `changeGuestReservation` e `ownSlot` no resumo do dia (`src/app/actions/reservations.ts`); troca na tela do hóspede com diálogo de confirmação (`src/components/guest-booking.tsx`); `kind: "changed"` nos avisos da recepção (`src/lib/new-reservations.ts`); migration que cria `reservations.guest_rescheduled_at` e faz a auditoria registrar mudança de `slot_start`/`reservation_date` com ator `guest`.
+- **Validação:** 166 testes, tsc e ESLint. Em navegador com PostgreSQL real (17 migrations): horário próprio e de outro apartamento em cinza; "Manter" não altera; "Alterar" troca para 22h, mantém 1 reserva ativa, zera os avisos, grava o evento `updated` com ator `guest` e `{slot_start}`, e a recepção foi avisada em 2 s.
+- **Impactos e riscos:** A migration é aditiva (coluna anulável + troca do corpo de uma função). O código tolera a migration ainda não aplicada: o aviso de trocas só falha em silêncio e a troca devolve "não foi possível alterar", sem afetar reservas novas. Aplicar a migration ANTES de usar a troca.
+- **Não fazer / evitar regressão:** Não permitir mais de 1 reserva por dia para o hóspede; não trocar reserva de outra estadia; não apagar o aviso da recepção.
+- **Pendências:** Aplicar a migration em produção (aguarda autorização do responsável); conferir no site publicado depois.
+- **Referências:** `supabase/migrations/20261110200000_guest_reschedule.sql`, `src/app/actions/reservations.ts`, `src/components/guest-booking.tsx`.
+
+### 2026-11-10 — Hóspede não precisa informar nome e WhatsApp de novo
+
+- **Status:** Concluído (PR #16 mergeado; verificado em navegador real contra PostgreSQL local)
+- **Área:** Reservas (tela do hóspede)
+- **Pedido:** Depois de cadastrar nome e WhatsApp pelo link da recepção, ao clicar em "Agendar piscina/academia" o hóspede deve cair direto na escolha de horários, sem refazer o cadastro.
+- **Problema observado:** Os dados ficavam só na memória da página; ao voltar ao início e abrir outra instalação, a identificação aparecia de novo.
+- **Decisão:** Guardar nome e WhatsApp no navegador do hóspede (`localStorage`), por apartamento e data de check-out, assim que ele continua na identificação. Na volta, o WhatsApp é revalidado com o mesmo schema do servidor e o hóspede vai direto ao calendário; "Voltar" reabre a identificação preenchida. Só neste aparelho: outro aparelho pede os dados uma vez. Dados de estadias encerradas são apagados.
+- **O que foi feito:** `src/lib/guest-contact-storage.ts` (+ teste), `src/components/guest-booking.tsx`.
+- **Validação:** 152 testes, tsc e ESLint; em navegador, piscina, academia e F5 vão direto ao calendário e outro aparelho pede os dados.
+- **Impactos e riscos:** O WhatsApp fica no aparelho do hóspede até o check-out; aparelho compartilhado por hóspedes do mesmo apartamento usa os mesmos dados (aceito). A validação do servidor não mudou.
+- **Não fazer / evitar regressão:** Não gravar o token da estadia no armazenamento; manter a expiração por check-out; não pular a validação do WhatsApp.
+- **Pendências:** Opcional: lembrar os dados entre aparelhos (exigiria gravar o contato no servidor).
+- **Referências:** `src/lib/guest-contact-storage.ts`, PR #16.
+
+### 2026-11-10 — Hóspede vê as próprias reservas na página inicial
+
+- **Status:** Concluído (PR #15 mergeado; verificado em app real contra PostgreSQL local)
+- **Área:** Reservas (página inicial do hóspede)
+- **Pedido:** Ao abrir o link da recepção, mostrar acima dos botões os horários já reservados. Ex.: "terça-feira 10/11 - 19h às 20h - piscina".
+- **Decisão:** Bloco "Sua reserva / Suas reservas" só com reservas ativas que ainda não terminaram, ordenadas por data e horário, só do apartamento da estadia do link (sem nome, WhatsApp ou observações). Inclui as feitas pelo link e pela recepção; exclui as de outra estadia do mesmo apartamento (filtro em código, sem depender do operador `or` do PostgREST). Sem link válido ou com o banco fora do ar, a página abre normal sem o bloco.
+- **O que foi feito:** `src/lib/my-reservations.ts` (+ teste), `listMyReservations()` em `src/app/actions/reservations.ts`, `src/app/page.tsx` (agora assíncrona).
+- **Validação:** 148 testes, tsc e ESLint; em app real o bloco mostra as reservas certas, não mostra a de outra estadia e não aparece sem cookie.
+- **Impactos e riscos:** A página inicial passa a ser dinâmica (lê o cookie e faz uma consulta leve). O bloco 00h–01h da piscina nunca é tratado como "já terminou" (regra pendente).
+- **Não fazer / evitar regressão:** Não exibir dados pessoais nem reservas de outros apartamentos ou estadias.
+- **Pendências:** nenhuma.
+- **Referências:** `src/lib/my-reservations.ts`, `src/app/page.tsx`, PR #15.
+
+### 2026-11-10 — Hóspede: horários que já passaram somem; indisponíveis só em cinza
+
+- **Status:** Concluído (PR #14 mergeado)
+- **Área:** Reservas (tela do hóspede)
+- **Pedido:** Na escolha de horário (piscina e academia), não mostrar horários que já passaram. Nos indisponíveis, sem texto e sem riscado: só o horário em cinza.
+- **Decisão:** Ajusta a regra do PR #9 (que mostrava tudo em cinza com o motivo escrito): para o hóspede, passado some; ocupado e limite do apartamento continuam visíveis em cinza, sem rótulo (o motivo segue no `aria-label`). A recepção NÃO mudou (reserva retroativa é decisão pendente). Se todos os horários do dia já passaram, aparece "Não há mais horários disponíveis hoje. Escolha outro dia."
+- **O que foi feito:** `src/components/guest-booking.tsx`: lista filtrada (`visibleSlots`), removidos rótulo, riscado e `title`.
+- **Não fazer / evitar regressão:** A regra de bloqueio no servidor (`slotBlockReason`) continua valendo: esconder na tela não substitui a validação.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `src/lib/slot-availability.ts`, PR #9, PR #14.
+
 ### 2026-11-10 — QA completo antes da entrega (testes, correções e carga)
 
 - **Status:** Concluído (PR #12 mergeado; aprovado com condições)
