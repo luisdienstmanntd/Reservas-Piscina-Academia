@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Histórico de reservas: dias passados com canceladas (Etapas 2 e 3)
+
+- **Status:** Concluído (PR em rascunho; sem mudança de banco)
+- **Área:** Recepção — grade do dia
+- **Pedido:** Ter histórico de reservas (nenhum registro some; só o WhatsApp é apagado depois de 1 ano). A recepção consulta qualquer data passada pelo calendário e vê reservas ativas e canceladas. Decisões do responsável: canceladas só nas datas passadas; reservas passadas continuam **editáveis** (nome, observações, WhatsApp) e o botão excluir (cancelar) continua valendo para cancelamento e não comparecimento; criar reserva no passado continua bloqueado.
+- **Diagnóstico antes (comportamento anterior):** a grade só trazia `status='active'`, então canceladas não apareciam; datas passadas já eram consultáveis; o servidor não tinha trava por data em editar/cancelar (mantido, por decisão); não existe `DELETE` físico de reservas no código, nas migrations nem nos jobs (só `login_attempts` e estadias órfãs); o job `lgpd_anonymize_reservations` apaga nome, WhatsApp e observações no dia seguinte ao check-out (ver Etapa 4).
+- **O que foi feito:** `getReservationsForDate` devolve também `cancelled` (somente para dias anteriores a hoje, segunda consulta `status='cancelled'`); `CancelledSlotRow` mostra a cancelada esmaecida (horário, apto e origem, nome, observações, WhatsApp, "Cancelada" + quem e quando); marcador de "horário alterado pelo hóspede" (`guest_rescheduled_at`) nas ativas de dias passados; coluna do apto da grade de 4,5 para 5,5 rem; todas as linhas seguem com a mesma altura.
+- **Testes:** `reservations-history.test.ts` (9): dia de ontem consultável, cancelada preservada, filtro por data, piscina × academia, sem sessão não consulta, hoje/futuro sem canceladas, alterar nome/observações e cancelar reserva passada, criar no passado recusado. tsc, ESLint e testes OK.
+- **Verificação no navegador (Postgres real, desktop e celular 390 px):** canceladas aparecem só no dia passado; hoje não; academia separada da piscina; nome de reserva passada altera; excluir reserva passada mantém a linha no banco como cancelada e ela passa a aparecer como "Cancelada"; linhas de mesma altura; sem rolagem horizontal; sem erros de console.
+- **Riscos conhecidos:** a situação "alterada" só cobre troca de horário feita pelo hóspede (a auditoria não guarda valores antigos); reservas já anonimizadas na produção (12 em 11/11/2026) seguem sem nome e observações.
+
 ### 2026-11-11 — Ícone da piscina: escada de piscina
 
 - **Status:** Concluído (PR em rascunho)
