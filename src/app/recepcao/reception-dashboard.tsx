@@ -28,6 +28,7 @@ import {
 } from "@/app/actions/reservations";
 import { guestWhatsappOptionalSchema } from "@/lib/booking-zod";
 import { formatPhoneDisplay, PHONE_HINT } from "@/lib/phone";
+import { toUpperText } from "@/lib/text-case";
 import { generateStayToken } from "@/app/actions/stays";
 import {
   AlertDialog,
@@ -204,7 +205,7 @@ function ReceptionGuestNameCell({
       ref={inputRef}
       className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
       disabled={saving}
       placeholder="Nome"
@@ -260,7 +261,7 @@ function ReceptionNotesCell({
       className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
       title={value || "Observações"}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
       disabled={saving}
       placeholder="Observações"
@@ -1078,7 +1079,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   maxLength={200}
                   className="border-border bg-white"
                   value={newGuestName}
-                  onChange={(e) => setNewGuestName(e.target.value)}
+                  onChange={(e) => setNewGuestName(toUpperText(e.target.value))}
                 />
               </div>
               <div className="space-y-2 sm:col-span-1">
@@ -1152,7 +1153,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   id="nn"
                   maxLength={2000}
                   value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
+                  onChange={(e) => setNewNotes(toUpperText(e.target.value))}
                   placeholder="Opcional: pedido especial, notas internas…"
                 />
               </div>
