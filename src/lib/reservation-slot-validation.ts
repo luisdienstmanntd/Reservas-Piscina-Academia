@@ -12,7 +12,7 @@ import {
  * `guestCheckoutDate` nulo (reserva de balcão) pula a checagem de check-out.
  * `todayYmd` e `nowMs` são injetáveis para testes; em produção usam o relógio do hotel.
  * Horário que já terminou hoje é recusado (o em andamento continua permitido).
- * `forReception`: a recepção também pode reservar os horários de uso compartilhado da piscina (09h–12h);
+ * `forReception`: a recepção também pode reservar os horários de uso compartilhado da piscina (09h);
  * o hóspede não.
  */
 export function validateStayAndSlot(
