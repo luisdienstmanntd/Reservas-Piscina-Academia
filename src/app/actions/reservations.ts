@@ -48,7 +48,13 @@ import {
   type MyReservation,
 } from "@/lib/my-reservations";
 import { hotelCalendarDate } from "@/lib/hotel-time";
-import type { HistoryEventType, HistoryItem } from "@/lib/reservation-history";
+import {
+  escapeLike,
+  historyDayRange,
+  normalizeHistoryFilters,
+  type HistoryEventType,
+  type HistoryItem,
+} from "@/lib/reservation-history";
 import { toUpperText } from "@/lib/text-case";
 import { isEndingSoon, minutesLeft, type EndingSoonItem } from "@/lib/ending-soon";
 
@@ -1247,7 +1253,11 @@ const HISTORY_TYPES: readonly string[] = ["created", "updated", "cancelled", "an
  * Histórico de alterações para a recepção: os eventos mais recentes da trilha de auditoria
  * (reserva incluída, alterada, excluída) junto com instalação, apartamento, dia e horário.
  */
-export async function listReservationHistory(): Promise<
+export async function listReservationHistory(filters?: {
+  date?: string;
+  apartment?: string;
+  name?: string;
+}): Promise<
   | { ok: true; items: HistoryItem[]; limit: number }
   | { ok: false; error: string; unauthorized?: boolean }
 > {
@@ -1256,12 +1266,34 @@ export async function listReservationHistory(): Promise<
   }
   const supabase = getAdminClient();
   if (!supabase) return { ok: false, error: supabaseConfigErrorMessage() };
+  const f = normalizeHistoryFilters(filters);
   try {
-    const { data: events, error } = await supabase
+    // Apartamento e nome filtram as reservas primeiro; depois buscamos só os eventos delas.
+    let filterIds: string[] | null = null;
+    if (f.apartment || f.name) {
+      let rq = supabase
+        .from("reservations")
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(HISTORY_LIMIT);
+      if (f.apartment) rq = rq.like("apartment_number", `${escapeLike(f.apartment)}%`);
+      if (f.name) rq = rq.ilike("guest_name", `%${escapeLike(f.name)}%`);
+      const { data: found, error: fErr } = await rq;
+      if (fErr) throw fErr;
+      filterIds = (found ?? []).map((r) => String(r.id));
+      if (filterIds.length === 0) return { ok: true, items: [], limit: HISTORY_LIMIT };
+    }
+    let eq = supabase
       .from("reservation_events")
       .select("id, reservation_id, event_type, actor, changed_fields, occurred_at")
       .order("occurred_at", { ascending: false })
       .limit(HISTORY_LIMIT);
+    if (filterIds) eq = eq.in("reservation_id", filterIds);
+    if (f.date) {
+      const range = historyDayRange(f.date);
+      eq = eq.gte("occurred_at", range.from).lt("occurred_at", range.to);
+    }
+    const { data: events, error } = await eq;
     if (error) throw error;
     const rows = events ?? [];
     const ids = [...new Set(rows.map((e) => String(e.reservation_id)))];

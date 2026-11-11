@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   actorLabel,
+  escapeLike,
+  historyDayRange,
+  normalizeHistoryFilters,
   changedFieldsLabel,
   formatEventDateTime,
   historyTitle,
@@ -58,5 +61,27 @@ describe("histórico de alterações", () => {
       "Piscina · Apto 101 · quarta-feira 11/11 · 19h às 20h (atual)"
     );
     expect(reservationLine(item({ facility: null, apartment: null, reservationDate: null, slotStart: null }))).toBe("");
+  });
+  it("normaliza os filtros", () => {
+    expect(normalizeHistoryFilters(undefined)).toEqual({});
+    expect(normalizeHistoryFilters({ date: "2026-11-11", apartment: " 101 ", name: "  ana   souza " })).toEqual({
+      date: "2026-11-11",
+      apartment: "101",
+      name: "ana souza",
+    });
+    expect(normalizeHistoryFilters({ date: "11/11/2026", apartment: "10 1;", name: "   " })).toEqual({});
+    expect(normalizeHistoryFilters({ date: "2026-13-45" })).toEqual({});
+    expect(normalizeHistoryFilters({ name: "x".repeat(100) }).name).toHaveLength(60);
+    expect(normalizeHistoryFilters({ date: 5, apartment: null, name: {} })).toEqual({});
+  });
+  it("escapa curingas do LIKE", () => {
+    expect(escapeLike("100%_a\\b")).toBe("100\\%\\_a\\\\b");
+    expect(escapeLike("ana")).toBe("ana");
+  });
+  it("intervalo do dia no fuso do hotel", () => {
+    expect(historyDayRange("2026-11-11")).toEqual({
+      from: "2026-11-11T03:00:00.000Z",
+      to: "2026-11-12T03:00:00.000Z",
+    });
   });
 });
