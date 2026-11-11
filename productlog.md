@@ -57,6 +57,14 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Resultado:** tsc, ESLint, 190 testes e build OK; teste ponta a ponta no navegador (hóspede no celular, recepção em desktop e celular): 29 de 30 verificações OK, a restante era uma suposição errada do teste (a página inicial sem link continua visível, mas "Agendar" leva a "Acesso indisponível"); 0 erros de console; produção (somente leitura): sem horários/apartamentos duplicados, sem reservas em 10h–12h, nomes e observações já em maiúsculas, nenhum 5xx; migration mais recente aplicada. `ia.navegation.md` atualizado (fluxo do hóspede, alarme, maiúsculas, `asGuest`, Nova reserva).
 - **Lacunas de teste registradas:** não há testes das telas (hóspede, recepção, alertas) nem CI que rode tsc/ESLint/testes nos PRs (só o keep-alive do Supabase); o e2e do repositório precisa de Supabase real.
 - **Referências:** `ia.navegation.md`.
+### 2026-11-11 — CI: TypeScript, ESLint e testes em todo PR
+
+- **Status:** Concluído (PR em rascunho; só será validado quando o PR abrir)
+- **Área:** Qualidade
+- **Motivo:** Na revisão geral não havia nenhuma verificação automática nos PRs (só o keep-alive do Supabase); as checagens eram rodadas à mão.
+- **O que foi feito:** `.github/workflows/ci.yml`: em PR e em push na `main`, roda `npx tsc --noEmit`, `npm run lint` e `npm test` (Node 22, `npm ci`). Não roda e2e (precisa de Supabase) nem usa segredos.
+- **Pendências:** conferir no próprio PR que o workflow passa; opcionalmente exigir esse check antes do merge (proteção de branch, decisão do dono do repositório).
+- **Referências:** `.github/workflows/ci.yml`.
 
 ### 2026-11-11 — Hóspede: depois de reservar ou trocar, vai para a página inicial
 
