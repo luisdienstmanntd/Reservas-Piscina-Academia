@@ -9,9 +9,10 @@ import {
   readGuestContact,
   saveGuestContact,
 } from "@/lib/guest-contact-storage";
-import { CalendarCheck, CalendarDays, ChevronLeft, Home } from "lucide-react";
+import { CalendarDays, ChevronLeft, Home } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   changeGuestReservation,
@@ -33,7 +34,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -56,15 +56,7 @@ import {
   slotBlockReason,
 } from "@/lib/slot-availability";
 
-type Step = 1 | 2 | 3 | 4;
-
-type ConfirmedReservation = { dateYmd: string; slot: string };
-
-function sortConfirmed(a: ConfirmedReservation, b: ConfirmedReservation): number {
-  const d = a.dateYmd.localeCompare(b.dateYmd);
-  if (d !== 0) return d;
-  return normalizeSlotStart(a.slot).localeCompare(normalizeSlotStart(b.slot));
-}
+type Step = 1 | 2 | 3;
 
 function fromYmd(localYmd: string): Date {
   const [y, m, d] = localYmd.split("-").map(Number);
@@ -114,12 +106,10 @@ export function GuestBooking({
   const [submitting, setSubmitting] = useState(false);
   /** Trava imediata contra duplo toque (o estado `submitting` só muda na próxima renderização). */
   const submittingRef = useRef(false);
-  const [confirmedReservations, setConfirmedReservations] = useState<
-    ConfirmedReservation[]
-  >([]);
-  /** De onde o calendário (passo 2) volta com “Voltar”: identificação ou resumo. */
-  const [calendarBackTarget, setCalendarBackTarget] = useState<1 | 4>(1);
+  /** Depois de reservar/trocar o hóspede vai para a página inicial; mantém os botões travados até lá. */
+  const redirectingRef = useRef(false);
 
+  const router = useRouter();
   const todayStr = useMemo(() => hotelCalendarDate(), []);
 
   const minDate = useMemo(() => fromYmd(todayStr), [todayStr]);
@@ -239,21 +229,21 @@ export function GuestBooking({
     } catch {
       /* sem armazenamento: segue sem lembrar */
     }
-    setCalendarBackTarget(1);
     setStep(2);
     setSelectedDate(undefined);
   }
 
-  /** Após confirmar: nova reserva = só calendário (mantém apto, check-out, WhatsApp). */
-  function goNewReservationFromSummary() {
-    setCalendarBackTarget(4);
-    setSelectedDate(undefined);
-    setStep(2);
+  /** Reserva feita/trocada: leva o hóspede à página inicial, onde aparecem as reservas dele. */
+  function goHomeAfterBooking(message: string) {
+    redirectingRef.current = true;
+    toast.success(message);
+    router.push("/");
+    router.refresh();
   }
 
   function goBackFromStep() {
     if (step === 2) {
-      setStep(calendarBackTarget);
+      setStep(1);
       return;
     }
     if (step === 3) setStep(2);
@@ -338,20 +328,16 @@ export function GuestBooking({
         }
         return;
       }
-      setConfirmedReservations((prev) => {
-        const next = [...prev, { dateYmd: ymd, slot }];
-        next.sort(sortConfirmed);
-        return next;
-      });
-      setStep(4);
-      toast.success("Reserva confirmada!");
+      goHomeAfterBooking("Reserva confirmada!");
     } catch {
       toast.error(
         "Conexão interrompida. Sua seleção foi mantida — tente confirmar de novo."
       );
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (!redirectingRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
@@ -374,23 +360,16 @@ export function GuestBooking({
         await loadOccupied(ymd, { silent: true });
         return;
       }
-      setConfirmedReservations((prev) => {
-        const next = [
-          ...prev.filter((x) => x.dateYmd !== ymd),
-          { dateYmd: ymd, slot },
-        ];
-        next.sort(sortConfirmed);
-        return next;
-      });
-      setStep(4);
-      toast.success("Reserva alterada!");
+      goHomeAfterBooking("Reserva alterada!");
     } catch {
       toast.error(
         "Conexão interrompida. Nada foi alterado — tente de novo."
       );
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (!redirectingRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
@@ -585,55 +564,6 @@ export function GuestBooking({
                       </ul>
                     </>
                   )}
-                </CardContent>
-              </Card>
-            )}
-
-            {step === 4 && confirmedReservations.length > 0 && (
-              <Card className="border-primary/25 shadow-md">
-                <CardHeader className="space-y-1 p-3 pb-2">
-                  <div className="flex items-center gap-2 text-primary">
-                    <CalendarCheck className="size-5" aria-hidden />
-                    <CardTitle className="font-serif text-charcoal text-base">
-                      {confirmedReservations.length === 1
-                        ? "Reserva confirmada"
-                        : "Reservas confirmadas"}
-                    </CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">
-                    Apto. {apartment} · ordem por data
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3 p-3 pt-0">
-                  <ul className="space-y-3">
-                    {confirmedReservations.map((r) => (
-                      <li
-                        key={`${r.dateYmd}-${normalizeSlotStart(r.slot)}`}
-                        className="border-border/70 text-charcoal border-b pb-3 text-sm last:border-0 last:pb-0"
-                      >
-                        <span className="font-medium tabular-nums">
-                          {format(fromYmd(r.dateYmd), "EEE, dd/MM/yy", {
-                            locale: ptBR,
-                          })}
-                        </span>
-                        <span className="text-muted-foreground"> · </span>
-                        <span className="tabular-nums font-semibold">
-                          {slotLabel(r.slot)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-charcoal/90 text-xs leading-snug">
-                    Alterações na recepção.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 w-full border-charcoal/20 text-sm"
-                    onClick={goNewReservationFromSummary}
-                  >
-                    Nova reserva
-                  </Button>
                 </CardContent>
               </Card>
             )}

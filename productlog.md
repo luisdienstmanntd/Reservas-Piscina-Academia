@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Hóspede: depois de reservar ou trocar, vai para a página inicial
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Fluxo do hóspede
+- **Pedido:** Ao escolher o horário, em vez da tela "Reserva confirmada · Nova reserva", o hóspede deve ir para a página inicial, onde aparecem as reservas dele.
+- **Decisão:** Substitui a tela de confirmação (passo 4). Ao reservar ou trocar, aparece o aviso "Reserva confirmada!"/"Reserva alterada!" e o hóspede é levado a `/` (com atualização dos dados), onde "Sua reserva" mostra o horário. Os botões ficam travados até a navegação, para não haver toque duplo.
+- **O que foi feito:** `guest-booking.tsx`: removidos o passo 4, o estado das reservas confirmadas e o botão "Nova reserva"; `goHomeAfterBooking` (aviso + `router.push("/")` + `router.refresh()`). O "Voltar" do calendário volta à identificação. `tests/e2e/guest-booking-flow.spec.ts` espera agora a página inicial com a lista de reservas.
+- **Validação:** tsc, ESLint, 190 testes; em navegador: reservar 20h → página inicial com "quinta-feira 12/11 - 20h às 21h - piscina"; trocar para 22h → página inicial só com o novo horário.
+- **Não fazer / evitar regressão:** Não reintroduzir a tela de confirmação; nova reserva = tocar em "Agendar piscina/academia" na página inicial.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `src/app/page.tsx` (lista "Sua reserva").
+
 ### 2026-11-11 — Hóspede: tela de horários só com "Toque em um horário para reservar"
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador, piscina e academia)

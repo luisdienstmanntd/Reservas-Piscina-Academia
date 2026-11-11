@@ -93,9 +93,11 @@ test.describe("Fluxo hóspede (recepção → token → piscina)", () => {
     await page.waitForTimeout(PAUSE_MS);
     await firstFreeSlot.click();
 
-    await expect(
-      page.locator("main").getByText("Reserva confirmada", { exact: true })
-    ).toBeVisible({ timeout: 30_000 });
+    // Depois de reservar, o hóspede volta à página inicial, onde aparecem as reservas dele.
+    await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+    await expect(page.locator("#minhas-reservas")).toBeVisible({
+      timeout: 30_000,
+    });
     await page.waitForTimeout(PAUSE_MS);
   });
 });
