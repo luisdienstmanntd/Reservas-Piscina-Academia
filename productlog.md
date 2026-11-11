@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Histórico: formato dos cartões e da data
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — histórico de alterações
+- **Pedido:** À direita da linha do tempo: "Quarta-feira - 11/11/2026 - 10:57". No cartão: "Academia · Apto 103 · 12h às 13h (atual)", o nome do hóspede e "Hóspede" (sem "Por").
+- **O que foi feito:** `formatEventWhen` (dia da semana capitalizado - data - hora, fuso do hotel); `reservationLine` sem o dia da semana/data da reserva; "Por " removido antes de Hóspede/Recepção/Sistema.
+- **Decisão minha:** o dia da reserva (dd/MM) só aparece quando é diferente do dia do evento, para não esconder reservas de outro dia (ex.: "Piscina · Apto 101 · 13/11 · 19h às 20h").
+- **Verificação:** build local com Postgres real (desktop e celular 390 px): formato conferido em todos os eventos, sem "Por". tsc, ESLint e 196 testes OK.
+
 ### 2026-11-11 — Recepção: histórico de alterações (engrenagem ao lado de "Sair")
 
 - **Status:** Concluído (PR em rascunho)
