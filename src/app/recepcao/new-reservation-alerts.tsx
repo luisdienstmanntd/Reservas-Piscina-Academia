@@ -21,6 +21,9 @@ export const NEW_RESERVATION_POLL_MS = 10_000;
 /** Depois de quantas falhas seguidas o aviso de "sem conexão" aparece. */
 const OFFLINE_AFTER_FAILURES = 2;
 
+/** Avisos da recepção (nova reserva, horário alterado, horário acabando) ficam na tela até alguém fechar. */
+const STAY_UNTIL_CLOSED = Infinity;
+
 const CURSOR_KEY = "valle.reception.newReservationsCursor";
 const SOUND_KEY = "valle.reception.alertSound";
 const UNREAD_KEY = "valle.reception.unreadAlerts";
@@ -214,12 +217,12 @@ export function useNewReservationAlerts({
       for (const item of fresh.slice(0, 3)) {
         toast.warning("Horário acabando", {
           description: endingSoonLabel(item),
-          duration: 30_000,
+          duration: STAY_UNTIL_CLOSED,
         });
       }
       if (fresh.length > 3) {
         toast.warning(`+${fresh.length - 3} horários acabando`, {
-          duration: 30_000,
+          duration: STAY_UNTIL_CLOSED,
         });
       }
       void beep();
@@ -259,14 +262,14 @@ export function useNewReservationAlerts({
         persistUnread(next);
         const shown = fresh.slice(0, 3);
         for (const item of shown) {
-          toast.success("Nova reserva", {
+          toast.success(item.kind === "changed" ? "Reserva alterada" : "Nova reserva", {
             description: alertLabel(item, todayRef.current),
-            duration: 20_000,
+            duration: STAY_UNTIL_CLOSED,
           });
         }
         if (fresh.length > shown.length) {
           toast.success(`+${fresh.length - shown.length} novas reservas`, {
-            duration: 20_000,
+            duration: STAY_UNTIL_CLOSED,
           });
         }
         void beep();
