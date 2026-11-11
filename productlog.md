@@ -49,6 +49,16 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Hóspede: removida a dica abaixo do campo WhatsApp
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Fluxo do hóspede (passo de identificação)
+- **Pedido:** Não mostrar "Brasil: (54) 99999-9999. Exterior: + código do país e número." abaixo do campo WhatsApp.
+- **O que foi feito:** `src/components/guest-booking.tsx`: removidos o parágrafo da dica e o `aria-describedby` que apontava para ele. O exemplo continua no próprio campo (placeholder "(54) 99999-9999 ou +44 7911 123456") e a validação do número não mudou. Na recepção, a dica segue só como texto de ajuda ao passar o mouse no campo WhatsApp da planilha (não aparece na tela).
+- **Validação:** tsc, ESLint, 187 testes.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `src/lib/phone.ts` (`PHONE_HINT`).
+
 ### 2026-11-11 — Recepção: apartamento que já tem reserva no dia não aparece na lista
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
