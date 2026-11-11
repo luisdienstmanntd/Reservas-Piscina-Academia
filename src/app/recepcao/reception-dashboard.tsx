@@ -284,18 +284,40 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 /** Horário sem reserva: só a hora, numa linha compacta (a planilha mostra o dia inteiro, uma linha por hora). */
+/** Altura única das linhas da planilha em telas largas (livres e reservadas ficam iguais). */
+const ROW_HEIGHT = "xl:h-14";
+
+/** Campo vazio e desativado, só para mostrar onde os dados aparecem numa linha livre. */
+function GhostField({ placeholder }: { placeholder: string }) {
+  return (
+    <Input
+      disabled
+      tabIndex={-1}
+      aria-hidden
+      placeholder={placeholder}
+      className="hidden h-8 w-full min-w-0 border-border bg-white text-sm opacity-60 xl:block"
+    />
+  );
+}
+
 function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
   return (
     <li
       className={cn(
         "flex items-center rounded-md border border-dashed px-3 py-1 text-sm tabular-nums",
-        "xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0",
+        "xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0 xl:py-2 xl:text-base",
+        ROW_HEIGHT,
+        GRID,
         past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
       )}
     >
       <span className="whitespace-nowrap font-medium xl:w-[7.5rem]">
         {slotStartLabel(slot)}
       </span>
+      <span className="hidden xl:block" aria-hidden />
+      <GhostField placeholder="Hóspede" />
+      <GhostField placeholder="Observações" />
+      <GhostField placeholder="WhatsApp" />
     </li>
   );
 }
@@ -318,6 +340,7 @@ function ReservationSlotRow({
       className={cn(
         "space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm",
         "xl:space-y-0 xl:rounded-none xl:border-0 xl:border-b xl:border-border/60 xl:bg-transparent xl:px-0 xl:py-2 xl:shadow-none",
+        ROW_HEIGHT,
         GRID
       )}
     >
@@ -350,7 +373,7 @@ function ReservationSlotRow({
           type="button"
           variant="ghost"
           size="sm"
-          className="order-2 ml-auto size-9 p-0 text-destructive hover:text-destructive sm:order-3 xl:order-7 xl:ml-0"
+          className="order-2 ml-auto size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 xl:order-7 xl:ml-0 xl:size-8"
           onClick={() => onAskCancel(row.id)}
           title="Cancelar reserva"
         >
