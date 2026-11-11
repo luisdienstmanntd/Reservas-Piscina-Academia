@@ -5,6 +5,7 @@ import {
   escapeLike,
   historyDayRange,
   normalizeHistoryFilters,
+  reservationDetail,
   changedFieldsLabel,
   formatEventDateTime,
   formatEventWhen,
@@ -72,6 +73,14 @@ describe("histórico de alterações", () => {
       "Piscina · Apto 101 · 13/11 · 19h às 20h"
     );
     expect(reservationLine(item({ facility: null, apartment: null, reservationDate: null, slotStart: null }))).toBe("");
+  });
+  it("detalhe da reserva sem o nome da instalação (o ícone fica na tela)", () => {
+    expect(reservationDetail(item({ facility: "gym", apartment: "103", slotStart: "12:00:00", slotMayDiffer: true }))).toBe(
+      "Apto 103 · 12h às 13h (atual)"
+    );
+    expect(reservationDetail(item({ reservationDate: "2026-11-13" }))).toBe("Apto 101 · 13/11 · 19h às 20h");
+    expect(reservationDetail(item())).not.toMatch(/Piscina|Academia/);
+    expect(reservationDetail(item({ apartment: null, reservationDate: null, slotStart: null }))).toBe("");
   });
   it("normaliza os filtros", () => {
     expect(normalizeHistoryFilters(undefined)).toEqual({});

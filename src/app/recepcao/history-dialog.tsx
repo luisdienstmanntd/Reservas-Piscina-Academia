@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ConciergeBell, Settings, Smartphone, X } from "lucide-react";
+import { CalendarDays, ConciergeBell, Dumbbell, Settings, Smartphone, X } from "lucide-react";
 
 import { listReservationHistory } from "@/app/actions/reservations";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   changedFieldsLabel,
   formatEventWhen,
   historyTitle,
-  reservationLine,
+  reservationDetail,
   type HistoryItem,
 } from "@/lib/reservation-history";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,19 @@ function ActorIcon({ actor }: { actor: string | null }) {
     );
   }
   return null;
+}
+
+/** Instalação: mesmos ícones da página inicial (calendário = piscina, halter = academia). */
+function FacilityIcon({ facility }: { facility: "pool" | "gym" }) {
+  const Icon = facility === "gym" ? Dumbbell : CalendarDays;
+  const label = facility === "gym" ? "Academia" : "Piscina";
+  return (
+    <Icon
+      className="text-muted-foreground size-4 shrink-0"
+      aria-label={label}
+      role="img"
+    />
+  );
 }
 
 /** Linha do tempo: o mais recente em cima, cartões alternando esquerda/direita (no celular, uma coluna). */
@@ -87,8 +100,11 @@ function Timeline({ items }: { items: HistoryItem[] }) {
                   ) : null}
                 </span>
               </p>
-              {reservationLine(it) ? (
-                <p className="text-muted-foreground mt-1 text-sm">{reservationLine(it)}</p>
+              {it.facility || reservationDetail(it) ? (
+                <p className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
+                  {it.facility ? <FacilityIcon facility={it.facility} /> : null}
+                  <span className="min-w-0">{reservationDetail(it)}</span>
+                </p>
               ) : null}
               {it.guestName ? (
                 <p className="text-muted-foreground text-sm">{it.guestName}</p>

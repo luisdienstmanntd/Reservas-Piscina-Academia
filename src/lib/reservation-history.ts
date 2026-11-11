@@ -93,12 +93,11 @@ export function formatEventWhen(iso: string): string {
 }
 
 /**
- * "Academia · Apto 103 · 12h às 13h (atual)". O dia da reserva só aparece (dd/MM) quando é
- * diferente do dia do evento; partes ausentes são omitidas.
+ * "Apto 103 · 12h às 13h (atual)": a linha da reserva SEM o nome da instalação (a tela mostra o
+ * ícone no lugar). O dia da reserva só aparece (dd/MM) quando é diferente do dia do evento.
  */
-export function reservationLine(item: HistoryItem): string {
+export function reservationDetail(item: HistoryItem): string {
   const out: string[] = [];
-  if (item.facility) out.push(item.facility === "pool" ? "Piscina" : "Academia");
   if (item.apartment) out.push(`Apto ${item.apartment}`);
   if (item.reservationDate && item.reservationDate !== hotelCalendarDate(new Date(item.occurredAt))) {
     const [, m, d] = item.reservationDate.split("-");
@@ -107,6 +106,14 @@ export function reservationLine(item: HistoryItem): string {
   if (item.slotStart) out.push(hourRangeLabel(item.slotStart));
   const line = out.join(" · ");
   return item.slotMayDiffer && line ? `${line} (atual)` : line;
+}
+
+/** "Academia · Apto 103 · 12h às 13h (atual)" (versão em texto, com o nome da instalação). */
+export function reservationLine(item: HistoryItem): string {
+  const place = item.facility ? (item.facility === "pool" ? "Piscina" : "Academia") : "";
+  const detail = reservationDetail(item);
+  if (!place) return detail;
+  return detail ? `${place} · ${detail}` : place;
 }
 
 /** Filtros do histórico (todos opcionais). */
