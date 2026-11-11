@@ -73,3 +73,25 @@ describe("validateStayAndSlot", () => {
     });
   });
 });
+
+describe("piscina em uso compartilhado (09h–12h): só a recepção reserva", () => {
+  const today = "2026-04-15";
+  const now = new Date("2026-04-15T08:00:00-03:00").getTime();
+  it("hóspede NÃO pode reservar 09h–12h", () => {
+    for (const h of ["09:00:00", "10:00:00", "11:00:00", "12:00:00"]) {
+      expect(validateStayAndSlot("pool", "2026-04-16", "2026-04-20", h, today, now)).toBe("Horário inválido.");
+    }
+  });
+  it("recepção pode reservar 09h–12h (e continua podendo os horários normais)", () => {
+    for (const h of ["09:00:00", "10:00:00", "11:00:00", "12:00:00", "13:00:00", "00:00:00"]) {
+      expect(validateStayAndSlot("pool", "2026-04-16", null, h, today, now, true)).toBeNull();
+    }
+  });
+  it("antes das 09h e horários quebrados continuam inválidos, mesmo para a recepção", () => {
+    expect(validateStayAndSlot("pool", "2026-04-16", null, "08:00:00", today, now, true)).toBe("Horário inválido.");
+    expect(validateStayAndSlot("pool", "2026-04-16", null, "10:30:00", today, now, true)).toBe("Horário inválido.");
+  });
+  it("academia não muda", () => {
+    expect(validateStayAndSlot("gym", "2026-04-16", "2026-04-20", "03:00:00", today, now)).toBeNull();
+  });
+});

@@ -2,6 +2,7 @@ import { hotelCalendarDate } from "@/lib/hotel-time";
 import { SLOT_BLOCK_MESSAGE, isSlotEnded } from "@/lib/slot-availability";
 import {
   normalizeSlotStart,
+  receptionSlotStartsFor,
   slotStartsFor,
   type Facility,
 } from "@/lib/reservations";
@@ -11,6 +12,8 @@ import {
  * `guestCheckoutDate` nulo (reserva de balcão) pula a checagem de check-out.
  * `todayYmd` e `nowMs` são injetáveis para testes; em produção usam o relógio do hotel.
  * Horário que já terminou hoje é recusado (o em andamento continua permitido).
+ * `forReception`: a recepção também pode reservar os horários de uso compartilhado da piscina (09h–12h);
+ * o hóspede não.
  */
 export function validateStayAndSlot(
   facility: Facility,
@@ -18,7 +21,8 @@ export function validateStayAndSlot(
   guestCheckoutDate: string | null,
   slotStart: string,
   todayYmd: string = hotelCalendarDate(),
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  forReception: boolean = false
 ): string | null {
   if (reservationDate < todayYmd) {
     return "Não é possível reservar datas passadas.";
@@ -27,7 +31,9 @@ export function validateStayAndSlot(
     return "A data da reserva deve ser até o seu check-out.";
   }
   const norm = normalizeSlotStart(slotStart);
-  const allowed = new Set(slotStartsFor(facility));
+  const allowed = new Set(
+    forReception ? receptionSlotStartsFor(facility) : slotStartsFor(facility)
+  );
   if (!allowed.has(norm)) {
     return "Horário inválido.";
   }

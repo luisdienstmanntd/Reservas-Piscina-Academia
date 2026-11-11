@@ -63,6 +63,7 @@ import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
   normalizeSlotStart,
   slotLabel,
+  receptionSlotStartsFor,
   slotStartsFor,
   type Facility,
   type ReservationRow,
@@ -378,7 +379,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const todayStr = useMemo(() => hotelCalendarDate(), []);
   const [facility, setFacility] = useState<Facility>("pool");
-  const slotList = useMemo(() => [...slotStartsFor(facility)], [facility]);
+  // A recepção vê (e pode reservar) também os horários de uso compartilhado da piscina (09h–12h).
+  const slotList = useMemo(
+    () => [...receptionSlotStartsFor(facility)],
+    [facility]
+  );
 
   const [dateStr, setDateStr] = useState(todayStr);
   const [rows, setRows] = useState<ReservationRow[]>([]);
@@ -646,7 +651,10 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const noFreeSlot = slotList.every((s) => reasonForSlot(s) !== null);
 
   // Pré-seleciona o primeiro horário livre (só enquanto o usuário não escolheu um).
-  const firstFreeSlot = slotList.find((s) => reasonForSlot(s) === null);
+  // Prefere os horários normais (o 1º livre do hóspede); o uso compartilhado só se não houver outro.
+  const firstFreeSlot =
+    slotStartsFor(facility).find((s) => reasonForSlot(s) === null) ??
+    slotList.find((s) => reasonForSlot(s) === null);
   useEffect(() => {
     if (slotPickedByUserRef.current) return;
     if (slotReason === null) return;
