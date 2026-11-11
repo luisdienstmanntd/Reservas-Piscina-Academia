@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: alarme e mensagem nos 10 minutos finais de cada horário
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com relógio simulado no servidor de teste)
+- **Área:** Recepção (alertas)
+- **Pedido:** Quando faltarem 10 minutos para o fim do horário, tocar o mesmo alarme sonoro de quando entra reserva e mostrar uma mensagem avisando que o horário está acabando.
+- **Decisão:** Vale para todas as reservas ativas (piscina e academia, qualquer dia em exibição), não só as da planilha aberta. O servidor decide pelo horário dele (faltam >0 e ≤10 min). Cada reserva avisa uma vez (lembrado no navegador por 3 h, então recarregar a página não repete). O som respeita o botão Som ligado/desligado; a mensagem aparece sempre. O sino laranja piscando continua com a janela de 15 min (é o lembrete do aviso ao hóspede), sem relação com este alarme.
+- **O que foi feito:** `src/lib/ending-soon.ts` (regra e texto); `listEndingSoonReservations` em `src/app/actions/reservations.ts` (só recepção); `new-reservation-alerts.tsx` verifica junto com as reservas novas (a cada 10 s), toca o mesmo `beep` e mostra "Horário acabando — Apto X (nome) · Piscina · faltam N min" por 30 s.
+- **Validação:** tsc, ESLint, 187 testes (novos); em navegador, com o relógio do servidor em 20h52: mensagem do apto 212 com "faltam 8 min", o apto 101 (termina 22h) não avisou, 3 tons tocaram uma vez, sem repetição e sem repetir após recarregar.
+- **Não fazer / evitar regressão:** Não ligar este alarme à lista de "novas reservas" (não deve contar no título da aba). Não usar o relógio do navegador para decidir.
+- **Pendências:** conferir no site publicado quando houver um horário perto do fim (minutos 50–59 de uma hora).
+- **Referências:** `src/lib/ending-soon.ts`, `src/app/actions/reservations.ts`, `src/app/recepcao/new-reservation-alerts.tsx`.
+
 ### 2026-11-11 — Recepção: "Nova reserva" não lista horários que já passaram
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
