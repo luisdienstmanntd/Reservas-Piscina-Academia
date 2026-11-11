@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Hóspede: calendário direto, sem título e sem botão "Ver horários"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Fluxo do hóspede (passo do calendário)
+- **Pedido:** Não mostrar "Escolha o dia / Apto. 404 · até 11/11/26"; só o calendário, justificado (ocupando a largura); remover o botão "Ver horários": ao tocar numa data, a tela de horários abre sozinha.
+- **O que foi feito:** `guest-booking.tsx`: título e descrição removidos; `pickDate` valida a data (dentro da estadia) e já avança para os horários; botão e formulário removidos. `src/components/ui/calendar.tsx` não mudou: a largura total vem de classes no uso (com `!`, porque o CSS da biblioteca fica fora das camadas do Tailwind e ganharia). `tests/e2e/guest-booking-flow.spec.ts` ajustado ao novo fluxo.
+- **Validação:** tsc, ESLint, 187 testes; em navegador (1000 e 390 px): sem título nem botão, calendário ocupa toda a largura do cartão, tocar no dia abre 12 horários e "Voltar" volta ao calendário. O teste e2e do repositório foi só atualizado, não executado (precisa de Supabase real).
+- **Não fazer / evitar regressão:** Não recolocar o botão; tocar de novo na data já selecionada não faz nada (não desmarca). O texto de erro "Data fora do período da sua estadia" continua para datas inválidas (o calendário já desativa essas datas).
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `tests/e2e/guest-booking-flow.spec.ts`.
+
 ### 2026-11-11 — Hóspede: removida a dica abaixo do campo WhatsApp
 
 - **Status:** Concluído (PR em rascunho)
