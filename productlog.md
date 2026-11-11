@@ -57,6 +57,25 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx`: selo (`Badge`) removido; `Smartphone` (hóspede) e `ConciergeBell` (recepção), do lucide, antes do número, com `aria-label` ("Reserva feita pelo hóspede" / "Reserva feita pela recepção") para leitores de tela.
 - **Validação:** tsc, ESLint e 175 testes; em navegador, reserva do hóspede mostra o celular e a da recepção o sino de recepção, sem o texto do selo.
 - **Não fazer / evitar regressão:** Não voltar a mostrar texto de origem nessa coluna; manter o `aria-label`.
+
+### 2026-11-11 — Recepção: "Som ligado" na mesma linha de Piscina/Academia
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (cabeçalho)
+- **Pedido:** O botão "Som ligado" deve ficar na mesma linha dos botões Piscina/Academia.
+- **O que foi feito:** `SoundToggleButton` (novo, em `new-reservation-alerts.tsx`) colocado à direita da linha das abas em `reception-dashboard.tsx`; o cabeçalho passou a ter uma linha com logo/título/Sair e outra com abas + som. O banner de alertas deixou de ter a linha do botão (o aviso "navegador bloqueou o som" continua nele).
+- **Validação:** tsc, ESLint e testes; em navegador, centros verticais de Piscina e Som iguais (desktop 1400px e celular 390px), alinhado à direita com o Sair no desktop.
+- **Não fazer / evitar regressão:** Não recolocar o botão de som dentro do banner de alertas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/app/recepcao/new-reservation-alerts.tsx`.
+
+### 2026-11-11 — Recepção: removido o texto do cartão "Gerar acesso hóspede"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção
+- **Pedido:** Na tela inicial, em "Gerar acesso hóspede", não mostrar o texto "Link com token de estadia para agendar piscina ou academia no telemóvel do hóspede."
+- **O que foi feito:** removido o `CardDescription` desse cartão em `src/app/recepcao/reception-dashboard.tsx`; título, formulário e geração do link não mudaram.
+- **Validação:** tsc e ESLint sem erros; o texto não existe em mais nenhum lugar do código.
 - **Pendências:** nenhuma.
 - **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
 
