@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Ícone da piscina: ondas no lugar do calendário
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial e histórico da recepção
+- **Relato:** "o ícone da piscina foi trocado por um ícone de calendário" (visto como regressão); pedido de revisão do site todo.
+- **Apuração:** pelo histórico do git não houve troca: o cartão "Piscina" da página inicial usa `CalendarDays` desde a primeira versão (30/09/2026) e a piscina nunca teve ícone próprio. Ao pôr ícones no histórico (PR #58), reaproveitei esse mesmo ícone, o que deixou o problema à vista.
+- **O que foi feito:** a piscina passa a usar `Waves` (ondas, lucide) na página inicial (`page.tsx`) e no histórico (`history-dialog.tsx`); a academia segue com `Dumbbell`. `CalendarDays` continua só no cabeçalho do fluxo do hóspede, onde indica a data.
+- **Revisão do site:** build local com Postgres real, 44 verificações: página inicial (sem link, desktop e celular, botões alinhados, texto da academia, "Sua reserva" capitalizada), fluxo do hóspede (identificação, calendário, horários, volta à inicial, academia), recepção (cabeçalho, planilha de 13 linhas iguais sem 10h–12h, academia 24 linhas, Nova reserva com listas filtradas, maiúsculas, mãozinha em todos os botões, histórico com ícones de quem fez e da instalação, formato da data, celular sem rolagem horizontal); rotas `/acesso-negado`, `/indisponivel`, `/hospede/*` sem link (redireciona) e 404 conforme o esperado; 0 erros de console. tsc, ESLint e 207 testes OK.
+
 ### 2026-11-11 — Histórico: ícone no lugar do nome "Piscina/Academia"
 
 - **Status:** Concluído (PR em rascunho)
