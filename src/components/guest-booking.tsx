@@ -41,7 +41,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { guestWhatsappRequiredSchema } from "@/lib/booking-zod";
-import { PHONE_HINT } from "@/lib/phone";
 import { toUpperText } from "@/lib/text-case";
 import { cn } from "@/lib/utils";
 import { hotelCalendarDate } from "@/lib/hotel-time";
@@ -487,14 +486,10 @@ export function GuestBooking({
                         autoComplete="tel"
                         required
                         placeholder="(54) 99999-9999 ou +44 7911 123456"
-                        aria-describedby="wa-hint"
                         className="border-border h-9 bg-white text-sm"
                         value={whatsapp}
                         onChange={(e) => setWhatsapp(e.target.value)}
                       />
-                      <p id="wa-hint" className="text-xs text-muted-foreground">
-                        {PHONE_HINT}
-                      </p>
                     </div>
                     <Button type="submit" className="h-10 w-full" size="default">
                       Continuar
