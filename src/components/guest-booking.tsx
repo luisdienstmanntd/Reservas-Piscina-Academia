@@ -263,17 +263,15 @@ export function GuestBooking({
     if (step === 3) setStep(2);
   }
 
-  function submitDatePick(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedDate) {
-      toast.error("Escolha o dia da reserva.");
-      return;
-    }
-    const ymd = format(selectedDate, "yyyy-MM-dd");
+  /** Tocar numa data abre direto a tela de horários (sem botão "Ver horários"). */
+  function pickDate(date: Date | undefined) {
+    if (!date) return;
+    const ymd = format(date, "yyyy-MM-dd");
     if (ymd < todayStr || ymd > guestCheckoutDate) {
       toast.error("Data fora do período da sua estadia.");
       return;
     }
+    setSelectedDate(date);
     setStep(3);
   }
 
@@ -501,37 +499,18 @@ export function GuestBooking({
 
             {step === 2 && (
               <Card className="border-border/80 shadow-sm">
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Escolha o dia
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Apto. {apartment} · até{" "}
-                    {guestCheckoutDate
-                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
-                          locale: ptBR,
-                        })
-                      : "—"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 p-3 pt-0">
-                  <form
-                    onSubmit={submitDatePick}
-                    className="flex flex-col gap-3"
-                  >
-                    <div className="flex justify-center overflow-x-auto rounded-lg border border-border/60 bg-white p-1 [&_.rdp-root]:scale-[0.92] sm:[&_.rdp-root]:scale-100">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={{ before: minDate, after: maxDate }}
-                        defaultMonth={minDate}
-                      />
-                    </div>
-                    <Button type="submit" className="h-10 w-full">
-                      Ver horários
-                    </Button>
-                  </form>
+                <CardContent className="p-3">
+                  {/* Só o calendário, ocupando toda a largura. Tocar numa data abre direto os horários. */}
+                  <div className="rounded-lg border border-border/60 bg-white p-1">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={pickDate}
+                      disabled={{ before: minDate, after: maxDate }}
+                      defaultMonth={minDate}
+                      className="block w-full border-0 p-0 shadow-none [&_.rdp-months]:max-w-none! [&_.rdp-months]:w-full! [&_.rdp-month]:w-full! [&_table]:w-full! [&_.rdp-day]:w-auto! [&_.rdp-weekday]:w-auto!"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}
