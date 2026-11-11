@@ -5,6 +5,7 @@ import { Settings, X } from "lucide-react";
 
 import { listReservationHistory } from "@/app/actions/reservations";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   actorLabel,
   changedFieldsLabel,
@@ -94,15 +95,23 @@ export function HistoryButton({
 }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<State>({ status: "loading" });
+  const [refreshing, setRefreshing] = useState(false);
+  const [date, setDate] = useState("");
+  const [apartment, setApartment] = useState("");
+  const [name, setName] = useState("");
   const closeRef = useRef<HTMLButtonElement>(null);
+  const filtered = Boolean(date || apartment.trim() || name.trim());
 
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    setState({ status: "loading" });
-    listReservationHistory()
+    // Espera um instante após digitar para não consultar a cada letra.
+    const timer = setTimeout(() => {
+      setRefreshing(true);
+      listReservationHistory({ date, apartment, name })
       .then((r) => {
         if (!alive) return;
+        setRefreshing(false);
         if (r.ok) {
           setState({ status: "ok", items: r.items, limit: r.limit });
           return;
@@ -115,13 +124,22 @@ export function HistoryButton({
         setState({ status: "error", message: r.error });
       })
       .catch(() => {
-        if (alive)
-          setState({ status: "error", message: "Falha de rede ao carregar o histórico." });
+        if (!alive) return;
+        setRefreshing(false);
+        setState({ status: "error", message: "Falha de rede ao carregar o histórico." });
       });
+    }, 300);
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
-  }, [open, onUnauthorized]);
+  }, [open, onUnauthorized, date, apartment, name]);
+
+  function clearFilters() {
+    setDate("");
+    setApartment("");
+    setName("");
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -145,7 +163,13 @@ export function HistoryButton({
         size="sm"
         variant="outline"
         className="size-8 px-0"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setDate("");
+          setApartment("");
+          setName("");
+          setState({ status: "loading" });
+          setOpen(true);
+        }}
         aria-label="Histórico de alterações"
         title="Histórico de alterações"
         aria-haspopup="dialog"
@@ -185,6 +209,55 @@ export function HistoryButton({
                 <X className="size-4" aria-hidden />
               </Button>
             </div>
+            <div className="mb-6 grid grid-cols-2 items-end gap-3 sm:grid-cols-[10rem_6rem_minmax(0,1fr)_auto]">
+              <div className="space-y-1">
+                <label htmlFor="hist-data" className="text-muted-foreground block text-xs">
+                  Data
+                </label>
+                <Input
+                  id="hist-data"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="hist-apto" className="text-muted-foreground block text-xs">
+                  Apto
+                </label>
+                <Input
+                  id="hist-apto"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="101"
+                  value={apartment}
+                  onChange={(e) => setApartment(e.target.value)}
+                />
+              </div>
+              <div className="col-span-2 space-y-1 sm:col-span-1">
+                <label htmlFor="hist-nome" className="text-muted-foreground block text-xs">
+                  Nome
+                </label>
+                <Input
+                  id="hist-nome"
+                  maxLength={60}
+                  placeholder="Nome do hóspede"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              {filtered ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="col-span-2 sm:col-span-1"
+                  onClick={clearFilters}
+                >
+                  Limpar
+                </Button>
+              ) : null}
+            </div>
             {state.status === "loading" ? (
               <p className="text-muted-foreground py-8 text-center text-sm">Carregando…</p>
             ) : state.status === "error" ? (
@@ -193,17 +266,19 @@ export function HistoryButton({
               </p>
             ) : state.items.length === 0 ? (
               <p className="text-muted-foreground py-8 text-center text-sm">
-                Nenhuma alteração registrada ainda.
+                {filtered
+                  ? "Nenhuma alteração encontrada com esses filtros."
+                  : "Nenhuma alteração registrada ainda."}
               </p>
             ) : (
-              <>
+              <div aria-busy={refreshing} className={cn(refreshing && "opacity-60 transition-opacity")}>
                 <Timeline items={state.items} />
                 {state.items.length >= state.limit ? (
                   <p className="text-muted-foreground mt-4 text-center text-xs">
                     Mostrando as {state.limit} alterações mais recentes.
                   </p>
                 ) : null}
-              </>
+              </div>
             )}
           </div>
         </div>

@@ -108,3 +108,40 @@ export function reservationLine(item: HistoryItem): string {
   const line = out.join(" · ");
   return item.slotMayDiffer && line ? `${line} (atual)` : line;
 }
+
+/** Filtros do histórico (todos opcionais). */
+export type HistoryFilters = {
+  /** Dia do evento, yyyy-MM-dd (fuso do hotel). */
+  date?: string;
+  /** Início do número do apartamento. */
+  apartment?: string;
+  /** Trecho do nome do hóspede. */
+  name?: string;
+};
+
+/** Limpa e valida o que veio do formulário; campos vazios ou inválidos são descartados. */
+export function normalizeHistoryFilters(raw: unknown): HistoryFilters {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const out: HistoryFilters = {};
+  const date = typeof r.date === "string" ? r.date.trim() : "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T12:00:00-03:00`))) {
+    out.date = date;
+  }
+  const apartment = typeof r.apartment === "string" ? r.apartment.trim() : "";
+  if (/^[A-Za-z0-9]{1,6}$/.test(apartment)) out.apartment = apartment;
+  const name = typeof r.name === "string" ? r.name.trim().replace(/\s+/g, " ").slice(0, 60) : "";
+  if (name) out.name = name;
+  return out;
+}
+
+/** Escapa `\`, `%` e `_` para usar o texto dentro de um LIKE/ILIKE. */
+export function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/** Início (inclusive) e fim (exclusivo) do dia no fuso do hotel, em ISO. */
+export function historyDayRange(ymd: string): { from: string; to: string } {
+  const from = new Date(`${ymd}T00:00:00-03:00`);
+  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
