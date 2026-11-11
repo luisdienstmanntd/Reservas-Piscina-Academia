@@ -153,7 +153,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
       <Button
         type="button"
         size="sm"
-        variant={warnDone ? "secondary" : "outline"}
+        variant="ghost"
         disabled={!hasPhone || warnDone || pending !== null}
         title={
           !hasPhone
@@ -171,15 +171,19 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
               ? "Aviso pendente: enviar agora"
               : "Enviar aviso"
         }
+        // Sem borda nem fundo, como os outros ícones. Pendente: sino laranja piscando.
         className={cn(
-          "relative size-9 p-0 xl:size-8",
+          "relative size-9 border-0 bg-transparent p-0 shadow-none xl:size-8",
           hasPhone &&
             showWarningPulse &&
-            "animate-pulse border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
+            "animate-pulse text-orange-600 hover:bg-orange-50 hover:text-orange-700"
         )}
         onClick={() => void openWaAndMark("warning", warnMsg)}
       >
-        <Bell className="size-4 shrink-0" aria-hidden />
+        <Bell
+          className={cn("shrink-0", showWarningPulse ? "size-5" : "size-[1.15rem]")}
+          aria-hidden
+        />
         {warnDone ? (
           <ConfirmDoneIcon className="absolute -right-1 -top-1 size-3.5" />
         ) : null}
