@@ -919,10 +919,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
               Gerar acesso hóspede
             </CardTitle>
-            <CardDescription>
-              Link com token de estadia para agendar piscina ou academia no
-              telemóvel do hóspede.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
             <form
