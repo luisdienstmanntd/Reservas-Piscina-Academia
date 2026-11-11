@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Documentação: `ia.navegation.md` atualizado após a revisão geral
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Documentação
+- **Pedido:** Revisar as tarefas feitas e verificar conflitos/regressões.
+- **Problema observado:** Na revisão (tsc, ESLint, 175 testes, build, migrations repo = produção, e2e, concorrência, logs) não houve regressão de código; só o `ia.navegation.md` estava desatualizado.
+- **O que foi feito:** `ia.navegation.md` §3.2 (horários compartilhados 09h–12h só pela recepção, `receptionSlotStartsFor`, ordem da academia), §3.4 (indisponível em cinza sem texto para o hóspede), §3.6 (botões só ícone, planilha de uma linha por hora, "Suas reservas", contato lembrado, troca de horário) e §3.7 (exclusivo 13h–01h só para hóspede).
+- **Validação:** só documentação; nomes conferidos contra o código.
+- **Pendências:** PR #21 (`asGuest`) e PR #26 (sino sem borda) aguardam decisão; limpeza dos dados de teste e rotação da chave exposta dependem do usuário.
+- **Referências:** `ia.navegation.md`.
+
 ### 2026-11-11 — Recepção: botões de confirmação e aviso só com ícone
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados; falta conferir no site publicado)
