@@ -462,16 +462,17 @@ export function SoundToggleButton({
       type="button"
       size="sm"
       variant="outline"
-      className="h-8"
+      className="size-8 px-0"
       onClick={alerts.toggleSound}
       aria-pressed={soundOn}
+      aria-label={soundOn ? "Som ligado" : "Som desligado"}
+      title={soundOn ? "Som ligado (clique para desligar)" : "Som desligado (clique para ligar)"}
     >
       {soundOn ? (
         <Volume2 className="size-4" aria-hidden />
       ) : (
         <VolumeX className="size-4" aria-hidden />
       )}
-      {soundOn ? "Som ligado" : "Som desligado"}
     </Button>
   );
 }

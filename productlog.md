@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Botão de som só com ícone e "mãozinha" em todos os botões
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção (cabeçalho) e estilos globais
+- **Pedido:** O botão "Som ligado" deve ter só o ícone; revisar todos os botões: ao passar o mouse deve aparecer o cursor de mãozinha.
+- **Causa do cursor:** o Tailwind v4 não aplica `cursor: pointer` aos botões (o padrão voltou a ser seta).
+- **O que foi feito:** `SoundToggleButton` virou botão quadrado só com ícone (`size-8`), com `aria-label` e `title` ("Som ligado/desligado") para acessibilidade; regra global em `globals.css` (`@layer base`) aplica `cursor: pointer` a `button`, `[role=button]`, `input[type=button|submit]` e `summary` que não estejam desativados (utilitários como `cursor-not-allowed` continuam valendo).
+- **Verificação:** build em produção local; computed style medido no navegador: recepção (7 botões), identificação, calendário e horários do hóspede (todos `pointer`); botão de som 32×32 sem texto e alternando o `aria-label` ao clicar. tsc, ESLint e testes OK.
+
 ### 2026-11-11 — Home: "Sua reserva" sem aviso do ramal e com primeira letra maiúscula
 
 - **Status:** Concluído (PR em rascunho)
