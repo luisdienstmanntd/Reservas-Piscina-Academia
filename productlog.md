@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: apartamento que já tem reserva no dia não aparece na lista
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Ao cadastrar reserva manual, o apartamento que já tem agendamento no dia não precisa aparecer na lista.
+- **Decisão:** A regra é a do sistema: 1 reserva por apartamento, por instalação e por dia. Por isso, na piscina some quem já tem piscina naquele dia (não quem só tem academia, e vice-versa). Se o apartamento já escolhido passar a ter reserva (ex.: troca de data), ele continua visível só enquanto estiver selecionado, e o aviso vermelho explica; assim o campo não fica incoerente.
+- **O que foi feito:** `reception-dashboard.tsx`: opções de apartamento com reserva no dia/instalação deixam de ser renderizadas (antes apareciam desativadas com "— já tem reserva neste dia").
+- **Validação:** tsc, ESLint; em navegador: 201 com reserva na piscina some na piscina e aparece na academia; 102 com reserva na academia some na academia e aparece na piscina.
+- **Não fazer / evitar regressão:** Não voltar a listar desativados; o servidor continua recusando apartamento duplicado no dia.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
 ### 2026-11-11 — Recepção: colunas da planilha justificadas, cabem em telas menores
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador em 1400, 1100, 1024 e 900 px)

@@ -1054,6 +1054,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   <option value="">Selecione…</option>
                   {ALLOWED_APARTMENT_NUMBERS.map((n) => {
                     const booked = formBookedApts.has(n);
+                    // Apartamento que já tem reserva neste dia não aparece na lista
+                    // (só se for o que está selecionado, para o aviso continuar coerente).
+                    if (booked && n !== newApt) return null;
                     return (
                       <option
                         key={n}
