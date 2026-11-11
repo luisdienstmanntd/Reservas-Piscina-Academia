@@ -387,30 +387,36 @@ export function NewReservationBanner({ alerts, todayYmd, onView }: BannerProps) 
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-2">
-          {soundBlocked && soundOn ? (
-            <span className="text-amber-700">
-              O navegador bloqueou o som: clique em qualquer lugar da página.
-            </span>
-          ) : null}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8"
-            onClick={alerts.toggleSound}
-            aria-pressed={soundOn}
-          >
-            {soundOn ? (
-              <Volume2 className="size-4" aria-hidden />
-            ) : (
-              <VolumeX className="size-4" aria-hidden />
-            )}
-            {soundOn ? "Som ligado" : "Som desligado"}
-          </Button>
-        </span>
-      </div>
+      {soundBlocked && soundOn ? (
+        <p className="text-right text-xs text-amber-700">
+          O navegador bloqueou o som: clique em qualquer lugar da página.
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+export function SoundToggleButton({
+  alerts,
+}: {
+  alerts: ReturnType<typeof useNewReservationAlerts>;
+}) {
+  const { soundOn } = alerts;
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      className="h-8"
+      onClick={alerts.toggleSound}
+      aria-pressed={soundOn}
+    >
+      {soundOn ? (
+        <Volume2 className="size-4" aria-hidden />
+      ) : (
+        <VolumeX className="size-4" aria-hidden />
+      )}
+      {soundOn ? "Som ligado" : "Som desligado"}
+    </Button>
   );
 }
