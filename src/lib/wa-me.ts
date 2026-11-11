@@ -61,10 +61,11 @@ export function isWarningAlertWindow(
   return minutesLeft > 0 && minutesLeft <= 15;
 }
 
+/** "15h" (com minutos só quando não forem zero: "15h30"). */
 function formatSlotStartForMessage(slotStart: string): string {
   const n = normalizeSlotStart(slotStart);
   const [hh, mm] = n.split(":").map(Number);
-  return `${String(hh).padStart(2, "0")}h${String(mm).padStart(2, "0")}`;
+  return mm === 0 ? `${hh}h` : `${hh}h${String(mm).padStart(2, "0")}`;
 }
 
 function formatReservationDateForMessage(ymd: string): string {
@@ -73,19 +74,25 @@ function formatReservationDateForMessage(ymd: string): string {
   return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
 }
 
+/** Bandeira da Itália 🇮🇹 (escrita por código para não depender da codificação do arquivo). */
+const ITALY_FLAG = "\u{1F1EE}\u{1F1F9}";
+
+/** Mensagem de confirmação ao hóspede (duas linhas; a segunda muda conforme a instalação). */
 export function buildConfirmationMessage(
   facility: string,
   reservationDateYmd: string,
-  slotStart: string,
-  todayYmd: string
+  slotStart: string
 ): string {
-  const place = facilityDisplayName(facility);
-  const timeStr = formatSlotStartForMessage(slotStart);
-  const when =
-    reservationDateYmd === todayYmd
-      ? `hoje às ${timeStr}`
-      : `dia ${formatReservationDateForMessage(reservationDateYmd)} às ${timeStr}`;
-  return `Olá! Sua reserva para a ${place} no Valle D'incanto está confirmada para ${when}. Desejamos um momento de muito relaxamento!`;
+  const place = facility === "gym" ? "academia" : "piscina";
+  const when = `${formatReservationDateForMessage(reservationDateYmd)}, às ${formatSlotStartForMessage(slotStart)}`;
+  const closing =
+    facility === "gym"
+      ? "Aproveite esse momento dedicado ao seu bem-estar."
+      : "Aproveite esse momento de tranquilidade e relaxamento.";
+  return (
+    `Olá! Sua reserva para a ${place} do Valle D'Incanto está confirmada para o dia ${when}.\n` +
+    `${closing} Você merece! ${ITALY_FLAG}`
+  );
 }
 
 export function buildWarningMessage(facility: string): string {

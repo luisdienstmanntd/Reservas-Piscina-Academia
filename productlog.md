@@ -56,6 +56,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Pedido:** Identificar quem fez cada alteração pelos mesmos ícones da planilha (sineta = recepção, celular = hóspede), aparecendo antes do texto "Reserva incluída/alterada/excluída".
 - **O que foi feito:** `ActorIcon` em `history-dialog.tsx` (lucide `ConciergeBell`/`Smartphone`, mesmo tamanho e cor da planilha, `role="img"` com `aria-label` "Recepção"/"Hóspede"); o ícone vem na frente do título e a linha de texto "Hóspede/Recepção" saiu do cartão. Eventos do "Sistema" (ex.: apagar dados por LGPD) não têm ícone e mantêm a linha "Sistema". No celular a data fica numa linha própria no rodapé do cartão.
 - **Verificação:** build local com Postgres real (desktop e 390 px): 7 eventos, ícone certo e em primeiro lugar em todos os de hóspede/recepção, sem texto repetido, evento do sistema sem ícone, sem erros de console. tsc, ESLint e testes OK.
+### 2026-11-11 — Mensagens de confirmação do WhatsApp (novo texto)
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — botão de confirmação (WhatsApp)
+- **Pedido:** Novo texto. Academia: "Olá! Sua reserva para a academia do Valle D'Incanto está confirmada para o dia 12/11/2026, às 15h. / Aproveite esse momento dedicado ao seu bem-estar. Você merece! 🇮🇹". Piscina: igual, com "piscina" e "Aproveite esse momento de tranquilidade e relaxamento. Você merece! 🇮🇹".
+- **O que foi feito:** `buildConfirmationMessage` (`src/lib/wa-me.ts`) reescrita (duas linhas separadas por quebra de linha); a data aparece sempre como "dia dd/MM/aaaa" (a versão anterior dizia "hoje às …" para o mesmo dia); hora sem zero à esquerda ("15h", "9h", "7h30"); bandeira escrita por código (U+1F1EE U+1F1F9). Parâmetro `todayYmd` removido da função e do chamador (`reception-wa-actions.tsx`). A mensagem de aviso dos 10 minutos não mudou.
+- **Testes:** novo `wa-me.test.ts` (textos exatos de academia e piscina, data/hora, emoji, codificação no link, aviso inalterado).
+- **Verificação:** build local; cliquei no botão de confirmação da recepção (piscina e academia) capturando o link do WhatsApp Web: texto idêntico ao pedido, com quebra de linha e emoji. tsc, ESLint e 206 testes OK.
+- **Observação:** mensagens já enviadas não mudam; vale só para os próximos cliques.
 
 ### 2026-11-11 — Histórico: filtros por data, apto e nome
 

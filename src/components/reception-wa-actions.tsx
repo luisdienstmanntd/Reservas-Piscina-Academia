@@ -5,7 +5,6 @@ import { Bell, CircleCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { markMessageAsSent } from "@/app/actions/reservations";
-import { hotelCalendarDate } from "@/lib/hotel-time";
 import type { ReservationRow } from "@/lib/reservations";
 import {
   buildConfirmationMessage,
@@ -69,12 +68,10 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
     }
   }
 
-  const todayYmd = hotelCalendarDate();
   const confirmMsg = buildConfirmationMessage(
     row.facility,
     row.reservation_date,
-    String(row.slot_start),
-    todayYmd
+    String(row.slot_start)
   );
   const warnMsg = buildWarningMessage(row.facility);
 
