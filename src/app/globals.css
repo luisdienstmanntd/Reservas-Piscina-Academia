@@ -77,4 +77,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Tailwind v4 não põe a "mãozinha" nos botões: vale para todos os botões ativos. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
 }

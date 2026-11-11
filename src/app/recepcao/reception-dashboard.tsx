@@ -47,6 +47,7 @@ import {
   useNewReservationAlerts,
   SoundToggleButton,
 } from "@/app/recepcao/new-reservation-alerts";
+import { HistoryButton } from "@/app/recepcao/history-dialog";
 import type { NewReservationItem } from "@/lib/new-reservations";
 import {
   SLOT_BLOCK_LABEL,
@@ -615,6 +616,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     }
   }
 
+  const onHistoryUnauthorized = useCallback((message: string) => {
+    setAuthed(false);
+    toast.error(message);
+  }, []);
+
   async function onLogout() {
     await logoutReception();
     setAuthed(false);
@@ -855,6 +861,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <SoundToggleButton alerts={newReservationAlerts} />
+              <HistoryButton onUnauthorized={onHistoryUnauthorized} />
               <Button
                 type="button"
                 variant="outline"
