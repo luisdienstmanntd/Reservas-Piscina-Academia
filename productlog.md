@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Histórico: ícone no lugar do nome "Piscina/Academia"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — histórico de alterações
+- **Pedido:** Identificar a instalação pelos mesmos ícones minimalistas já usados para piscina e academia, no lugar das palavras.
+- **O que foi feito:** `FacilityIcon` em `history-dialog.tsx` com os ícones da página inicial (`CalendarDays` = piscina, `Dumbbell` = academia), `role="img"` e `aria-label` "Piscina"/"Academia"; a linha do cartão passa a ser "[ícone] Apto 103 · 12h às 13h (atual)" via `reservationDetail` (`reservation-history.ts`); `reservationLine` (texto com o nome) continua disponível.
+- **Fora do escopo:** os avisos flutuantes ("Nova reserva", "Horário acabando") e o resto do sistema continuam com o nome por extenso.
+- **Verificação:** build local com Postgres real (desktop e 390 px): ícone certo antes do texto em todos os cartões (piscina e academia), nenhuma palavra "Piscina/Academia" na linha, sem rolagem horizontal, sem erros de console. tsc, ESLint e 207 testes OK.
+
 ### 2026-11-11 — Histórico: ícones de quem fez (sineta e celular)
 
 - **Status:** Concluído (PR em rascunho)
