@@ -6,7 +6,14 @@ import { ptBR } from "date-fns/locale";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogOut, Trash2 } from "lucide-react";
+import {
+  ConciergeBell,
+  Eye,
+  EyeOff,
+  LogOut,
+  Smartphone,
+  Trash2,
+} from "lucide-react";
 
 import {
   createReceptionReservation,
@@ -32,7 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { receptionSlotOrder, slotStartLabel } from "@/lib/reservation-grid";
 import {
@@ -318,18 +324,26 @@ function ReservationSlotRow({
         <span className="order-1 whitespace-nowrap font-medium tabular-nums xl:order-1">
           {label}
         </span>
-        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto xl:order-2 xl:flex-col xl:items-start xl:gap-0.5">
+        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto xl:order-2">
+          {row.created_by === "reception" ? (
+            <ConciergeBell
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-label="Reserva feita pela recepção"
+              role="img"
+            />
+          ) : (
+            <Smartphone
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-label="Reserva feita pelo hóspede"
+              role="img"
+            />
+          )}
           <span className="font-mono text-base xl:text-lg">
             <span className="font-sans text-sm text-muted-foreground xl:hidden">
               Apto{" "}
             </span>
             {row.apartment_number}
           </span>
-          <Badge
-            variant={row.created_by === "reception" ? "secondary" : "outline"}
-          >
-            {row.created_by === "reception" ? "Recepção" : "Hóspede"}
-          </Badge>
         </span>
         <Button
           type="button"
