@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: ícone de origem da reserva no lugar do selo "Hóspede"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (coluna Apto da planilha)
+- **Pedido:** Em vez do selo "Hóspede", mostrar um ícone minimalista de celular antes do número do apartamento quando a reserva for do hóspede; quando for da recepção, um ícone de recepção.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx`: selo (`Badge`) removido; `Smartphone` (hóspede) e `ConciergeBell` (recepção), do lucide, antes do número, com `aria-label` ("Reserva feita pelo hóspede" / "Reserva feita pela recepção") para leitores de tela.
+- **Validação:** tsc, ESLint e 175 testes; em navegador, reserva do hóspede mostra o celular e a da recepção o sino de recepção, sem o texto do selo.
+- **Não fazer / evitar regressão:** Não voltar a mostrar texto de origem nessa coluna; manter o `aria-label`.
+
 ### 2026-11-11 — Recepção: "Som ligado" na mesma linha de Piscina/Academia
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
