@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: botões de confirmação e aviso só com ícone
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados; falta conferir no site publicado)
+- **Área:** Recepção (coluna de mensagens da planilha)
+- **Pedido:** O aviso deve mostrar só o ícone do sino, sem texto. A confirmação deve mostrar somente os ícones enviados no pedido (círculo verde com o "certo": contorno e cheio), sem texto.
+- **Decisão:** Confirmação ainda não enviada = círculo verde só com o contorno e o "certo"; enviada = círculo verde cheio com o "certo" branco; sem WhatsApp = a versão de contorno em cinza, desabilitada. Aviso = só o sino; no horário de avisar (10 min antes do fim) o sino fica laranja piscando, como o botão já ficava; depois de enviado, o sino fica cinza desabilitado com um pequeno "certo" verde no canto (esse selo é um acréscimo meu para o estado "enviado" não ficar igual ao "não enviado" sem texto). Sem texto visível; o texto continua só como `aria-label` e dica ao passar o mouse, por acessibilidade.
+- **O que foi feito:** `src/components/reception-wa-actions.tsx`: ícones SVG próprios (`ConfirmPendingIcon`, `ConfirmDoneIcon`), botões quadrados só com ícone; o comportamento de enviar não mudou.
+- **Validação:** tsc e ESLint; em navegador com quatro reservas (nenhuma enviada, só confirmação enviada, as duas enviadas, sem WhatsApp): nenhum dos textos "Confirmação", "OK conf.", "Aviso", "OK aviso" ou "Aviso pendente" aparece e os rótulos de acessibilidade mudam por estado.
+- **Não fazer / evitar regressão:** Não voltar a mostrar texto nesses botões; manter o laranja piscando do aviso pendente (é o alerta para a recepção).
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/reception-wa-actions.tsx`.
+
 ### 2026-11-11 — Piscina: recepção pode reservar o uso compartilhado (09h às 12h)
 
 - **Status:** Concluído (PR #24 mergeado; migration `20261111100000_pool_shared_slots.sql` aplicada em produção em 11/11/2026 antes do merge)
