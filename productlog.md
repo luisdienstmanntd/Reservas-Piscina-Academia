@@ -49,6 +49,14 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Home (desktop): botões "Agendar" alinhados
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial
+- **Pedido:** Na versão para PC, os botões "Agendar piscina" e "Agendar academia" estavam desalinhados.
+- **Causa:** os dois cartões têm a mesma altura (grade), mas o botão ficava logo abaixo do texto; a descrição da piscina ocupa duas linhas e a da academia uma, então os botões ficavam em alturas diferentes.
+- **O que foi feito:** `CardContent` dos dois cartões da home com `mt-auto` (o botão desce para o rodapé do cartão). Só `src/app/page.tsx`; o componente `Card` compartilhado não foi alterado.
+- **Verificação:** build em produção local; medido no navegador: desktop (1280) e tablet (820) com os dois botões no mesmo `top`/`bottom`; celular (390) continua empilhado. tsc e ESLint OK.
 ### 2026-11-11 — Recepção: histórico de alterações (engrenagem ao lado de "Sair")
 
 - **Status:** Concluído (PR em rascunho)
