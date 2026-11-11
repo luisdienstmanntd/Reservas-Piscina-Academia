@@ -143,8 +143,8 @@ Objetivo: nenhum registro de reserva é apagado automaticamente; o único dado a
 
 - [x] **6.1 — Consulta de dias passados** — a grade mostra as reservas **canceladas** (esmaecidas, com quem cancelou e quando) em dias anteriores a hoje, o marcador de horário alterado pelo hóspede e a origem (hóspede/recepção). Hoje e dias futuros não mostram canceladas. Nada muda no banco. — Concluído em: 11/11/2026
 - [x] **6.2 — Testes do histórico** — `reservations-history.test.ts` (dia passado consultável, cancelada preservada, filtro por data, piscina × academia, autenticação, edição de reserva passada, criação bloqueada). — Concluído em: 11/11/2026
-- [ ] **6.3 — Retenção: WhatsApp após 365 dias** — migration nova (não aplicada sem autorização): o job `lgpd_anonymize_reservations` deixa de apagar nome e observações e passa a apagar só o WhatsApp 365 dias após o check-out; documentação em `docs/`. — Concluído em: ____
-- [ ] **6.4 — Testes de integração do histórico e da retenção** — rodar em ambiente de teste (nunca na produção). — Concluído em: ____
+- [ ] **6.3 — Retenção: WhatsApp após 365 dias** — migration `20261112100000_retention_whatsapp_365.sql` e `docs/RETENCAO_DADOS.md` **preparadas (PR em rascunho), NÃO aplicadas**: o job deixa de apagar nome e observações e passa a apagar só o WhatsApp 365 dias após o check-out. Falta a aprovação de LGPD e a autorização para aplicar. — Concluído em: ____
+- [x] **6.4 — Testes de retenção** — `retention.test.ts` (unitário) e `tests/integration/retention.test.ts` (7 testes, banco local) + verificação de que a migration não perde dados. — Concluído em: 11/11/2026
 
 ---
 
@@ -157,7 +157,7 @@ Objetivo: nenhum registro de reserva é apagado automaticamente; o único dado a
 | 3 — Power BI | 4 | 0 | 🟡 Migrations aplicadas em produção (09/11/2026); faltam a senha da role, o merge do código e o relatório |
 | 4 — Funcional | 3 | 0 | ⏳ Não iniciada |
 | 5 — Operação | 6 | 0 | ⏳ Não iniciada |
-| 6 — Histórico e retenção | 4 | 2 | 🟡 Consulta de dias passados e testes prontos (PR em rascunho); retenção em preparo |
+| 6 — Histórico e retenção | 4 | 3 | 🟡 Histórico e testes prontos; retenção preparada e **não aplicada** (aguarda LGPD e autorização) |
 
 **Convenções ao executar:**
 - 1 etapa = 1 commit (ou PR) pequeno e reversível, com teste acompanhando.
