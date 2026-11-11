@@ -700,7 +700,15 @@ export async function createReceptionReservation(input: {
     guestName,
   } = parsed.data;
   // Balcão não informa check-out: grava NULL em vez de inventar um valor.
-  const v = validateStayAndSlot(facility, reservationDate, null, slotStart);
+  const v = validateStayAndSlot(
+    facility,
+    reservationDate,
+    null,
+    slotStart,
+    undefined,
+    undefined,
+    true // a recepção pode reservar também o uso compartilhado da piscina (09h–12h)
+  );
   if (v) {
     return { ok: false, error: v, code: "validation" };
   }

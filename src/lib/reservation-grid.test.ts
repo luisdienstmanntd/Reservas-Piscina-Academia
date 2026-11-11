@@ -32,3 +32,15 @@ describe("planilha da recepção", () => {
     expect([...GYM_SLOT_STARTS]).toEqual(antes);
   });
 });
+
+describe("planilha da piscina na recepção", () => {
+  it("começa às 09h (uso compartilhado) e termina às 00h, uma linha por hora", async () => {
+    const { receptionSlotStartsFor } = await import("./reservations");
+    const ordem = receptionSlotOrder(receptionSlotStartsFor("pool")).map(slotStartLabel);
+    expect(ordem[0]).toBe("09h00");
+    expect(ordem.slice(0, 5)).toEqual(["09h00", "10h00", "11h00", "12h00", "13h00"]);
+    expect(ordem[ordem.length - 1]).toBe("00h00");
+    expect(ordem).toHaveLength(16);
+    expect(new Set(ordem).size).toBe(16);
+  });
+});
