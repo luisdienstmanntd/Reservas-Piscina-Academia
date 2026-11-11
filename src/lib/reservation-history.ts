@@ -1,6 +1,4 @@
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
+import { hotelCalendarDate } from "@/lib/hotel-time";
 import { hourRangeLabel } from "@/lib/my-reservations";
 
 /** Tipos gravados em `reservation_events.event_type`. */
@@ -81,14 +79,30 @@ export function formatEventDateTime(iso: string): string {
   return `${p("day")}/${p("month")}/${p("year")}, ${p("hour")}:${p("minute")}`;
 }
 
-/** "Piscina · Apto 101 · quarta-feira 11/11 · 19h às 20h" (partes ausentes são omitidas). */
+/** "Quarta-feira - 11/11/2026 - 10:57" (fuso do hotel), para o lado da linha do tempo. */
+export function formatEventWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+  }).format(d);
+  const [date, time] = formatEventDateTime(iso).split(", ");
+  const day = weekday.charAt(0).toLocaleUpperCase("pt-BR") + weekday.slice(1);
+  return `${day} - ${date} - ${time}`;
+}
+
+/**
+ * "Academia · Apto 103 · 12h às 13h (atual)". O dia da reserva só aparece (dd/MM) quando é
+ * diferente do dia do evento; partes ausentes são omitidas.
+ */
 export function reservationLine(item: HistoryItem): string {
   const out: string[] = [];
   if (item.facility) out.push(item.facility === "pool" ? "Piscina" : "Academia");
   if (item.apartment) out.push(`Apto ${item.apartment}`);
-  if (item.reservationDate) {
-    const [y, m, d] = item.reservationDate.split("-").map(Number);
-    out.push(format(new Date(y, m - 1, d), "EEEE dd/MM", { locale: ptBR }));
+  if (item.reservationDate && item.reservationDate !== hotelCalendarDate(new Date(item.occurredAt))) {
+    const [, m, d] = item.reservationDate.split("-");
+    out.push(`${d}/${m}`);
   }
   if (item.slotStart) out.push(hourRangeLabel(item.slotStart));
   const line = out.join(" · ");

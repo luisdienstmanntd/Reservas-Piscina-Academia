@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import {
   actorLabel,
   changedFieldsLabel,
-  formatEventDateTime,
+  formatEventWhen,
   historyTitle,
   reservationLine,
   type HistoryItem,
@@ -31,7 +31,7 @@ function Timeline({ items }: { items: HistoryItem[] }) {
       />
       {items.map((it, i) => {
         const cardLeft = i % 2 === 0;
-        const when = formatEventDateTime(it.occurredAt);
+        const when = formatEventWhen(it.occurredAt);
         const changed =
           it.type === "updated" ? changedFieldsLabel(it.changedFields) : "";
         return (
@@ -68,7 +68,7 @@ function Timeline({ items }: { items: HistoryItem[] }) {
                 <p className="text-muted-foreground text-sm">{it.guestName}</p>
               ) : null}
               <p className="text-muted-foreground/80 mt-1 text-xs">
-                Por {actorLabel(it.actor)}
+                {actorLabel(it.actor)}
                 <span className="md:hidden"> · {when}</span>
               </p>
             </div>

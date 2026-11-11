@@ -7,6 +7,7 @@ import {
   normalizeHistoryFilters,
   changedFieldsLabel,
   formatEventDateTime,
+  formatEventWhen,
   historyTitle,
   reservationLine,
   type HistoryItem,
@@ -52,13 +53,23 @@ describe("histórico de alterações", () => {
     expect(formatEventDateTime("2026-11-12T02:05:00Z")).toBe("11/11/2026, 23:05");
     expect(formatEventDateTime("lixo")).toBe("—");
   });
-  it("linha da reserva", () => {
-    expect(reservationLine(item())).toBe("Piscina · Apto 101 · quarta-feira 11/11 · 19h às 20h");
-    expect(reservationLine(item({ facility: "gym", slotStart: "07:00:00" }))).toBe(
-      "Academia · Apto 101 · quarta-feira 11/11 · 7h às 8h"
-    );
+  it("data do evento: dia da semana - data - hora", () => {
+    expect(formatEventWhen("2026-11-11T13:57:00Z")).toBe("Quarta-feira - 11/11/2026 - 10:57");
+    expect(formatEventWhen("2026-11-12T02:05:00Z")).toBe("Quarta-feira - 11/11/2026 - 23:05");
+    expect(formatEventWhen("lixo")).toBe("—");
+  });
+  it("linha da reserva (sem dia quando é o do evento)", () => {
+    // evento em 11/11 10:24 (hotel) e reserva no mesmo dia
+    expect(reservationLine(item())).toBe("Piscina · Apto 101 · 19h às 20h");
     expect(reservationLine(item({ slotMayDiffer: true }))).toBe(
-      "Piscina · Apto 101 · quarta-feira 11/11 · 19h às 20h (atual)"
+      "Piscina · Apto 101 · 19h às 20h (atual)"
+    );
+    expect(reservationLine(item({ facility: "gym", slotStart: "12:00:00", apartment: "103", slotMayDiffer: true }))).toBe(
+      "Academia · Apto 103 · 12h às 13h (atual)"
+    );
+    // reserva para outro dia: mostra dd/MM
+    expect(reservationLine(item({ reservationDate: "2026-11-13" }))).toBe(
+      "Piscina · Apto 101 · 13/11 · 19h às 20h"
     );
     expect(reservationLine(item({ facility: null, apartment: null, reservationDate: null, slotStart: null }))).toBe("");
   });
