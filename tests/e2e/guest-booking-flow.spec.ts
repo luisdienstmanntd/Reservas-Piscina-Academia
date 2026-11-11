@@ -58,10 +58,10 @@ test.describe("Fluxo hóspede (recepção → token → piscina)", () => {
     await page.locator("#wa").fill("11999999999");
     await page.waitForTimeout(PAUSE_MS);
     await page.getByRole("button", { name: /^Continuar$/i }).click();
-    // CardTitle (shadcn) é <div>, não expõe role heading
-    await expect(
-      page.locator("main").getByText("Escolha o dia", { exact: true })
-    ).toBeVisible({ timeout: 15_000 });
+    // Passo do calendário: só o calendário aparece (sem título nem botão "Ver horários").
+    await expect(page.locator("main .rdp-root")).toBeVisible({
+      timeout: 15_000,
+    });
     await page.waitForTimeout(PAUSE_MS);
 
     const dayStr = `${year}-12-30`;
@@ -78,7 +78,7 @@ test.describe("Fluxo hóspede (recepção → token → piscina)", () => {
     await dayCell.locator("button[type='button']").click();
     await page.waitForTimeout(PAUSE_MS);
 
-    await page.getByRole("button", { name: /Ver horários/i }).click();
+    // Tocar na data já abre direto os horários.
     await expect(
       page.locator("main").getByText("Horários", { exact: true })
     ).toBeVisible({ timeout: 15_000 });

@@ -38,7 +38,9 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 
 ### 3.2 Slots (fonte de verdade na app)
 
-- **Piscina:** `POOL_SLOT_STARTS` — 13h … 23h e `00:00:00` (bloco 00h–01h no mesmo `reservation_date`). `slotStartsFor("pool")`.
+- **Piscina (hóspede):** `POOL_SLOT_STARTS` — 13h … 23h e `00:00:00` (bloco 00h–01h no mesmo `reservation_date`). `slotStartsFor("pool")`.
+- **Piscina (horário compartilhado):** `POOL_SHARED_SLOT_STARTS` — só **09h** (representa o uso compartilhado 09h–13h; a planilha mostra 09h e pula 10h–12h); uso livre, o hóspede **não** reserva; só a recepção reserva manualmente (10h/11h/12h são recusados). `receptionSlotStartsFor("pool")` = compartilhados + normais (usado na planilha e no formulário da recepção); `validateStayAndSlot(..., forReception=true)` aceita esses horários. O CHECK `reservations_slot_valid` continua aceitando piscina ≥ 09:00 (mais largo que o app; a regra fica no servidor) (migration `20261111100000_pool_shared_slots.sql`).
+- **Academia:** `GYM_SLOT_STARTS` 24 slots; na recepção a ordem é 01h → 00h (`receptionSlotOrder` em `reservation-grid.ts`).
 - **Academia:** `GYM_SLOT_STARTS` — 24 horas cheias. `slotStartsFor("gym")`.
 - **Normalização:** `normalizeSlotStart()` antes de comparar, gravar ou consultar sets.
 - **UI:** `slotLabel()`.
@@ -53,7 +55,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Hoje:** `hotelCalendarDate()` em `src/lib/hotel-time.ts` (timezone **America/Sao_Paulo**).
 - **`validateStayAndSlot`:** data da reserva ≥ hoje; data da reserva ≤ `guestCheckoutDate`; slot ∈ lista permitida da instalação.
 - **Balcão:** o formulário não pede check-out; a action grava `guest_checkout_date = NULL` e `validateStayAndSlot` pula só a checagem de check-out.
-- **Horário indisponível (regra única):** `src/lib/slot-availability.ts` (`slotBlockReason`). Ocupado > já passou (hoje, horário terminado; o em andamento é permitido; bloco 00h–01h da piscina fica de fora) > limite do apartamento. Toda tela mostra indisponível em cinza com o motivo escrito; o servidor repete a regra em `validateStayAndSlot`. O hóspede nunca recebe a lista de apartamentos (só `ownApartmentBooked`); a hora vem do servidor (`serverNowMs`).
+- **Horário indisponível (regra única):** `src/lib/slot-availability.ts` (`slotBlockReason`). Ocupado > já passou (hoje, horário terminado; o em andamento é permitido; bloco 00h–01h da piscina fica de fora) > limite do apartamento. Para o hóspede, horário passado fica oculto e indisponível aparece só em cinza (sem texto nem sublinhado); a recepção vê a tabela completa; o servidor repete a regra em `validateStayAndSlot`. O hóspede nunca recebe a lista de apartamentos (só `ownApartmentBooked`); a hora vem do servidor (`serverNowMs`).
 - **Estadia ↔ reserva:** reservas do link gravam `stay_id` (id de `active_stays`); balcão fica `NULL`. O Power BI lê só o schema `analytics` (`vw_reservas`, `vw_estadias`, `vw_eventos`) com a role `powerbi_reader`; nunca adicionar PII nem `token` a essas views.
 - **Cancelamento:** `cancelReservation` faz UPDATE (`status = 'cancelled'`), nunca DELETE. Toda consulta de ocupação deve filtrar `status = 'active'`. Auditoria em `reservation_events` (sem PII).
 
@@ -69,12 +71,14 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - Coluna `text` nullable na BD; armazenar **só dígitos** (10–13) quando preenchido.
 - **Hóspede:** obrigatório — `guestWhatsappRequiredSchema` em `createGuestReservation`.
 - **Recepção:** opcional no balcão; **edição inline** na coluna WhatsApp da grade — `updateReservationGuestWhatsapp` em `reservations.ts` (validação igual ao balcão).
-- **`confirmation_sent` / `warning_sent`:** booleanos; `markMessageAsSent` após abrir WhatsApp Web. UI em `reception-wa-actions.tsx`; links e textos em `src/lib/wa-me.ts`. Sem número válido (`whatsappDigitsForWaMe`), botões **Confirmação** / **Aviso** ficam desativados.
+- **`confirmation_sent` / `warning_sent`:** booleanos; `markMessageAsSent` após abrir WhatsApp Web. UI em `reception-wa-actions.tsx`; links e textos em `src/lib/wa-me.ts`. Sem número válido (`whatsappDigitsForWaMe`), botões ficam desativados. Os botões são **só ícone** (sino = aviso; check = confirmação) — sem texto e, no caso do sino, sem borda.
+- **Planilha da recepção:** uma linha por hora (`EmptySlotRow` para livres, `ReservationSlotRow` para reservadas), horário inicial um abaixo do outro.
+- **Hóspede:** a home lista "Suas reservas" (`listMyReservations`, `my-reservations.ts`); contato lembrado em `localStorage` (`src/lib/guest-contact-storage.ts`); troca de horário via `changeGuestReservation` (confirmação em AlertDialog); a recepção é avisada de novas reservas e de alterações (`listNewReservations`, `kind: "changed"`).
 
 ### 3.7 Copy vs lógica (marketing)
 
 - **`src/app/page.tsx`:** textos de horário amplo da piscina (ex. 09h–01h) são informativos.
-- **Reserva de exclusivo** da piscina: **13h–01h** em `reservations.ts` e SQL — não derivar slots a partir só da copy da home.
+- **Reserva de exclusivo** da piscina (hóspede): **13h–01h** em `reservations.ts` e SQL (09h–13h é compartilhado, ver §3.2) — não derivar slots a partir só da copy da home.
 
 ### 3.8 Autenticação recepção
 

@@ -1,45 +1,47 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGridItems, freeRangeLabel } from "./reservation-grid";
+import { receptionSlotOrder, slotStartLabel } from "./reservation-grid";
 import { GYM_SLOT_STARTS, POOL_SLOT_STARTS } from "./reservations";
 
-describe("grade do dia", () => {
-  it("agrupa horários livres consecutivos e mantém cada reserva como item próprio", () => {
-    const booked = new Set(["13:00:00", "16:00:00", "20:00:00", "00:00:00"]);
-    const items = buildGridItems(POOL_SLOT_STARTS, (s) => (booked.has(s) ? s : undefined));
-    expect(items.map((i) => i.kind)).toEqual([
-      "booked", "free", "booked", "free", "booked", "free", "booked",
-    ]);
-    const free = items.filter((i) => i.kind === "free") as { kind: "free"; slots: string[]; past: boolean }[];
-    expect(free.map((f) => freeRangeLabel(f.slots))).toEqual([
-      "14h00 – 16h00",
-      "17h00 – 20h00",
-      "21h00 – 00h00",
-    ]);
+describe("planilha da recepção", () => {
+  it("rótulo é só o início da hora", () => {
+    expect(slotStartLabel("21:00:00")).toBe("21h00");
+    expect(slotStartLabel("09:00")).toBe("09h00");
+    expect(slotStartLabel("00:00:00")).toBe("00h00");
   });
 
-  it("dia inteiro livre vira um único item; dia lotado não tem grupos livres", () => {
-    const livre = buildGridItems(GYM_SLOT_STARTS, () => undefined);
-    expect(livre).toHaveLength(1);
-    expect(freeRangeLabel((livre[0] as { slots: string[] }).slots)).toBe("Dia todo");
-
-    const lotado = buildGridItems(POOL_SLOT_STARTS, (s) => s);
-    expect(lotado.every((i) => i.kind === "booked")).toBe(true);
-    expect(lotado).toHaveLength(POOL_SLOT_STARTS.length);
+  it("academia (24 h): linhas de 01h até 00h, uma por hora, sem faltar nenhuma", () => {
+    const ordem = receptionSlotOrder(GYM_SLOT_STARTS).map(slotStartLabel);
+    expect(ordem).toHaveLength(24);
+    expect(ordem[0]).toBe("01h00");
+    expect(ordem[22]).toBe("23h00");
+    expect(ordem[23]).toBe("00h00");
+    expect(new Set(ordem).size).toBe(24);
   });
 
-  it("um único horário livre mantém o rótulo do próprio horário", () => {
-    expect(freeRangeLabel(["14:00:00"])).toBe("14h00 – 15h00");
+  it("piscina: 13h00 até 00h00, uma linha por hora", () => {
+    const ordem = receptionSlotOrder(POOL_SLOT_STARTS).map(slotStartLabel);
+    expect(ordem[0]).toBe("13h00");
+    expect(ordem[ordem.length - 1]).toBe("00h00");
+    expect(ordem).toHaveLength(POOL_SLOT_STARTS.length);
   });
 
-  it("separa os livres que já passaram dos que ainda estão disponíveis", () => {
-    const booked = new Set(["16:00:00"]);
-    const passou = (slot: string) => slot < "17:00:00" && slot >= "13:00:00";
-    const items = buildGridItems(POOL_SLOT_STARTS, (s) => (booked.has(s) ? s : undefined), passou);
-    const resumo = items.map((i) =>
-      i.kind === "booked" ? "reserva" : i.past ? `passou(${i.slots.length})` : `livre(${i.slots.length})`
-    );
-    // 13–16 passou (3), 16 reserva, 17–23 e 00 livres (8)
-    expect(resumo).toEqual(["passou(3)", "reserva", "livre(8)"]);
+  it("não altera a lista original", () => {
+    const antes = [...GYM_SLOT_STARTS];
+    receptionSlotOrder(GYM_SLOT_STARTS);
+    expect([...GYM_SLOT_STARTS]).toEqual(antes);
+  });
+});
+
+describe("planilha da piscina na recepção", () => {
+  it("mostra 09h (uso compartilhado), pula 10h–12h e segue 13h até 00h", async () => {
+    const { receptionSlotStartsFor } = await import("./reservations");
+    const ordem = receptionSlotOrder(receptionSlotStartsFor("pool")).map(slotStartLabel);
+    expect(ordem[0]).toBe("09h00");
+    expect(ordem.slice(0, 4)).toEqual(["09h00", "13h00", "14h00", "15h00"]);
+    expect(ordem).not.toContain("10h00");
+    expect(ordem[ordem.length - 1]).toBe("00h00");
+    expect(ordem).toHaveLength(13);
+    expect(new Set(ordem).size).toBe(13);
   });
 });

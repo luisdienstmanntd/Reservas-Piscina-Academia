@@ -64,6 +64,245 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Pendências:** Conferir em produção com o link do hóspede no mesmo navegador da recepção.
 - **Referências:** PR #18, #19, #20; `src/app/actions/reservations.ts`.
 
+### 2026-11-11 — Hóspede: calendário direto, sem título e sem botão "Ver horários"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Fluxo do hóspede (passo do calendário)
+- **Pedido:** Não mostrar "Escolha o dia / Apto. 404 · até 11/11/26"; só o calendário, justificado (ocupando a largura); remover o botão "Ver horários": ao tocar numa data, a tela de horários abre sozinha.
+- **O que foi feito:** `guest-booking.tsx`: título e descrição removidos; `pickDate` valida a data (dentro da estadia) e já avança para os horários; botão e formulário removidos. `src/components/ui/calendar.tsx` não mudou: a largura total vem de classes no uso (com `!`, porque o CSS da biblioteca fica fora das camadas do Tailwind e ganharia). `tests/e2e/guest-booking-flow.spec.ts` ajustado ao novo fluxo.
+- **Validação:** tsc, ESLint, 187 testes; em navegador (1000 e 390 px): sem título nem botão, calendário ocupa toda a largura do cartão, tocar no dia abre 12 horários e "Voltar" volta ao calendário. O teste e2e do repositório foi só atualizado, não executado (precisa de Supabase real).
+- **Não fazer / evitar regressão:** Não recolocar o botão; tocar de novo na data já selecionada não faz nada (não desmarca). O texto de erro "Data fora do período da sua estadia" continua para datas inválidas (o calendário já desativa essas datas).
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `tests/e2e/guest-booking-flow.spec.ts`.
+
+### 2026-11-11 — Hóspede: removida a dica abaixo do campo WhatsApp
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Fluxo do hóspede (passo de identificação)
+- **Pedido:** Não mostrar "Brasil: (54) 99999-9999. Exterior: + código do país e número." abaixo do campo WhatsApp.
+- **O que foi feito:** `src/components/guest-booking.tsx`: removidos o parágrafo da dica e o `aria-describedby` que apontava para ele. O exemplo continua no próprio campo (placeholder "(54) 99999-9999 ou +44 7911 123456") e a validação do número não mudou. Na recepção, a dica segue só como texto de ajuda ao passar o mouse no campo WhatsApp da planilha (não aparece na tela).
+- **Validação:** tsc, ESLint, 187 testes.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`, `src/lib/phone.ts` (`PHONE_HINT`).
+
+### 2026-11-11 — Hóspede: tela de identificação só com "APTO 104" e rótulo "Nome do hóspede"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Fluxo do hóspede (passo de identificação)
+- **Pedido:** Não mostrar "Identificação" nem "Apto. 404 · check-out 11/11/26. Nome (opcional) e WhatsApp (obrigatório)."; mostrar só o número do apto em maiúsculo (ex.: APTO 101); trocar "Nome do hóspede (opcional)" por "Nome do hóspede".
+- **O que foi feito:** `src/components/guest-booking.tsx`: título do cartão passou a "APTO {número}", descrição removida, rótulo sem "(opcional)". O campo de nome continua opcional e o WhatsApp continua obrigatório (comportamento inalterado; só o texto mudou).
+- **Validação:** tsc, ESLint, 187 testes; em navegador (link do apto 104): título "APTO 104", sem "Identificação", sem a frase longa, rótulo "Nome do hóspede".
+- **Não fazer / evitar regressão:** Não voltar a mostrar a data de check-out nesse passo; a regra de nome opcional/WhatsApp obrigatório não depende do texto.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`.
+
+### 2026-11-11 — Home do hóspede: texto da Academia com "apto"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial do hóspede
+- **Pedido:** A descrição do cartão Academia deve ser "Academia 24 horas · 1 hora por apto."
+- **O que foi feito:** `src/app/page.tsx`: "…1 hora por apartamento." passou a "…1 hora por apto." Só esse texto; o cartão da Piscina e a tela de agendamento (`guest-booking.tsx`, que ainda diz "por apartamento") não mudaram.
+- **Validação:** tsc, ESLint e testes; texto conferido no código.
+- **Pendências:** se quiser o mesmo "apto" na tela de agendamento da academia, é uma linha em `guest-booking.tsx`.
+- **Referências:** `src/app/page.tsx`.
+
+### 2026-11-11 — Recepção: "Nova reserva" lista só os horários disponíveis
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Fazer com os horários o mesmo que com os apartamentos: mostrar apenas os disponíveis.
+- **Decisão:** Substitui a decisão anterior de manter horários ocupados na lista, desativados. Agora o seletor mostra só horários livres (nem passados nem ocupados). Exceção: o horário que está selecionado fica visível mesmo se ficar ocupado (ex.: outra pessoa reservou), e o aviso vermelho explica. O pré-selecionado continua sendo o primeiro livre.
+- **O que foi feito:** `reception-dashboard.tsx`: opções com motivo (ocupado/já passou) deixam de ser renderizadas.
+- **Validação:** tsc, ESLint, 187 testes; em navegador: com 14h e 22h ocupados e horários passados, a lista só mostra os livres.
+- **Não fazer / evitar regressão:** A planilha do dia continua mostrando todas as linhas; o servidor continua recusando horário ocupado ou passado.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
+### 2026-11-11 — Recepção: apartamento que já tem reserva no dia não aparece na lista
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Ao cadastrar reserva manual, o apartamento que já tem agendamento no dia não precisa aparecer na lista.
+- **Decisão:** A regra é a do sistema: 1 reserva por apartamento, por instalação e por dia. Por isso, na piscina some quem já tem piscina naquele dia (não quem só tem academia, e vice-versa). Se o apartamento já escolhido passar a ter reserva (ex.: troca de data), ele continua visível só enquanto estiver selecionado, e o aviso vermelho explica; assim o campo não fica incoerente.
+- **O que foi feito:** `reception-dashboard.tsx`: opções de apartamento com reserva no dia/instalação deixam de ser renderizadas (antes apareciam desativadas com "— já tem reserva neste dia").
+- **Validação:** tsc, ESLint; em navegador: 201 com reserva na piscina some na piscina e aparece na academia; 102 com reserva na academia some na academia e aparece na piscina.
+- **Não fazer / evitar regressão:** Não voltar a listar desativados; o servidor continua recusando apartamento duplicado no dia.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
+### 2026-11-11 — Recepção: colunas da planilha justificadas, cabem em telas menores
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador em 1400, 1100, 1024 e 900 px)
+- **Área:** Recepção (planilha)
+- **Pedido:** Havia espaços em branco entre as colunas; justificar as colunas para aproveitar o espaço e caber em telas menores.
+- **Decisão:** As colunas fixas ficam só do tamanho do conteúdo (Horário 3,75rem, Apto 4,5rem, WhatsApp 9,5rem, mensagens 5,5rem, lixeira 2rem) e Hóspede/Observações dividem todo o resto (1 : 1,4). A planilha em colunas passa a valer a partir de 1024 px (`lg`, antes só 1280 px `xl`); abaixo disso continua em cartões.
+- **O que foi feito:** `reception-dashboard.tsx` (modelo de colunas, cabeçalho, linhas livres e reservadas) e `reception-wa-actions.tsx`: classes `xl:` das linhas trocadas por `lg:`.
+- **Validação:** tsc, ESLint, 187 testes; em navegador sem rolagem horizontal e sem campos cortados em 1400/1100/1024 px; 900 px usa cartões.
+- **Não fazer / evitar regressão:** Não voltar a larguras fixas grandes nas colunas de Horário/Apto/Mensagens.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/components/reception-wa-actions.tsx`.
+
+### 2026-11-11 — Recepção: alarme e mensagem nos 10 minutos finais de cada horário
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com relógio simulado no servidor de teste)
+- **Área:** Recepção (alertas)
+- **Pedido:** Quando faltarem 10 minutos para o fim do horário, tocar o mesmo alarme sonoro de quando entra reserva e mostrar uma mensagem avisando que o horário está acabando.
+- **Decisão:** Vale para todas as reservas ativas (piscina e academia, qualquer dia em exibição), não só as da planilha aberta. O servidor decide pelo horário dele (faltam >0 e ≤10 min). Cada reserva avisa uma vez (lembrado no navegador por 3 h, então recarregar a página não repete). O som respeita o botão Som ligado/desligado; a mensagem aparece sempre. O sino laranja piscando continua com a janela de 15 min (é o lembrete do aviso ao hóspede), sem relação com este alarme.
+- **O que foi feito:** `src/lib/ending-soon.ts` (regra e texto); `listEndingSoonReservations` em `src/app/actions/reservations.ts` (só recepção); `new-reservation-alerts.tsx` verifica junto com as reservas novas (a cada 10 s), toca o mesmo `beep` e mostra "Horário acabando — Apto X (nome) · Piscina · faltam N min" por 30 s.
+- **Validação:** tsc, ESLint, 187 testes (novos); em navegador, com o relógio do servidor em 20h52: mensagem do apto 212 com "faltam 8 min", o apto 101 (termina 22h) não avisou, 3 tons tocaram uma vez, sem repetição e sem repetir após recarregar.
+- **Não fazer / evitar regressão:** Não ligar este alarme à lista de "novas reservas" (não deve contar no título da aba). Não usar o relógio do navegador para decidir.
+- **Pendências:** conferir no site publicado quando houver um horário perto do fim (minutos 50–59 de uma hora).
+- **Referências:** `src/lib/ending-soon.ts`, `src/app/actions/reservations.ts`, `src/app/recepcao/new-reservation-alerts.tsx`.
+
+### 2026-11-11 — Recepção: "Som ligado" ao lado do Sair e título "Reservas" oculto
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (cabeçalho)
+- **Pedido:** O liga/desliga som deve ficar ao lado do botão Sair; o nome "Reservas" não deve aparecer.
+- **Decisão:** Substitui a posição anterior do som (linha de Piscina/Academia, 11/11). O título "Reservas" deixa de aparecer na tela, mas continua no HTML como `h1` só para leitores de tela (`sr-only`), para não perder a estrutura de acessibilidade.
+- **O que foi feito:** `reception-dashboard.tsx`: `SoundToggleButton` movido para antes do Sair (mesma linha, canto direito); linha das abas só com Piscina/Academia; `h1` vira `sr-only`.
+- **Validação:** tsc, ESLint, 179 testes; em navegador (1400px e 390px) som e Sair no mesmo eixo vertical, lado a lado; nenhum texto "Reservas" visível.
+- **Não fazer / evitar regressão:** Não recolocar o título visível nem o som na linha das abas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
+### 2026-11-11 — Recepção: "Nova reserva" não lista horários que já passaram
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Horários que já passaram não devem aparecer na lista de horários.
+- **O que foi feito:** `reception-dashboard.tsx`: as opções com motivo "já passou" deixam de ser renderizadas no seletor. Horários ocupados continuam aparecendo, desativados e com "— ocupado". A planilha do dia (linhas por hora) não mudou: a recepção continua vendo o dia inteiro para controle.
+- **Validação:** tsc, ESLint, 176 testes; em navegador, hoje (já passado das 23h) mostra só 23h–00h e 00h–01h; amanhã mostra os 13 horários.
+- **Não fazer / evitar regressão:** Não esconder horários ocupados (a recepção precisa ver que estão ocupados). A regra do servidor continua recusando horário passado.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
+### 2026-11-11 — Recepção: linhas da planilha do mesmo tamanho e ícones minimalistas
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop)
+- **Área:** Recepção (planilha)
+- **Pedido:** Todas as linhas com o mesmo tamanho e com os campos a preencher visíveis; ícones de confirmação, aviso e excluir minimalistas, como os de celular e recepção.
+- **Decisão:** (1) Em telas largas (xl+) todas as linhas têm a mesma altura (`ROW_HEIGHT`, 56px). Nas linhas livres aparecem os três campos (Hóspede, Observações, WhatsApp) como caixas desativadas e esmaecidas, só para mostrar onde os dados aparecem: a reserva continua sendo criada pelo formulário "Nova reserva". (2) Ícones em traço fino (lucide, 16px, cinza): confirmação = `CircleCheck` (cinza; verde quando enviada), aviso = `Bell` (cinza; laranja piscando na hora de avisar; verde quando enviado), excluir = `Trash2` (cinza; vermelho ao passar o mouse). Isto substitui os ícones de círculo verde cheio da decisão de 11/11 ("botões só com ícone").
+- **O que foi feito:** `reception-dashboard.tsx` (`ROW_HEIGHT`, `GhostField`, `EmptySlotRow` em grade, lixeira); `reception-wa-actions.tsx` (SVGs próprios removidos).
+- **Validação:** tsc, ESLint, 176 testes; em navegador: 13 linhas, todas com 56px; campos visíveis nas livres; ícones conferidos nos estados.
+- **Não fazer / evitar regressão:** Não voltar a misturar alturas; manter o laranja piscando do aviso pendente (alerta da recepção). No celular/tablet (abaixo de xl) as linhas livres continuam compactas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/components/reception-wa-actions.tsx`.
+
+### 2026-11-11 — Nomes de hóspedes e observações sempre em MAIÚSCULAS
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador; reservas antigas em produção NÃO foram alteradas)
+- **Área:** Reservas (hóspede e recepção)
+- **Pedido:** Nomes dos hóspedes e observações devem ficar sempre em maiúsculo.
+- **Decisão:** A regra vale no servidor (fonte da verdade) e na tela (o campo já mostra maiúsculas ao digitar). Sem migration: só dados novos ou editados. Telefone/WhatsApp não mudam.
+- **O que foi feito:** `src/lib/text-case.ts` (`toUpperText`, pt-BR); `booking-zod.ts` (nome do hóspede e do balcão, observações do balcão); `reservations.ts` (edição inline de nome e de observações); campos de nome/observações em `guest-booking.tsx` e `reception-dashboard.tsx`.
+- **Validação:** tsc, ESLint, 179 testes (testes ajustados e novos); em navegador: hóspede e recepção digitam em minúsculo, tela e banco ficam em maiúsculo.
+- **Pendências:** em produção há 5 nomes antigos em minúsculas (dados de teste); converter só com autorização.
+- **Referências:** `src/lib/text-case.ts`, `src/lib/booking-zod.ts`, `src/app/actions/reservations.ts`.
+
+### 2026-11-11 — Piscina: planilha da recepção só com 09h no período compartilhado
+
+- **Status:** Concluído (PR em rascunho; sem deploy ainda)
+- **Área:** Reservas (recepção)
+- **Pedido:** As linhas 10h, 11h e 12h não precisam aparecer na planilha da piscina; a recepção pode reservar manualmente às 09h. Ficará: 09h, 13h, 14h … 00h.
+- **Decisão:** Isto substitui a decisão anterior (09h–12h como quatro horários de início): `POOL_SHARED_SLOT_STARTS` passa a ser só `09:00:00` (o período compartilhado 09h–13h vira um único horário). 10h/11h/12h passam a ser recusados também para a recepção. O CHECK do banco (`reservations_slot_valid`, piscina ≥ 09:00) não foi alterado: é mais largo que o app e inofensivo; nenhuma migration.
+- **O que foi feito:** `src/lib/reservations.ts` (lista e comentários), comentários em `reservations.ts` (actions), `reservation-slot-validation.ts` e `reception-dashboard.tsx`; testes ajustados (planilha com 13 linhas; 10h–12h inválidos para a recepção); `ia.navegation.md` e `docs/POWERBI.md`.
+- **Validação:** tsc, ESLint, 176 testes; consulta somente leitura em produção: nenhuma reserva em 10h–12h (nada some da planilha).
+- **Não fazer / evitar regressão:** Não reintroduzir 10h–12h na planilha; o texto da home do hóspede ("09h–13h Uso compartilhado") continua correto.
+- **Pendências:** nenhuma.
+- **Referências:** `src/lib/reservations.ts`, `src/lib/reservation-slot-validation.ts`.
+
+### 2026-11-11 — Recepção: ícone de origem da reserva no lugar do selo "Hóspede"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (coluna Apto da planilha)
+- **Pedido:** Em vez do selo "Hóspede", mostrar um ícone minimalista de celular antes do número do apartamento quando a reserva for do hóspede; quando for da recepção, um ícone de recepção.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx`: selo (`Badge`) removido; `Smartphone` (hóspede) e `ConciergeBell` (recepção), do lucide, antes do número, com `aria-label` ("Reserva feita pelo hóspede" / "Reserva feita pela recepção") para leitores de tela.
+- **Validação:** tsc, ESLint e 175 testes; em navegador, reserva do hóspede mostra o celular e a da recepção o sino de recepção, sem o texto do selo.
+- **Não fazer / evitar regressão:** Não voltar a mostrar texto de origem nessa coluna; manter o `aria-label`.
+
+### 2026-11-11 — Recepção: "Som ligado" na mesma linha de Piscina/Academia
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (cabeçalho)
+- **Pedido:** O botão "Som ligado" deve ficar na mesma linha dos botões Piscina/Academia.
+- **O que foi feito:** `SoundToggleButton` (novo, em `new-reservation-alerts.tsx`) colocado à direita da linha das abas em `reception-dashboard.tsx`; o cabeçalho passou a ter uma linha com logo/título/Sair e outra com abas + som. O banner de alertas deixou de ter a linha do botão (o aviso "navegador bloqueou o som" continua nele).
+- **Validação:** tsc, ESLint e testes; em navegador, centros verticais de Piscina e Som iguais (desktop 1400px e celular 390px), alinhado à direita com o Sair no desktop.
+- **Não fazer / evitar regressão:** Não recolocar o botão de som dentro do banner de alertas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/app/recepcao/new-reservation-alerts.tsx`.
+
+### 2026-11-11 — Recepção: removido o texto do cartão "Gerar acesso hóspede"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção
+- **Pedido:** Na tela inicial, em "Gerar acesso hóspede", não mostrar o texto "Link com token de estadia para agendar piscina ou academia no telemóvel do hóspede."
+- **O que foi feito:** removido o `CardDescription` desse cartão em `src/app/recepcao/reception-dashboard.tsx`; título, formulário e geração do link não mudaram.
+- **Validação:** tsc e ESLint sem erros; o texto não existe em mais nenhum lugar do código.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
+### 2026-11-11 — Documentação: `ia.navegation.md` atualizado após a revisão geral
+
+- **Status:** Concluído (PR #27 mergeado)
+- **Área:** Documentação
+- **Pedido:** Revisar as tarefas feitas e verificar conflitos/regressões.
+- **Problema observado:** Na revisão (tsc, ESLint, 175 testes, build, migrations repo = produção, e2e, concorrência, logs) não houve regressão de código; só o `ia.navegation.md` estava desatualizado.
+- **O que foi feito:** `ia.navegation.md` §3.2 (horários compartilhados 09h–12h só pela recepção, `receptionSlotStartsFor`, ordem da academia), §3.4 (indisponível em cinza sem texto para o hóspede), §3.6 (botões só ícone, planilha de uma linha por hora, "Suas reservas", contato lembrado, troca de horário) e §3.7 (exclusivo 13h–01h só para hóspede).
+- **Validação:** só documentação; nomes conferidos contra o código.
+- **Pendências:** PR #21 (`asGuest`) aguarda decisão (o #26, sino sem borda, foi mergeado); limpeza dos dados de teste e rotação da chave exposta dependem do usuário.
+- **Referências:** `ia.navegation.md`.
+
+### 2026-11-11 — Recepção: sino do aviso sem borda (ajuste)
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados)
+- **Área:** Recepção
+- **Pedido:** O sino deve aparecer sem borda, como os outros ícones (o "certo" da confirmação e a lixeira).
+- **Decisão:** O botão do aviso passa a ser sem borda e sem fundo. Estados: normal = sino preto; hora de avisar (10 min antes do fim) = sino laranja piscando (antes era um botão laranja cheio com borda); enviado = sino cinza desabilitado com o selo verde pequeno; sem WhatsApp = sino cinza desabilitado.
+- **O que foi feito:** `src/components/reception-wa-actions.tsx` (variante sem borda e sem fundo no botão do aviso).
+- **Validação:** tsc e ESLint; em navegador, nos quatro estados, nenhum botão tem borda.
+- **Não fazer / evitar regressão:** Não voltar a pôr borda ou fundo nos ícones da coluna de mensagens; manter o laranja piscando do aviso pendente.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/reception-wa-actions.tsx`, PR #25.
+
+### 2026-11-11 — Recepção: botões de confirmação e aviso só com ícone
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados; falta conferir no site publicado)
+- **Área:** Recepção (coluna de mensagens da planilha)
+- **Pedido:** O aviso deve mostrar só o ícone do sino, sem texto. A confirmação deve mostrar somente os ícones enviados no pedido (círculo verde com o "certo": contorno e cheio), sem texto.
+- **Decisão:** Confirmação ainda não enviada = círculo verde só com o contorno e o "certo"; enviada = círculo verde cheio com o "certo" branco; sem WhatsApp = a versão de contorno em cinza, desabilitada. Aviso = só o sino; no horário de avisar (10 min antes do fim) o sino fica laranja piscando, como o botão já ficava; depois de enviado, o sino fica cinza desabilitado com um pequeno "certo" verde no canto (esse selo é um acréscimo meu para o estado "enviado" não ficar igual ao "não enviado" sem texto). Sem texto visível; o texto continua só como `aria-label` e dica ao passar o mouse, por acessibilidade.
+- **O que foi feito:** `src/components/reception-wa-actions.tsx`: ícones SVG próprios (`ConfirmPendingIcon`, `ConfirmDoneIcon`), botões quadrados só com ícone; o comportamento de enviar não mudou.
+- **Validação:** tsc e ESLint; em navegador com quatro reservas (nenhuma enviada, só confirmação enviada, as duas enviadas, sem WhatsApp): nenhum dos textos "Confirmação", "OK conf.", "Aviso", "OK aviso" ou "Aviso pendente" aparece e os rótulos de acessibilidade mudam por estado.
+- **Não fazer / evitar regressão:** Não voltar a mostrar texto nesses botões; manter o laranja piscando do aviso pendente (é o alerta para a recepção).
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/reception-wa-actions.tsx`.
+
+### 2026-11-11 — Piscina: recepção pode reservar o uso compartilhado (09h às 12h)
+
+- **Status:** Concluído (PR #24 mergeado; migration `20261111100000_pool_shared_slots.sql` aplicada em produção em 11/11/2026 antes do merge)
+- **Área:** Reservas (recepção), banco de dados
+- **Pedido:** Na piscina, 09h às 12h é de uso compartilhado e não precisa de reserva, mas a recepção pode registrar reserva manualmente nesses horários.
+- **Decisão:** "09h às 12h" foi lido como a lista de horas de início 09h, 10h, 11h e 12h (o mesmo texto da página inicial: "09h–13h uso compartilhado"). O HÓSPEDE continua sem poder reservar esses horários (a regra fica no servidor: `validateStayAndSlot` só aceita `receptionSlotStartsFor` quando chamado pela recepção). A planilha e o formulário "Nova reserva" da recepção passam a incluir 09h–12h: piscina com 16 linhas (09h00 a 00h00). O padrão do formulário continua sendo o primeiro horário normal (13h00). O limite de 1 reserva por apartamento por dia continua valendo para todos os horários. Reserva manual nesses horários aparece ao hóspede em "Suas reservas" e ele pode trocá-la por um horário normal.
+- **O que foi feito:** `POOL_SHARED_SLOT_STARTS` e `receptionSlotStartsFor` em `src/lib/reservations.ts`; parâmetro `forReception` em `validateStayAndSlot`; `createReceptionReservation` o usa; `reception-dashboard.tsx` usa a lista da recepção na planilha e no formulário; migration `20261111100000_pool_shared_slots.sql` amplia a regra do banco (`reservations_slot_valid`) para aceitar piscina a partir de 09h (só amplia: nenhuma reserva existente fica inválida); nota no `docs/POWERBI.md` (essas reservas não entram na capacidade de 12 horários).
+- **Validação:** 175 testes, tsc e ESLint. Em navegador com PostgreSQL real (18 migrations): a planilha da piscina tem 16 linhas; a recepção registra uma reserva às 10h pelo formulário e ela aparece na linha 10h00 e no banco (`10:00:00`, criada pela recepção); o hóspede continua vendo só 13h00 a 00h00.
+- **Impactos e riscos:** A migration já está aplicada em produção (conferido: a regra do banco aceita piscina a partir das 09h; as 20 reservas existentes seguem intactas; histórico de migrations alinhado com a versão do arquivo). A rotina de anonimização, as views do Power BI e os avisos de novas reservas não precisam de mudança.
+- **Não fazer / evitar regressão:** Não liberar 09h–12h para o hóspede; não remover o limite de 1 reserva por dia; não aceitar horário quebrado (minutos) nem antes das 09h.
+- **Pendências:** Conferir no site publicado: a recepção reserva um horário de 09h a 12h na piscina e o hóspede não vê esses horários.
+- **Referências:** `supabase/migrations/20261111100000_pool_shared_slots.sql`, `src/lib/reservations.ts`, `src/lib/reservation-slot-validation.ts`.
+
+### 2026-11-11 — Tela da recepção mais limpa e planilha completa, uma linha por hora
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador contra PostgreSQL local; falta conferir no site publicado)
+- **Área:** Recepção
+- **Pedido:** (A) Não mostrar: (1) "Novas reservas verificadas às … (a cada 10 s)"; (2) o botão "Atualizar"; (3) "Horários em cinza estão indisponíveis (ocupados ou já passaram)."; (4) "Preencha para ativar os botões de confirmação e aviso (10 min) na coluna whatsapp da grade."; (5) "Brasil: (54) 99999-9999. Exterior: + código do país e número." (campo WhatsApp da Nova reserva); (6) "Já passou · N horários"; (7) "Livre · N horários". (B) A recepção precisa ver a tabela completa de horários, do primeiro ao último, para controle: uma linha por hora, uma abaixo da outra, no formato "21h00" (e não "21h00 – 22h00"). Piscina de hora em hora; academia 24 h, de 01h até 00h.
+- **Decisão:** Os grupos "Já passou · N" e "Livre · N" saem, mas a planilha passa a mostrar TODOS os horários do dia, cada um na sua linha: com reserva, a linha completa de sempre (apto, hóspede, observações, WhatsApp, mensagens, cancelar); sem reserva, só a hora, numa linha compacta (as que já passaram ficam em cinza claro, sem texto). O rótulo é só o início da hora ("21h00"). Piscina: 13h00 a 00h00 (12 linhas, os horários reserváveis). Academia: 24 linhas, de 01h00 a 00h00 (a meia-noite passa a ser a última). Sem o botão "Atualizar", a grade continua atualizando sozinha (carrega ao abrir, ao trocar a data ou a instalação, depois de cada ação e a cada 30 s). Foi removido só o TEXTO do status das novas reservas: o aviso de conexão ("Sem conexão com o sistema"), o banner de novas reservas, o som e o botão "Som ligado" continuam. A dica de telefone da tela do HÓSPEDE não mudou (o pedido era da recepção); o tooltip do campo WhatsApp na grade também ficou.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx` (botão e textos de ajuda removidos; linha por hora com `EmptySlotRow`; rótulo só com o início), `src/app/recepcao/new-reservation-alerts.tsx` (texto de status removido), `src/lib/reservation-grid.ts` (`receptionSlotOrder`, `slotStartLabel`; os agrupamentos antigos foram removidos).
+- **Validação:** testes, tsc e ESLint; em navegador: os oito textos não aparecem; piscina com 12 linhas (13h00 a 00h00); academia com 24 linhas (primeira 01h00, última 00h00, sem repetir nem faltar hora); nenhum rótulo com faixa "–"; editar o nome numa linha reservada continua salvando; no celular não há rolagem lateral; a grade atualiza ao trocar a data.
+- **Impactos e riscos:** A academia, com 24 linhas, deixa a página mais comprida (as linhas vazias são compactas). O formulário "Nova reserva" e a tela do hóspede mantêm os rótulos em faixa ("21h00 – 22h00") e a ordem de antes. A piscina só tem horários reserváveis de 13h a 00h (regra do banco); as 10h–13h, de uso compartilhado, não aparecem como linhas. Se o hotel quiser reservar a partir das 10h, é uma mudança de regra (e de banco) à parte.
+- **Não fazer / evitar regressão:** Não remover o aviso de queda de conexão nem o banner de novas reservas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, PR #10.
+
 ### 2026-11-10 — Troca de horário: o botão "Alterar" não fazia nada (correção)
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador com toque, contra PostgreSQL local; falta conferir no site publicado)

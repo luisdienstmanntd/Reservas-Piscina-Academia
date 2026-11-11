@@ -51,7 +51,7 @@ ADDCOLUMNS(
 )
 ```
 
-**Capacidade.** Tabela de apoio com os slots por dia (piscina: 13h–23h e 00h = 12; academia: 24):
+**Capacidade.** Tabela de apoio com os slots por dia (piscina: 13h–23h e 00h = 12; academia: 24). A recepção também pode registrar reserva manual na piscina no horário de uso compartilhado (09h), que NÃO entra nessa capacidade: para a taxa de ocupação da piscina, filtre `hora_slot` de 13h em diante (ou some esse horário à capacidade) para não passar de 100%:
 
 ```dax
 Capacidade =

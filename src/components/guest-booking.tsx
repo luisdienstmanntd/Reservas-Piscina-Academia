@@ -41,7 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { guestWhatsappRequiredSchema } from "@/lib/booking-zod";
-import { PHONE_HINT } from "@/lib/phone";
+import { toUpperText } from "@/lib/text-case";
 import { cn } from "@/lib/utils";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
@@ -189,7 +189,7 @@ export function GuestBooking({
           )
         : null;
       if (saved && guestCheckoutDate >= hotelCalendarDate()) {
-        setGuestName(saved.name);
+        setGuestName(toUpperText(saved.name));
         setWhatsapp(saved.whatsapp);
         setStep(2);
       }
@@ -265,17 +265,15 @@ export function GuestBooking({
     if (step === 3) setStep(2);
   }
 
-  function submitDatePick(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedDate) {
-      toast.error("Escolha o dia da reserva.");
-      return;
-    }
-    const ymd = format(selectedDate, "yyyy-MM-dd");
+  /** Tocar numa data abre direto a tela de horários (sem botão "Ver horários"). */
+  function pickDate(date: Date | undefined) {
+    if (!date) return;
+    const ymd = format(date, "yyyy-MM-dd");
     if (ymd < todayStr || ymd > guestCheckoutDate) {
       toast.error("Data fora do período da sua estadia.");
       return;
     }
+    setSelectedDate(date);
     setStep(3);
   }
 
@@ -454,17 +452,8 @@ export function GuestBooking({
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-0.5 p-3 pb-2">
                   <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Identificação
+                    APTO {apartment || "—"}
                   </CardTitle>
-                  <CardDescription className="text-xs">
-                    Apto. {apartment || "—"} · check-out{" "}
-                    {guestCheckoutDate
-                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
-                          locale: ptBR,
-                        })
-                      : "—"}
-                    . Nome (opcional) e WhatsApp (obrigatório).
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 p-3 pt-0">
                   <form
@@ -473,7 +462,7 @@ export function GuestBooking({
                   >
                     <div className="space-y-1">
                       <Label htmlFor="gn" className="text-charcoal text-xs">
-                        Nome do hóspede (opcional)
+                        Nome do hóspede
                       </Label>
                       <Input
                         id="gn"
@@ -483,7 +472,7 @@ export function GuestBooking({
                         placeholder="Como prefere ser chamado"
                         className="border-border h-9 bg-white text-sm"
                         value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
+                        onChange={(e) => setGuestName(toUpperText(e.target.value))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -497,14 +486,10 @@ export function GuestBooking({
                         autoComplete="tel"
                         required
                         placeholder="(54) 99999-9999 ou +44 7911 123456"
-                        aria-describedby="wa-hint"
                         className="border-border h-9 bg-white text-sm"
                         value={whatsapp}
                         onChange={(e) => setWhatsapp(e.target.value)}
                       />
-                      <p id="wa-hint" className="text-xs text-muted-foreground">
-                        {PHONE_HINT}
-                      </p>
                     </div>
                     <Button type="submit" className="h-10 w-full" size="default">
                       Continuar
@@ -516,37 +501,18 @@ export function GuestBooking({
 
             {step === 2 && (
               <Card className="border-border/80 shadow-sm">
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Escolha o dia
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Apto. {apartment} · até{" "}
-                    {guestCheckoutDate
-                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
-                          locale: ptBR,
-                        })
-                      : "—"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 p-3 pt-0">
-                  <form
-                    onSubmit={submitDatePick}
-                    className="flex flex-col gap-3"
-                  >
-                    <div className="flex justify-center overflow-x-auto rounded-lg border border-border/60 bg-white p-1 [&_.rdp-root]:scale-[0.92] sm:[&_.rdp-root]:scale-100">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={{ before: minDate, after: maxDate }}
-                        defaultMonth={minDate}
-                      />
-                    </div>
-                    <Button type="submit" className="h-10 w-full">
-                      Ver horários
-                    </Button>
-                  </form>
+                <CardContent className="p-3">
+                  {/* Só o calendário, ocupando toda a largura. Tocar numa data abre direto os horários. */}
+                  <div className="rounded-lg border border-border/60 bg-white p-1">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={pickDate}
+                      disabled={{ before: minDate, after: maxDate }}
+                      defaultMonth={minDate}
+                      className="block w-full border-0 p-0 shadow-none [&_.rdp-months]:max-w-none! [&_.rdp-months]:w-full! [&_.rdp-month]:w-full! [&_table]:w-full! [&_.rdp-day]:w-auto! [&_.rdp-weekday]:w-auto!"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}

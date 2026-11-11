@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, MessageCircle } from "lucide-react";
+import { Bell, CircleCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { markMessageAsSent } from "@/app/actions/reservations";
@@ -85,40 +85,64 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
     "Preencha o WhatsApp ao criar a reserva (balcão) para abrir o WhatsApp Web aqui.";
 
   return (
-    <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap xl:justify-end">
+    <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap lg:justify-end">
+      {/* Só o ícone, minimalista (traço fino, como celular/recepção): cinza = ainda não enviada; verde = enviada. */}
       <Button
         type="button"
         size="sm"
-        variant={confirmDone ? "secondary" : "default"}
+        variant="ghost"
         disabled={!hasPhone || confirmDone || pending !== null}
-        title={hasPhone ? "Enviar confirmação (WhatsApp Web)" : noPhoneTitle}
+        title={
+          !hasPhone
+            ? noPhoneTitle
+            : confirmDone
+              ? "Confirmação enviada"
+              : "Enviar confirmação (WhatsApp Web)"
+        }
+        aria-label={confirmDone ? "Confirmação enviada" : "Enviar confirmação"}
         className={cn(
-          "h-9 gap-1 px-3 text-sm xl:h-8",
-          hasPhone &&
-            !confirmDone &&
-            "bg-green-600 text-white hover:bg-green-700"
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none lg:size-8",
+          hasPhone && !confirmDone && "hover:bg-transparent hover:text-green-600",
+          // Enviada: verde e sem escurecer como botão desabilitado.
+          confirmDone && "text-green-600 opacity-100 disabled:opacity-100"
         )}
         onClick={() => void openWaAndMark("confirmation", confirmMsg)}
       >
-        <MessageCircle className="size-3.5 shrink-0" aria-hidden />
-        {confirmDone ? "OK conf." : "Confirmação"}
+        <CircleCheck className="size-4" aria-hidden />
       </Button>
+      {/* Só o sino, minimalista. Laranja piscando = hora de avisar; verde = aviso enviado. */}
       <Button
         type="button"
         size="sm"
-        variant={warnDone ? "secondary" : "outline"}
+        variant="ghost"
         disabled={!hasPhone || warnDone || pending !== null}
-        title={hasPhone ? "Aviso 10 min antes do fim" : noPhoneTitle}
+        title={
+          !hasPhone
+            ? noPhoneTitle
+            : warnDone
+              ? "Aviso enviado"
+              : showWarningPulse
+                ? "Aviso pendente: enviar agora (10 min antes do fim)"
+                : "Aviso 10 min antes do fim"
+        }
+        aria-label={
+          warnDone
+            ? "Aviso enviado"
+            : showWarningPulse
+              ? "Aviso pendente: enviar agora"
+              : "Enviar aviso"
+        }
         className={cn(
-          "h-9 gap-1 px-3 text-sm xl:h-8",
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none lg:size-8",
+          hasPhone && !warnDone && !showWarningPulse && "hover:bg-transparent hover:text-foreground",
           hasPhone &&
             showWarningPulse &&
-            "animate-pulse border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
+            "animate-pulse text-orange-600 hover:bg-orange-50 hover:text-orange-700",
+          warnDone && "text-green-600 opacity-100 disabled:opacity-100"
         )}
         onClick={() => void openWaAndMark("warning", warnMsg)}
       >
-        <Bell className="size-3.5 shrink-0" aria-hidden />
-        {showWarningPulse ? "Aviso pendente!" : warnDone ? "OK aviso" : "Aviso"}
+        <Bell className="size-4" aria-hidden />
       </Button>
     </div>
   );

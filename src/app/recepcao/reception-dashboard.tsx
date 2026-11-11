@@ -6,7 +6,14 @@ import { ptBR } from "date-fns/locale";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogOut, Trash2 } from "lucide-react";
+import {
+  ConciergeBell,
+  Eye,
+  EyeOff,
+  LogOut,
+  Smartphone,
+  Trash2,
+} from "lucide-react";
 
 import {
   createReceptionReservation,
@@ -21,6 +28,7 @@ import {
 } from "@/app/actions/reservations";
 import { guestWhatsappOptionalSchema } from "@/lib/booking-zod";
 import { formatPhoneDisplay, PHONE_HINT } from "@/lib/phone";
+import { toUpperText } from "@/lib/text-case";
 import { generateStayToken } from "@/app/actions/stays";
 import {
   AlertDialog,
@@ -32,12 +40,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { buildGridItems, freeRangeLabel } from "@/lib/reservation-grid";
+import { receptionSlotOrder, slotStartLabel } from "@/lib/reservation-grid";
 import {
   NewReservationBanner,
   useNewReservationAlerts,
+  SoundToggleButton,
 } from "@/app/recepcao/new-reservation-alerts";
 import type { NewReservationItem } from "@/lib/new-reservations";
 import {
@@ -63,6 +71,7 @@ import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
   normalizeSlotStart,
   slotLabel,
+  receptionSlotStartsFor,
   slotStartsFor,
   type Facility,
   type ReservationRow,
@@ -142,7 +151,7 @@ function ReceptionGuestWhatsappCell({
       type="tel"
       inputMode="tel"
       autoComplete="tel"
-      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs lg:h-8"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
@@ -194,9 +203,9 @@ function ReceptionGuestNameCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
       disabled={saving}
       placeholder="Nome"
@@ -249,10 +258,10 @@ function ReceptionNotesCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
       title={value || "Observações"}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
       disabled={saving}
       placeholder="Observações"
@@ -264,35 +273,52 @@ function ReceptionNotesCell({
 
 /** Colunas da grade em telas largas (xl+). Abaixo disso cada reserva vira um cartão. */
 const GRID_TEMPLATE =
-  "xl:grid-cols-[7.5rem_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_18rem_2.25rem]";
-const GRID = `xl:grid xl:items-center xl:gap-x-3 ${GRID_TEMPLATE}`;
+  "lg:grid-cols-[3.75rem_4.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem]";
+const GRID = `lg:grid lg:items-center lg:gap-x-2 ${GRID_TEMPLATE}`;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-0.5 block text-xs text-muted-foreground xl:hidden">
+    <span className="mb-0.5 block text-xs text-muted-foreground lg:hidden">
       {children}
     </span>
   );
 }
 
-function FreeSlotsRow({ slots, past }: { slots: string[]; past: boolean }) {
-  const count = slots.length > 1 ? ` · ${slots.length} horários` : "";
+/** Horário sem reserva: só a hora, numa linha compacta (a planilha mostra o dia inteiro, uma linha por hora). */
+/** Altura única das linhas da planilha em telas largas (livres e reservadas ficam iguais). */
+const ROW_HEIGHT = "lg:h-14";
+
+/** Campo vazio e desativado, só para mostrar onde os dados aparecem numa linha livre. */
+function GhostField({ placeholder }: { placeholder: string }) {
+  return (
+    <Input
+      disabled
+      tabIndex={-1}
+      aria-hidden
+      placeholder={placeholder}
+      className="hidden h-8 w-full min-w-0 border-border bg-white text-sm opacity-60 lg:block"
+    />
+  );
+}
+
+function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
   return (
     <li
       className={cn(
-        "flex flex-wrap items-center gap-x-3 rounded-md border border-dashed px-3 py-1.5 text-sm xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0",
-        past
-          ? "border-border/50 bg-muted/50 text-muted-foreground"
-          : "border-border/70"
+        "flex items-center rounded-md border border-dashed px-3 py-1 text-sm tabular-nums",
+        "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-0 lg:py-2 lg:text-base",
+        ROW_HEIGHT,
+        GRID,
+        past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
       )}
     >
-      <span className="whitespace-nowrap font-medium tabular-nums xl:w-[7.5rem]">
-        {freeRangeLabel(slots)}
+      <span className="whitespace-nowrap font-medium lg:w-auto">
+        {slotStartLabel(slot)}
       </span>
-      <span className={past ? undefined : "text-muted-foreground"}>
-        {past ? SLOT_BLOCK_LABEL.past : "Livre"}
-        {count}
-      </span>
+      <span className="hidden lg:block" aria-hidden />
+      <GhostField placeholder="Hóspede" />
+      <GhostField placeholder="Observações" />
+      <GhostField placeholder="WhatsApp" />
     </li>
   );
 }
@@ -308,38 +334,47 @@ function ReservationSlotRow({
   onChanged: () => void;
   onAskCancel: (id: string) => void;
 }) {
-  const label = slotLabel(slot);
+  const label = slotStartLabel(slot);
 
   return (
     <li
       className={cn(
         "space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm",
-        "xl:space-y-0 xl:rounded-none xl:border-0 xl:border-b xl:border-border/60 xl:bg-transparent xl:px-0 xl:py-2 xl:shadow-none",
+        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-border/60 lg:bg-transparent lg:px-0 lg:py-2 lg:shadow-none",
+        ROW_HEIGHT,
         GRID
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 xl:contents">
-        <span className="order-1 whitespace-nowrap font-medium tabular-nums xl:order-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:contents">
+        <span className="order-1 whitespace-nowrap font-medium tabular-nums lg:order-1">
           {label}
         </span>
-        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto xl:order-2 xl:flex-col xl:items-start xl:gap-0.5">
-          <span className="font-mono text-base xl:text-lg">
-            <span className="font-sans text-sm text-muted-foreground xl:hidden">
+        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto lg:order-2">
+          {row.created_by === "reception" ? (
+            <ConciergeBell
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-label="Reserva feita pela recepção"
+              role="img"
+            />
+          ) : (
+            <Smartphone
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-label="Reserva feita pelo hóspede"
+              role="img"
+            />
+          )}
+          <span className="font-mono text-base lg:text-lg">
+            <span className="font-sans text-sm text-muted-foreground lg:hidden">
               Apto{" "}
             </span>
             {row.apartment_number}
           </span>
-          <Badge
-            variant={row.created_by === "reception" ? "secondary" : "outline"}
-          >
-            {row.created_by === "reception" ? "Recepção" : "Hóspede"}
-          </Badge>
         </span>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="order-2 ml-auto size-9 p-0 text-destructive hover:text-destructive sm:order-3 xl:order-7 xl:ml-0"
+          className="order-2 ml-auto size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 lg:order-7 lg:ml-0 lg:size-8"
           onClick={() => onAskCancel(row.id)}
           title="Cancelar reserva"
         >
@@ -347,21 +382,21 @@ function ReservationSlotRow({
           <span className="sr-only">Cancelar</span>
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] xl:contents">
-        <div className="order-1 min-w-0 xl:order-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] lg:contents">
+        <div className="order-1 min-w-0 lg:order-3">
           <FieldLabel>Hóspede</FieldLabel>
           <ReceptionGuestNameCell row={row} onSaved={onChanged} />
         </div>
-        <div className="order-3 col-span-2 min-w-0 sm:col-span-1 xl:order-4">
+        <div className="order-3 col-span-2 min-w-0 sm:col-span-1 lg:order-4">
           <FieldLabel>Observações</FieldLabel>
           <ReceptionNotesCell row={row} onSaved={onChanged} />
         </div>
-        <div className="order-2 min-w-0 xl:order-5">
+        <div className="order-2 min-w-0 lg:order-5">
           <FieldLabel>WhatsApp</FieldLabel>
           <ReceptionGuestWhatsappCell row={row} onSaved={onChanged} />
         </div>
       </div>
-      <div className="xl:order-6">
+      <div className="lg:order-6">
         <ReceptionWaActions row={row} onUpdated={onChanged} />
       </div>
     </li>
@@ -383,7 +418,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const todayStr = useMemo(() => hotelCalendarDate(), []);
   const [facility, setFacility] = useState<Facility>("pool");
-  const slotList = useMemo(() => [...slotStartsFor(facility)], [facility]);
+  // A recepção vê (e pode reservar) também os horário de uso compartilhado da piscina (09h).
+  const slotList = useMemo(
+    () => [...receptionSlotStartsFor(facility)],
+    [facility]
+  );
 
   const [dateStr, setDateStr] = useState(todayStr);
   const [rows, setRows] = useState<ReservationRow[]>([]);
@@ -651,7 +690,10 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const noFreeSlot = slotList.every((s) => reasonForSlot(s) !== null);
 
   // Pré-seleciona o primeiro horário livre (só enquanto o usuário não escolheu um).
-  const firstFreeSlot = slotList.find((s) => reasonForSlot(s) === null);
+  // Prefere os horários normais (o 1º livre do hóspede); o uso compartilhado só se não houver outro.
+  const firstFreeSlot =
+    slotStartsFor(facility).find((s) => reasonForSlot(s) === null) ??
+    slotList.find((s) => reasonForSlot(s) === null);
   useEffect(() => {
     if (slotPickedByUserRef.current) return;
     if (slotReason === null) return;
@@ -798,18 +840,33 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   return (
     <div className="min-h-dvh bg-background">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 md:pt-6 lg:max-w-6xl lg:space-y-8 lg:px-8 lg:pb-10 xl:max-w-7xl 2xl:max-w-[min(100%-4rem,96rem)]">
-        <header className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-          <div className="min-w-0 space-y-3">
-            <Image
-              src="/logo-valle-dincanto.jpg"
-              alt="Logo Valle D'Incanto"
-              width={1024}
-              height={364}
-              className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
-            />
-            <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
-              Reservas
-            </h1>
+        <header className="flex flex-col gap-4 border-b border-border pb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+            <div className="min-w-0 space-y-3">
+              <Image
+                src="/logo-valle-dincanto.jpg"
+                alt="Logo Valle D'Incanto"
+                width={1024}
+                height={364}
+                className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
+              />
+              {/* O título não aparece na tela; fica só para leitores de tela. */}
+              <h1 className="sr-only">Reservas</h1>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <SoundToggleButton alerts={newReservationAlerts} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void onLogout()}
+              >
+                <LogOut className="size-4" />
+                Sair
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -831,17 +888,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void onLogout()}
-            >
-              <LogOut className="size-4" />
-              Sair
-            </Button>
-          </div>
         </header>
 
         <NewReservationBanner
@@ -861,15 +907,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               className="h-10 w-full max-w-full border-border bg-white sm:w-auto sm:min-w-[220px] lg:min-w-[240px]"
             />
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full shrink-0 sm:w-auto lg:h-10"
-            disabled={loading}
-            onClick={() => void load()}
-          >
-            {loading ? "Atualizando…" : "Atualizar"}
-          </Button>
           <p className="text-muted-foreground text-sm sm:ml-auto lg:text-base">
             {format(fromYmd(dateStr), "EEEE, dd/MM/yyyy", { locale: ptBR })}
           </p>
@@ -884,7 +921,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <div
               className={cn(
                 "hidden border-b pb-2 text-left text-sm font-medium",
-                "xl:grid xl:items-center xl:gap-x-3",
+                "lg:grid lg:items-center lg:gap-x-2",
                 GRID_TEMPLATE
               )}
               aria-hidden
@@ -897,28 +934,25 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span className="text-right">Mensagens</span>
               <span />
             </div>
-            <ul className="space-y-2 xl:space-y-0">
-              {buildGridItems(
-                slotList,
-                (slot) => bySlot.get(normalizeSlotStart(slot)),
-                (slot) => isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)
-              ).map((item) =>
-                item.kind === "free" ? (
-                  <FreeSlotsRow
-                    key={item.slots[0]}
-                    slots={item.slots}
-                    past={item.past}
-                  />
-                ) : (
+            <ul className="space-y-2 lg:space-y-0">
+              {receptionSlotOrder(slotList).map((slot) => {
+                const row = bySlot.get(normalizeSlotStart(slot));
+                return row ? (
                   <ReservationSlotRow
-                    key={item.slot}
-                    slot={item.slot}
-                    row={item.row}
+                    key={slot}
+                    slot={slot}
+                    row={row}
                     onChanged={() => void load()}
                     onAskCancel={setPendingDelete}
                   />
-                )
-              )}
+                ) : (
+                  <EmptySlotRow
+                    key={slot}
+                    slot={slot}
+                    past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                  />
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
@@ -928,10 +962,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
               Gerar acesso hóspede
             </CardTitle>
-            <CardDescription>
-              Link com token de estadia para agendar piscina ou academia no
-              telemóvel do hóspede.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
             <form
@@ -1024,6 +1054,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   <option value="">Selecione…</option>
                   {ALLOWED_APARTMENT_NUMBERS.map((n) => {
                     const booked = formBookedApts.has(n);
+                    // Apartamento que já tem reserva neste dia não aparece na lista
+                    // (só se for o que está selecionado, para o aviso continuar coerente).
+                    if (booked && n !== newApt) return null;
                     return (
                       <option
                         key={n}
@@ -1048,7 +1081,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   maxLength={200}
                   className="border-border bg-white"
                   value={newGuestName}
-                  onChange={(e) => setNewGuestName(e.target.value)}
+                  onChange={(e) => setNewGuestName(toUpperText(e.target.value))}
                 />
               </div>
               <div className="space-y-2 sm:col-span-1">
@@ -1075,6 +1108,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 >
                   {slotList.map((s) => {
                     const reason = reasonForSlot(s);
+                    // Só os horários disponíveis aparecem (passados e ocupados ficam de fora).
+                    // Exceção: o horário já escolhido, enquanto selecionado, para o aviso continuar coerente.
+                    if (reason !== null && s !== newSlot) return null;
                     return (
                       <option
                         key={s}
@@ -1088,30 +1124,19 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                     );
                   })}
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  Horários em cinza estão indisponíveis (ocupados ou já passaram).
-                </p>
               </div>
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="nw">WhatsApp (opcional)</Label>
-                <p className="text-muted-foreground text-[11px] leading-snug">
-                  Preencha para ativar os botões de confirmação e aviso (10 min)
-                  na coluna whatsapp da grade.
-                </p>
                 <Input
                   id="nw"
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="(54) 99999-9999 ou +44 7911 123456"
-                  aria-describedby="nw-hint"
                   className="border-border bg-white"
                   value={newWhatsapp}
                   onChange={(e) => setNewWhatsapp(e.target.value)}
                 />
-                <p id="nw-hint" className="text-xs text-muted-foreground">
-                  {PHONE_HINT}
-                </p>
               </div>
               {(aptAlreadyBooked || slotReason || noFreeSlot) && (
                 <p
@@ -1133,7 +1158,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   id="nn"
                   maxLength={2000}
                   value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
+                  onChange={(e) => setNewNotes(toUpperText(e.target.value))}
                   placeholder="Opcional: pedido especial, notas internas…"
                 />
               </div>
