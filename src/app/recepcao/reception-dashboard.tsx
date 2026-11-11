@@ -38,6 +38,7 @@ import { receptionSlotOrder, slotStartLabel } from "@/lib/reservation-grid";
 import {
   NewReservationBanner,
   useNewReservationAlerts,
+  SoundToggleButton,
 } from "@/app/recepcao/new-reservation-alerts";
 import type { NewReservationItem } from "@/lib/new-reservations";
 import {
@@ -801,18 +802,33 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   return (
     <div className="min-h-dvh bg-background">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 md:pt-6 lg:max-w-6xl lg:space-y-8 lg:px-8 lg:pb-10 xl:max-w-7xl 2xl:max-w-[min(100%-4rem,96rem)]">
-        <header className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-          <div className="min-w-0 space-y-3">
-            <Image
-              src="/logo-valle-dincanto.jpg"
-              alt="Logo Valle D'Incanto"
-              width={1024}
-              height={364}
-              className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
-            />
-            <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
-              Reservas
-            </h1>
+        <header className="flex flex-col gap-4 border-b border-border pb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+            <div className="min-w-0 space-y-3">
+              <Image
+                src="/logo-valle-dincanto.jpg"
+                alt="Logo Valle D'Incanto"
+                width={1024}
+                height={364}
+                className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
+              />
+              <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
+                Reservas
+              </h1>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void onLogout()}
+              >
+                <LogOut className="size-4" />
+                Sair
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -833,17 +849,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 Academia
               </Button>
             </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void onLogout()}
-            >
-              <LogOut className="size-4" />
-              Sair
-            </Button>
+            <SoundToggleButton alerts={newReservationAlerts} />
           </div>
         </header>
 

@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: "Som ligado" na mesma linha de Piscina/Academia
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (cabeçalho)
+- **Pedido:** O botão "Som ligado" deve ficar na mesma linha dos botões Piscina/Academia.
+- **O que foi feito:** `SoundToggleButton` (novo, em `new-reservation-alerts.tsx`) colocado à direita da linha das abas em `reception-dashboard.tsx`; o cabeçalho passou a ter uma linha com logo/título/Sair e outra com abas + som. O banner de alertas deixou de ter a linha do botão (o aviso "navegador bloqueou o som" continua nele).
+- **Validação:** tsc, ESLint e testes; em navegador, centros verticais de Piscina e Som iguais (desktop 1400px e celular 390px), alinhado à direita com o Sair no desktop.
+- **Não fazer / evitar regressão:** Não recolocar o botão de som dentro do banner de alertas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/app/recepcao/new-reservation-alerts.tsx`.
+
 ### 2026-11-11 — Documentação: `ia.navegation.md` atualizado após a revisão geral
 
 - **Status:** Concluído (PR #27 mergeado)
