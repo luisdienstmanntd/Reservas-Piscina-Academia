@@ -111,4 +111,6 @@ export type ReservationRow = {
   cancelled_by: string | null;
   updated_at: string;
   anonymized: boolean;
+  /** Quando o hóspede trocou o horário desta reserva (nulo = nunca trocou). */
+  guest_rescheduled_at?: string | null;
 };

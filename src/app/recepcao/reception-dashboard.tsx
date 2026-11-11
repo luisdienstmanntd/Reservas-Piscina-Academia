@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  RefreshCw,
   Smartphone,
   Trash2,
 } from "lucide-react";
@@ -48,6 +49,7 @@ import {
   SoundToggleButton,
 } from "@/app/recepcao/new-reservation-alerts";
 import { HistoryButton } from "@/app/recepcao/history-dialog";
+import { formatEventDateTime } from "@/lib/reservation-history";
 import type { NewReservationItem } from "@/lib/new-reservations";
 import {
   SLOT_BLOCK_LABEL,
@@ -274,7 +276,7 @@ function ReceptionNotesCell({
 
 /** Colunas da grade em telas largas (xl+). Abaixo disso cada reserva vira um cartão. */
 const GRID_TEMPLATE =
-  "lg:grid-cols-[3.75rem_4.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem]";
+  "lg:grid-cols-[3.75rem_5.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem]";
 const GRID = `lg:grid lg:items-center lg:gap-x-2 ${GRID_TEMPLATE}`;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -329,11 +331,14 @@ function ReservationSlotRow({
   row,
   onChanged,
   onAskCancel,
+  history = false,
 }: {
   slot: string;
   row: ReservationRow;
   onChanged: () => void;
   onAskCancel: (id: string) => void;
+  /** Dia anterior a hoje: mostra a situação "alterada" (o hóspede trocou o horário). */
+  history?: boolean;
 }) {
   const label = slotStartLabel(slot);
 
@@ -370,6 +375,13 @@ function ReservationSlotRow({
             </span>
             {row.apartment_number}
           </span>
+          {history && row.guest_rescheduled_at ? (
+            <RefreshCw
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-label="Horário alterado pelo hóspede"
+              role="img"
+            />
+          ) : null}
         </span>
         <Button
           type="button"
@@ -404,6 +416,51 @@ function ReservationSlotRow({
   );
 }
 
+/** "11/11 14:20" a partir de um instante ISO (fuso do hotel). */
+function shortWhen(iso: string): string {
+  const [date, time] = formatEventDateTime(iso).split(", ");
+  return date && time ? `${date.slice(0, 5)} ${time}` : "";
+}
+
+/** Reserva cancelada de um dia passado: só leitura (cancelar não apaga nada; fica no histórico). */
+function CancelledSlotRow({ slot, row }: { slot: string; row: ReservationRow }) {
+  return (
+    <li
+      data-testid="cancelled-row"
+      className={cn(
+        "space-y-1 rounded-lg border border-dashed border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground",
+        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:bg-transparent lg:px-0 lg:py-2",
+        ROW_HEIGHT,
+        GRID
+      )}
+    >
+      <span className="whitespace-nowrap font-medium tabular-nums">{slotStartLabel(slot)}</span>
+      <span className="flex items-center gap-2">
+        {row.created_by === "reception" ? (
+          <ConciergeBell className="size-4 shrink-0" aria-label="Reserva feita pela recepção" role="img" />
+        ) : (
+          <Smartphone className="size-4 shrink-0" aria-label="Reserva feita pelo hóspede" role="img" />
+        )}
+        <span className="font-mono">{row.apartment_number}</span>
+      </span>
+      <span className="min-w-0 truncate" title={row.guest_name ?? undefined}>
+        {row.guest_name || "—"}
+      </span>
+      <span className="min-w-0 truncate" title={row.notes ?? undefined}>
+        {row.notes || "—"}
+      </span>
+      <span className="min-w-0 truncate font-mono">{row.guest_whatsapp || "—"}</span>
+      <span className="text-xs leading-tight lg:col-span-2">
+        <span className="block font-semibold text-charcoal">Cancelada</span>
+        <span className="block whitespace-nowrap text-[11px]">
+          {row.cancelled_by === "guest" ? "Hóspede" : "Recepção"}
+          {row.cancelled_at ? ` · ${shortWhen(row.cancelled_at)}` : ""}
+        </span>
+      </span>
+    </li>
+  );
+}
+
 type Props = { initialAuthed: boolean };
 
 export function ReceptionDashboard({ initialAuthed }: Props) {
@@ -427,6 +484,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const [dateStr, setDateStr] = useState(todayStr);
   const [rows, setRows] = useState<ReservationRow[]>([]);
+  /** Canceladas do dia (só vêm em datas anteriores a hoje). */
+  const [cancelledRows, setCancelledRows] = useState<ReservationRow[]>([]);
   /** Dia e instalação a que `rows` se refere (evita misturar dados de outra instalação). */
   const [rowsKey, setRowsKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -541,6 +600,15 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     return m;
   }, [rows]);
 
+  const cancelledBySlot = useMemo(() => {
+    const m = new Map<string, ReservationRow[]>();
+    for (const r of cancelledRows) {
+      const k = normalizeSlotStart(String(r.slot_start));
+      m.set(k, [...(m.get(k) ?? []), r]);
+    }
+    return m;
+  }, [cancelledRows]);
+
   const load = useCallback(
     async (
       dateOverride?: string,
@@ -561,6 +629,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           return;
         }
         setRows(r.rows);
+        setCancelledRows(r.cancelled);
         setRowsKey(`${ymd}|${facility}`);
       } catch {
         if (!silent) toast.error("Falha de rede ao carregar reservas.");
@@ -625,6 +694,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     await logoutReception();
     setAuthed(false);
     setRows([]);
+    setCancelledRows([]);
     router.refresh();
     toast.message("Sessão encerrada.");
   }
@@ -652,6 +722,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const nowMs = Date.now() + serverSkewMs;
   void minuteTick;
   const hotelToday = hotelCalendarDate(new Date(nowMs));
+  /** Dia anterior a hoje: a grade também mostra as reservas canceladas (histórico). */
+  const isHistoryDay = dateStr < hotelToday;
 
   // Aviso de novas reservas (qualquer dia/instalação): faixa, toast, som e contador no título da aba.
   const newReservationAlerts = useNewReservationAlerts({
@@ -942,23 +1014,36 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span />
             </div>
             <ul className="space-y-2 lg:space-y-0">
-              {receptionSlotOrder(slotList).map((slot) => {
-                const row = bySlot.get(normalizeSlotStart(slot));
-                return row ? (
-                  <ReservationSlotRow
-                    key={slot}
-                    slot={slot}
-                    row={row}
-                    onChanged={() => void load()}
-                    onAskCancel={setPendingDelete}
-                  />
-                ) : (
-                  <EmptySlotRow
-                    key={slot}
-                    slot={slot}
-                    past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
-                  />
-                );
+              {receptionSlotOrder(slotList).flatMap((slot) => {
+                const key = normalizeSlotStart(slot);
+                const row = bySlot.get(key);
+                const gone = isHistoryDay ? (cancelledBySlot.get(key) ?? []) : [];
+                const items = gone.map((g) => (
+                  <CancelledSlotRow key={g.id} slot={slot} row={g} />
+                ));
+                if (row) {
+                  return [
+                    <ReservationSlotRow
+                      key={slot}
+                      slot={slot}
+                      row={row}
+                      history={isHistoryDay}
+                      onChanged={() => void load()}
+                      onAskCancel={setPendingDelete}
+                    />,
+                    ...items,
+                  ];
+                }
+                // Horário livre que já teve reserva cancelada: mostra o histórico no lugar da linha vazia.
+                return items.length > 0
+                  ? items
+                  : [
+                      <EmptySlotRow
+                        key={slot}
+                        slot={slot}
+                        past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                      />,
+                    ];
               })}
             </ul>
           </CardContent>

@@ -75,6 +75,7 @@ Reservas-Piscina-Academia/
 - ✅ Agendar em nome do hóspede
 - ✅ Gerenciar capacidades
 - ✅ Relatórios básicos
+- ✅ Histórico de reservas: pelo calendário, qualquer dia passado mostra as reservas ativas e as **canceladas** (com quem cancelou e quando); reservas passadas podem ser alteradas ou excluídas (cancelamento, nada é apagado do banco); criar reserva no passado continua bloqueado
 
 ### Sistema
 - ✅ Validação de conflitos (horário/lotação)
