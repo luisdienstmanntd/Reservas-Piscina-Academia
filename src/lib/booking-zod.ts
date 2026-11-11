@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
+import { toUpperText } from "@/lib/text-case";
 
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 
@@ -66,7 +67,7 @@ const guestNameOptionalSchema = z
   .optional()
   .transform((s) => {
     if (s === undefined) return null;
-    const t = s.trim();
+    const t = toUpperText(s.trim());
     return t.length ? t : null;
   });
 
@@ -107,6 +108,7 @@ export const createReceptionSchema = z.object({
     .string()
     .max(2000, "Observações muito longas (máx. 2000 caracteres).")
     .refine((s) => !FORBIDDEN_TEXT.test(s), FORBIDDEN_TEXT_MESSAGE)
+    .transform(toUpperText)
     .optional(),
   guestWhatsapp: guestWhatsappOptionalSchema,
   guestName: guestNameOptionalSchema,
