@@ -49,6 +49,14 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Histórico: ícones de quem fez (sineta e celular)
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — histórico de alterações
+- **Pedido:** Identificar quem fez cada alteração pelos mesmos ícones da planilha (sineta = recepção, celular = hóspede), aparecendo antes do texto "Reserva incluída/alterada/excluída".
+- **O que foi feito:** `ActorIcon` em `history-dialog.tsx` (lucide `ConciergeBell`/`Smartphone`, mesmo tamanho e cor da planilha, `role="img"` com `aria-label` "Recepção"/"Hóspede"); o ícone vem na frente do título e a linha de texto "Hóspede/Recepção" saiu do cartão. Eventos do "Sistema" (ex.: apagar dados por LGPD) não têm ícone e mantêm a linha "Sistema". No celular a data fica numa linha própria no rodapé do cartão.
+- **Verificação:** build local com Postgres real (desktop e 390 px): 7 eventos, ícone certo e em primeiro lugar em todos os de hóspede/recepção, sem texto repetido, evento do sistema sem ícone, sem erros de console. tsc, ESLint e testes OK.
+
 ### 2026-11-11 — Histórico: filtros por data, apto e nome
 
 - **Status:** Concluído (PR em rascunho; inclui as mudanças do PR #53, ainda não mergeado)

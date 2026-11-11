@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Settings, X } from "lucide-react";
+import { ConciergeBell, Settings, Smartphone, X } from "lucide-react";
 
 import { listReservationHistory } from "@/app/actions/reservations";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,29 @@ type State =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ok"; items: HistoryItem[]; limit: number };
+
+/** Quem fez: mesmos ícones da planilha (celular = hóspede, sineta = recepção). */
+function ActorIcon({ actor }: { actor: string | null }) {
+  if (actor === "guest") {
+    return (
+      <Smartphone
+        className="text-muted-foreground size-4 shrink-0"
+        aria-label={actorLabel(actor)}
+        role="img"
+      />
+    );
+  }
+  if (actor === "reception") {
+    return (
+      <ConciergeBell
+        className="text-muted-foreground size-4 shrink-0"
+        aria-label={actorLabel(actor)}
+        role="img"
+      />
+    );
+  }
+  return null;
+}
 
 /** Linha do tempo: o mais recente em cima, cartões alternando esquerda/direita (no celular, uma coluna). */
 function Timeline({ items }: { items: HistoryItem[] }) {
@@ -52,14 +75,17 @@ function Timeline({ items }: { items: HistoryItem[] }) {
                 cardLeft ? "md:col-start-1 md:mr-3" : "md:col-start-3 md:ml-3"
               )}
             >
-              <p className="text-charcoal text-sm font-semibold leading-snug">
-                {historyTitle(it.type)}
-                {changed ? (
-                  <span className="text-muted-foreground font-normal">
-                    {" "}
-                    — {changed}
-                  </span>
-                ) : null}
+              <p className="text-charcoal flex items-center gap-2 text-sm font-semibold leading-snug">
+                <ActorIcon actor={it.actor} />
+                <span className="min-w-0">
+                  {historyTitle(it.type)}
+                  {changed ? (
+                    <span className="text-muted-foreground font-normal">
+                      {" "}
+                      — {changed}
+                    </span>
+                  ) : null}
+                </span>
               </p>
               {reservationLine(it) ? (
                 <p className="text-muted-foreground mt-1 text-sm">{reservationLine(it)}</p>
@@ -67,10 +93,12 @@ function Timeline({ items }: { items: HistoryItem[] }) {
               {it.guestName ? (
                 <p className="text-muted-foreground text-sm">{it.guestName}</p>
               ) : null}
-              <p className="text-muted-foreground/80 mt-1 text-xs">
-                {actorLabel(it.actor)}
-                <span className="md:hidden"> · {when}</span>
-              </p>
+              {it.actor !== "guest" && it.actor !== "reception" ? (
+                <p className="text-muted-foreground/80 mt-1 text-xs">
+                  {actorLabel(it.actor)}
+                </p>
+              ) : null}
+              <p className="text-muted-foreground/80 mt-1 text-xs md:hidden">{when}</p>
             </div>
             <p
               className={cn(
