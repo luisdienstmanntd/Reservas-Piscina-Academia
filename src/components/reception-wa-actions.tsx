@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, CircleCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { markMessageAsSent } from "@/app/actions/reservations";
@@ -16,40 +16,6 @@ import {
 } from "@/lib/wa-me";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-/** Confirmação ainda não enviada: círculo verde só com o contorno e o "certo" dentro. */
-function ConfirmPendingIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden fill="none">
-      <circle cx="16" cy="16" r="13" stroke="currentColor" strokeWidth="2.6" />
-      <path
-        d="M9.5 16.5l4.6 4.6L22.6 11.4"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Confirmação enviada: círculo verde cheio com o "certo" branco. */
-function ConfirmDoneIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <circle cx="16" cy="16" r="14" fill="#16a34a" />
-      <circle cx="16" cy="16" r="14" fill="none" stroke="#15803d" strokeWidth="1.5" />
-      <path
-        d="M9 16.5l5 5L23.5 11"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 type Props = {
   row: ReservationRow;
@@ -120,7 +86,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
 
   return (
     <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap xl:justify-end">
-      {/* Só o ícone (sem texto): contorno = ainda não enviada; círculo cheio = enviada. */}
+      {/* Só o ícone, minimalista (traço fino, como celular/recepção): cinza = ainda não enviada; verde = enviada. */}
       <Button
         type="button"
         size="sm"
@@ -135,21 +101,16 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         }
         aria-label={confirmDone ? "Confirmação enviada" : "Enviar confirmação"}
         className={cn(
-          "size-9 p-0 xl:size-8",
-          hasPhone && !confirmDone && "text-green-600 hover:bg-green-50 hover:text-green-700",
-          // Enviada: continua com a cor cheia (não escurece como botão desabilitado).
-          confirmDone && "opacity-100 disabled:opacity-100",
-          !hasPhone && "text-muted-foreground"
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none xl:size-8",
+          hasPhone && !confirmDone && "hover:bg-transparent hover:text-green-600",
+          // Enviada: verde e sem escurecer como botão desabilitado.
+          confirmDone && "text-green-600 opacity-100 disabled:opacity-100"
         )}
         onClick={() => void openWaAndMark("confirmation", confirmMsg)}
       >
-        {confirmDone ? (
-          <ConfirmDoneIcon className="size-6" />
-        ) : (
-          <ConfirmPendingIcon className="size-6" />
-        )}
+        <CircleCheck className="size-4" aria-hidden />
       </Button>
-      {/* Só o sino (sem texto). Laranja piscando = hora de avisar; sino com "certo" verde = aviso enviado. */}
+      {/* Só o sino, minimalista. Laranja piscando = hora de avisar; verde = aviso enviado. */}
       <Button
         type="button"
         size="sm"
@@ -171,22 +132,17 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
               ? "Aviso pendente: enviar agora"
               : "Enviar aviso"
         }
-        // Sem borda nem fundo, como os outros ícones. Pendente: sino laranja piscando.
         className={cn(
-          "relative size-9 border-0 bg-transparent p-0 shadow-none xl:size-8",
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none xl:size-8",
+          hasPhone && !warnDone && !showWarningPulse && "hover:bg-transparent hover:text-foreground",
           hasPhone &&
             showWarningPulse &&
-            "animate-pulse text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+            "animate-pulse text-orange-600 hover:bg-orange-50 hover:text-orange-700",
+          warnDone && "text-green-600 opacity-100 disabled:opacity-100"
         )}
         onClick={() => void openWaAndMark("warning", warnMsg)}
       >
-        <Bell
-          className={cn("shrink-0", showWarningPulse ? "size-5" : "size-[1.15rem]")}
-          aria-hidden
-        />
-        {warnDone ? (
-          <ConfirmDoneIcon className="absolute -right-1 -top-1 size-3.5" />
-        ) : null}
+        <Bell className="size-4" aria-hidden />
       </Button>
     </div>
   );

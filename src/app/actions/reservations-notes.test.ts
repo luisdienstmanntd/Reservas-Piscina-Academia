@@ -18,14 +18,14 @@ describe("editing reservation notes", () => {
     expect(await updateReservationNotes(id, "a".repeat(2001))).toMatchObject({ ok: false });
     expect(mocks.getAdminClient).not.toHaveBeenCalled();
   });
-  it("saves trimmed notes, clears empty text and detects a missing reservation", async () => {
+  it("saves trimmed UPPERCASE notes, clears empty text and detects a missing reservation", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: { id }, error: null });
     const select = vi.fn().mockReturnValue({ maybeSingle });
     const eq = vi.fn().mockReturnValue({ select });
     const update = vi.fn().mockReturnValue({ eq });
     mocks.getAdminClient.mockReturnValue({ from: vi.fn().mockReturnValue({ update }) });
     expect(await updateReservationNotes(id, "  espumante\nsem álcool  ")).toEqual({ ok: true });
-    expect(update).toHaveBeenCalledWith({ notes: "espumante\nsem álcool" });
+    expect(update).toHaveBeenCalledWith({ notes: "ESPUMANTE\nSEM ÁLCOOL" });
     expect(eq).toHaveBeenCalledWith("id", id);
     expect(await updateReservationNotes(id, " ")).toEqual({ ok: true });
     expect(update).toHaveBeenLastCalledWith({ notes: null });
