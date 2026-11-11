@@ -1108,8 +1108,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 >
                   {slotList.map((s) => {
                     const reason = reasonForSlot(s);
-                    // Horário que já passou não aparece na lista (ocupado continua aparecendo, desativado).
-                    if (reason === "past") return null;
+                    // Só os horários disponíveis aparecem (passados e ocupados ficam de fora).
+                    // Exceção: o horário já escolhido, enquanto selecionado, para o aviso continuar coerente.
+                    if (reason !== null && s !== newSlot) return null;
                     return (
                       <option
                         key={s}
