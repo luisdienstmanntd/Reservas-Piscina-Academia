@@ -387,14 +387,7 @@ export function NewReservationBanner({ alerts, todayYmd, onView }: BannerProps) 
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>
-          {offline
-            ? "Verificação de novas reservas interrompida"
-            : lastOkAt
-              ? `Novas reservas verificadas às ${timeLabel(lastOkAt)} (a cada ${NEW_RESERVATION_POLL_MS / 1000} s)`
-              : "Verificando novas reservas…"}
-        </span>
+      <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-2">
           {soundBlocked && soundOn ? (
             <span className="text-amber-700">

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { buildGridItems, freeRangeLabel } from "@/lib/reservation-grid";
+import { buildGridItems } from "@/lib/reservation-grid";
 import {
   NewReservationBanner,
   useNewReservationAlerts,
@@ -272,28 +272,6 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
     <span className="mb-0.5 block text-xs text-muted-foreground xl:hidden">
       {children}
     </span>
-  );
-}
-
-function FreeSlotsRow({ slots, past }: { slots: string[]; past: boolean }) {
-  const count = slots.length > 1 ? ` · ${slots.length} horários` : "";
-  return (
-    <li
-      className={cn(
-        "flex flex-wrap items-center gap-x-3 rounded-md border border-dashed px-3 py-1.5 text-sm xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0",
-        past
-          ? "border-border/50 bg-muted/50 text-muted-foreground"
-          : "border-border/70"
-      )}
-    >
-      <span className="whitespace-nowrap font-medium tabular-nums xl:w-[7.5rem]">
-        {freeRangeLabel(slots)}
-      </span>
-      <span className={past ? undefined : "text-muted-foreground"}>
-        {past ? SLOT_BLOCK_LABEL.past : "Livre"}
-        {count}
-      </span>
-    </li>
   );
 }
 
@@ -861,15 +839,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               className="h-10 w-full max-w-full border-border bg-white sm:w-auto sm:min-w-[220px] lg:min-w-[240px]"
             />
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full shrink-0 sm:w-auto lg:h-10"
-            disabled={loading}
-            onClick={() => void load()}
-          >
-            {loading ? "Atualizando…" : "Atualizar"}
-          </Button>
           <p className="text-muted-foreground text-sm sm:ml-auto lg:text-base">
             {format(fromYmd(dateStr), "EEEE, dd/MM/yyyy", { locale: ptBR })}
           </p>
@@ -903,13 +872,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 (slot) => bySlot.get(normalizeSlotStart(slot)),
                 (slot) => isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)
               ).map((item) =>
-                item.kind === "free" ? (
-                  <FreeSlotsRow
-                    key={item.slots[0]}
-                    slots={item.slots}
-                    past={item.past}
-                  />
-                ) : (
+                item.kind === "booked" ? (
                   <ReservationSlotRow
                     key={item.slot}
                     slot={item.slot}
@@ -917,9 +880,14 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                     onChanged={() => void load()}
                     onAskCancel={setPendingDelete}
                   />
-                )
+                ) : null
               )}
             </ul>
+            {rows.length === 0 && !loading ? (
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                Nenhuma reserva neste dia.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -1088,30 +1056,19 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                     );
                   })}
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  Horários em cinza estão indisponíveis (ocupados ou já passaram).
-                </p>
               </div>
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="nw">WhatsApp (opcional)</Label>
-                <p className="text-muted-foreground text-[11px] leading-snug">
-                  Preencha para ativar os botões de confirmação e aviso (10 min)
-                  na coluna whatsapp da grade.
-                </p>
                 <Input
                   id="nw"
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="(54) 99999-9999 ou +44 7911 123456"
-                  aria-describedby="nw-hint"
                   className="border-border bg-white"
                   value={newWhatsapp}
                   onChange={(e) => setNewWhatsapp(e.target.value)}
                 />
-                <p id="nw-hint" className="text-xs text-muted-foreground">
-                  {PHONE_HINT}
-                </p>
               </div>
               {(aptAlreadyBooked || slotReason || noFreeSlot) && (
                 <p

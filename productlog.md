@@ -49,6 +49,19 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Tela da recepção mais limpa (sete elementos removidos)
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador contra PostgreSQL local; falta conferir no site publicado)
+- **Área:** Recepção
+- **Pedido:** Não mostrar: (1) "Novas reservas verificadas às … (a cada 10 s)"; (2) o botão "Atualizar"; (3) "Horários em cinza estão indisponíveis (ocupados ou já passaram)."; (4) "Preencha para ativar os botões de confirmação e aviso (10 min) na coluna whatsapp da grade."; (5) "Brasil: (54) 99999-9999. Exterior: + código do país e número." (campo WhatsApp da Nova reserva); (6) "Já passou · N horários"; (7) "Livre · N horários".
+- **Decisão:** A grade do dia passa a listar só as reservas (os grupos de horários livres e de horários que já passaram não aparecem). Com o dia sem reservas aparece "Nenhuma reserva neste dia." (para a lista vazia não parecer quebrada; este texto é novo). Sem o botão "Atualizar", a grade continua atualizando sozinha (carrega ao abrir, ao trocar a data ou a instalação, depois de cada ação e a cada 30 s). Foi removido só o TEXTO do status das novas reservas: o aviso de conexão ("Sem conexão com o sistema"), o banner de novas reservas, o som e o botão "Som ligado" continuam. A dica de telefone da tela do HÓSPEDE não mudou (o pedido era da recepção); o tooltip do campo WhatsApp na grade também ficou.
+- **O que foi feito:** `src/app/recepcao/reception-dashboard.tsx` (botão, grupos livres e textos de ajuda removidos), `src/app/recepcao/new-reservation-alerts.tsx` (texto de status removido).
+- **Validação:** 170 testes, tsc e ESLint; em navegador, os oito textos (incluindo "Verificando novas reservas…") não aparecem e a grade atualiza ao trocar a data.
+- **Impactos e riscos:** A recepção deixa de ver, na grade, quais horários estão livres; isso continua disponível na lista de horários do formulário "Nova reserva".
+- **Não fazer / evitar regressão:** Não remover o aviso de queda de conexão nem o banner de novas reservas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, PR #10.
+
 ### 2026-11-10 — Troca de horário: o botão "Alterar" não fazia nada (correção)
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador com toque, contra PostgreSQL local; falta conferir no site publicado)
