@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: sino do aviso sem borda (ajuste)
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados)
+- **Área:** Recepção
+- **Pedido:** O sino deve aparecer sem borda, como os outros ícones (o "certo" da confirmação e a lixeira).
+- **Decisão:** O botão do aviso passa a ser sem borda e sem fundo. Estados: normal = sino preto; hora de avisar (10 min antes do fim) = sino laranja piscando (antes era um botão laranja cheio com borda); enviado = sino cinza desabilitado com o selo verde pequeno; sem WhatsApp = sino cinza desabilitado.
+- **O que foi feito:** `src/components/reception-wa-actions.tsx` (variante sem borda e sem fundo no botão do aviso).
+- **Validação:** tsc e ESLint; em navegador, nos quatro estados, nenhum botão tem borda.
+- **Não fazer / evitar regressão:** Não voltar a pôr borda ou fundo nos ícones da coluna de mensagens; manter o laranja piscando do aviso pendente.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/reception-wa-actions.tsx`, PR #25.
+
 ### 2026-11-11 — Recepção: botões de confirmação e aviso só com ícone
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador com os quatro estados; falta conferir no site publicado)
