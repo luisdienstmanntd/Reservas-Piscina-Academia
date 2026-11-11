@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: colunas da planilha justificadas, cabem em telas menores
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador em 1400, 1100, 1024 e 900 px)
+- **Área:** Recepção (planilha)
+- **Pedido:** Havia espaços em branco entre as colunas; justificar as colunas para aproveitar o espaço e caber em telas menores.
+- **Decisão:** As colunas fixas ficam só do tamanho do conteúdo (Horário 3,75rem, Apto 4,5rem, WhatsApp 9,5rem, mensagens 5,5rem, lixeira 2rem) e Hóspede/Observações dividem todo o resto (1 : 1,4). A planilha em colunas passa a valer a partir de 1024 px (`lg`, antes só 1280 px `xl`); abaixo disso continua em cartões.
+- **O que foi feito:** `reception-dashboard.tsx` (modelo de colunas, cabeçalho, linhas livres e reservadas) e `reception-wa-actions.tsx`: classes `xl:` das linhas trocadas por `lg:`.
+- **Validação:** tsc, ESLint, 187 testes; em navegador sem rolagem horizontal e sem campos cortados em 1400/1100/1024 px; 900 px usa cartões.
+- **Não fazer / evitar regressão:** Não voltar a larguras fixas grandes nas colunas de Horário/Apto/Mensagens.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/components/reception-wa-actions.tsx`.
+
 ### 2026-11-11 — Recepção: "Nova reserva" não lista horários que já passaram
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
