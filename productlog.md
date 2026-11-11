@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Piscina: planilha da recepção só com 09h no período compartilhado
+
+- **Status:** Concluído (PR em rascunho; sem deploy ainda)
+- **Área:** Reservas (recepção)
+- **Pedido:** As linhas 10h, 11h e 12h não precisam aparecer na planilha da piscina; a recepção pode reservar manualmente às 09h. Ficará: 09h, 13h, 14h … 00h.
+- **Decisão:** Isto substitui a decisão anterior (09h–12h como quatro horários de início): `POOL_SHARED_SLOT_STARTS` passa a ser só `09:00:00` (o período compartilhado 09h–13h vira um único horário). 10h/11h/12h passam a ser recusados também para a recepção. O CHECK do banco (`reservations_slot_valid`, piscina ≥ 09:00) não foi alterado: é mais largo que o app e inofensivo; nenhuma migration.
+- **O que foi feito:** `src/lib/reservations.ts` (lista e comentários), comentários em `reservations.ts` (actions), `reservation-slot-validation.ts` e `reception-dashboard.tsx`; testes ajustados (planilha com 13 linhas; 10h–12h inválidos para a recepção); `ia.navegation.md` e `docs/POWERBI.md`.
+- **Validação:** tsc, ESLint, 176 testes; consulta somente leitura em produção: nenhuma reserva em 10h–12h (nada some da planilha).
+- **Não fazer / evitar regressão:** Não reintroduzir 10h–12h na planilha; o texto da home do hóspede ("09h–13h Uso compartilhado") continua correto.
+- **Pendências:** nenhuma.
+- **Referências:** `src/lib/reservations.ts`, `src/lib/reservation-slot-validation.ts`.
+
 ### 2026-11-11 — Recepção: ícone de origem da reserva no lugar do selo "Hóspede"
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)

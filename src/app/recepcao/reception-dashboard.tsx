@@ -394,7 +394,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const todayStr = useMemo(() => hotelCalendarDate(), []);
   const [facility, setFacility] = useState<Facility>("pool");
-  // A recepção vê (e pode reservar) também os horários de uso compartilhado da piscina (09h–12h).
+  // A recepção vê (e pode reservar) também os horário de uso compartilhado da piscina (09h).
   const slotList = useMemo(
     () => [...receptionSlotStartsFor(facility)],
     [facility]

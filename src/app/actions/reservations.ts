@@ -707,7 +707,7 @@ export async function createReceptionReservation(input: {
     slotStart,
     undefined,
     undefined,
-    true // a recepção pode reservar também o uso compartilhado da piscina (09h–12h)
+    true // a recepção pode reservar também o uso compartilhado da piscina (09h)
   );
   if (v) {
     return { ok: false, error: v, code: "validation" };
