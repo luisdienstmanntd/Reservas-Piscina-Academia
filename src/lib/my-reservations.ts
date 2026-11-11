@@ -21,11 +21,12 @@ export function hourRangeLabel(slotStart: string): string {
   return `${fmt(hh, mm)} às ${fmt(Math.floor(endTotal / 60), endTotal % 60)}`;
 }
 
-/** "terça-feira 10/11 - 19h às 20h - piscina" */
+/** "Terça-feira 10/11 - 19h às 20h - Piscina" */
 export function myReservationLabel(r: MyReservation): string {
   const [y, m, d] = r.dateYmd.split("-").map(Number);
-  const day = format(new Date(y, m - 1, d), "EEEE dd/MM", { locale: ptBR });
-  const place = r.facility === "pool" ? "piscina" : "academia";
+  const raw = format(new Date(y, m - 1, d), "EEEE dd/MM", { locale: ptBR });
+  const day = raw.charAt(0).toLocaleUpperCase("pt-BR") + raw.slice(1);
+  const place = r.facility === "pool" ? "Piscina" : "Academia";
   return `${day} - ${hourRangeLabel(r.slotStart)} - ${place}`;
 }
 

@@ -23,10 +23,10 @@ describe("my-reservations", () => {
 
   it("monta o texto do exemplo do pedido", () => {
     expect(myReservationLabel(r("1", "pool", "2026-11-10", "19:00:00"))).toBe(
-      "terça-feira 10/11 - 19h às 20h - piscina"
+      "Terça-feira 10/11 - 19h às 20h - Piscina"
     );
     expect(myReservationLabel(r("2", "gym", "2026-11-11", "07:00:00"))).toBe(
-      "quarta-feira 11/11 - 7h às 8h - academia"
+      "Quarta-feira 11/11 - 7h às 8h - Academia"
     );
   });
 
