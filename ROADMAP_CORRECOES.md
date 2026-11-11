@@ -137,6 +137,15 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 - [ ] **5.5 — Polimento** *(F17, F20, F21, F22, F23, F24)* — polling pausado com aba oculta (feito em 09/11/2026); `env.ts` com Zod; renomear coluna; remover deprecated/índice redundante; comentar semântica das flags. — Concluído em: ____
 - [ ] **5.6 — Tabela `apartments` como dimensão** *(F25)* — Concluído em: ____
 
+### Fase 6 — Histórico de reservas e retenção 🗂️
+
+Objetivo: nenhum registro de reserva é apagado automaticamente; o único dado apagado é o **WhatsApp, 365 dias depois do check-out**. A recepção consulta, pelo calendário, qualquer dia passado (reservas ativas e canceladas) e pode alterar ou excluir (cancelar) reservas passadas pela grade; **criar** reserva em data passada continua bloqueado.
+
+- [x] **6.1 — Consulta de dias passados** — a grade mostra as reservas **canceladas** (esmaecidas, com quem cancelou e quando) em dias anteriores a hoje, o marcador de horário alterado pelo hóspede e a origem (hóspede/recepção). Hoje e dias futuros não mostram canceladas. Nada muda no banco. — Concluído em: 11/11/2026
+- [x] **6.2 — Testes do histórico** — `reservations-history.test.ts` (dia passado consultável, cancelada preservada, filtro por data, piscina × academia, autenticação, edição de reserva passada, criação bloqueada). — Concluído em: 11/11/2026
+- [ ] **6.3 — Retenção: WhatsApp após 365 dias** — migration nova (não aplicada sem autorização): o job `lgpd_anonymize_reservations` deixa de apagar nome e observações e passa a apagar só o WhatsApp 365 dias após o check-out; documentação em `docs/`. — Concluído em: ____
+- [ ] **6.4 — Testes de integração do histórico e da retenção** — rodar em ambiente de teste (nunca na produção). — Concluído em: ____
+
 ---
 
 ## 3. Acompanhamento
@@ -148,6 +157,7 @@ Regra de ouro da ordem: **segurança primeiro → estancar perda de dados → ca
 | 3 — Power BI | 4 | 0 | 🟡 Migrations aplicadas em produção (09/11/2026); faltam a senha da role, o merge do código e o relatório |
 | 4 — Funcional | 3 | 0 | ⏳ Não iniciada |
 | 5 — Operação | 6 | 0 | ⏳ Não iniciada |
+| 6 — Histórico e retenção | 4 | 2 | 🟡 Consulta de dias passados e testes prontos (PR em rascunho); retenção em preparo |
 
 **Convenções ao executar:**
 - 1 etapa = 1 commit (ou PR) pequeno e reversível, com teste acompanhando.

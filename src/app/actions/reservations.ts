@@ -263,11 +263,17 @@ export async function getOccupiedSlotsForDate(
   return { ok: true, slots: r.occupiedSlots };
 }
 
+/**
+ * Reservas do dia e da instalação, para a grade da recepção.
+ * `rows` = só as ativas (a grade operacional). `cancelled` = as canceladas, devolvidas APENAS
+ * quando o dia é anterior a hoje (histórico); hoje e dias futuros não mostram canceladas.
+ * Nada é apagado: cancelar só muda `status`.
+ */
 export async function getReservationsForDate(
   reservationDate: string,
   facility: Facility
 ): Promise<
-  | { ok: true; rows: ReservationRow[] }
+  | { ok: true; rows: ReservationRow[]; cancelled: ReservationRow[] }
   | { ok: false; error: string; unauthorized?: boolean }
 > {
   if (!(await readReceptionAuthed())) {
@@ -303,7 +309,20 @@ export async function getReservationsForDate(
 
     if (error) throw error;
 
-    return { ok: true, rows: (data ?? []) as ReservationRow[] };
+    let cancelled: ReservationRow[] = [];
+    if (parsed.data < hotelCalendarDate()) {
+      const { data: gone, error: goneError } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("reservation_date", parsed.data)
+        .eq("facility", f.data)
+        .eq("status", "cancelled")
+        .order("slot_start", { ascending: true });
+      if (goneError) throw goneError;
+      cancelled = (gone ?? []) as ReservationRow[];
+    }
+
+    return { ok: true, rows: (data ?? []) as ReservationRow[], cancelled };
   } catch (e) {
     console.error(e);
     return {
