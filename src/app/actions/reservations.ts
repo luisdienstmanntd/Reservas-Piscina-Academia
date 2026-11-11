@@ -48,6 +48,7 @@ import {
   type MyReservation,
 } from "@/lib/my-reservations";
 import { hotelCalendarDate } from "@/lib/hotel-time";
+import type { HistoryEventType, HistoryItem } from "@/lib/reservation-history";
 import { toUpperText } from "@/lib/text-case";
 import { isEndingSoon, minutesLeft, type EndingSoonItem } from "@/lib/ending-soon";
 
@@ -1236,5 +1237,80 @@ export async function listEndingSoonReservations(): Promise<
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Não foi possível verificar os horários." };
+  }
+}
+
+const HISTORY_LIMIT = 150;
+const HISTORY_TYPES: readonly string[] = ["created", "updated", "cancelled", "anonymized"];
+
+/**
+ * Histórico de alterações para a recepção: os eventos mais recentes da trilha de auditoria
+ * (reserva incluída, alterada, excluída) junto com instalação, apartamento, dia e horário.
+ */
+export async function listReservationHistory(): Promise<
+  | { ok: true; items: HistoryItem[]; limit: number }
+  | { ok: false; error: string; unauthorized?: boolean }
+> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Sessão da recepção expirada.", unauthorized: true };
+  }
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, error: supabaseConfigErrorMessage() };
+  try {
+    const { data: events, error } = await supabase
+      .from("reservation_events")
+      .select("id, reservation_id, event_type, actor, changed_fields, occurred_at")
+      .order("occurred_at", { ascending: false })
+      .limit(HISTORY_LIMIT);
+    if (error) throw error;
+    const rows = events ?? [];
+    const ids = [...new Set(rows.map((e) => String(e.reservation_id)))];
+    const byId = new Map<
+      string,
+      {
+        facility: string;
+        reservation_date: string;
+        slot_start: string;
+        apartment_number: string;
+        guest_name: string | null;
+      }
+    >();
+    if (ids.length > 0) {
+      const { data: res, error: rErr } = await supabase
+        .from("reservations")
+        .select("id, facility, reservation_date, slot_start, apartment_number, guest_name")
+        .in("id", ids);
+      if (rErr) throw rErr;
+      for (const r of res ?? []) byId.set(String(r.id), r);
+    }
+    const rescheduled = new Set<string>();
+    for (const e of rows) {
+      const f = Array.isArray(e.changed_fields) ? e.changed_fields.map(String) : [];
+      if (f.includes("slot_start") || f.includes("reservation_date")) {
+        rescheduled.add(String(e.reservation_id));
+      }
+    }
+    const items: HistoryItem[] = [];
+    for (const e of rows) {
+      if (!HISTORY_TYPES.includes(String(e.event_type))) continue;
+      const r = byId.get(String(e.reservation_id));
+      items.push({
+        id: String(e.id),
+        type: e.event_type as HistoryEventType,
+        actor: e.actor ? String(e.actor) : null,
+        changedFields: Array.isArray(e.changed_fields) ? e.changed_fields.map(String) : [],
+        occurredAt: String(e.occurred_at),
+        facility: r ? (r.facility === "gym" ? "gym" : "pool") : null,
+        reservationDate: r ? String(r.reservation_date) : null,
+        slotStart: r ? normalizeSlotStart(String(r.slot_start)) : null,
+        apartment: r ? String(r.apartment_number) : null,
+        guestName: r?.guest_name ? String(r.guest_name) : null,
+        slotMayDiffer: rescheduled.has(String(e.reservation_id)),
+      });
+    }
+    return { ok: true, items, limit: HISTORY_LIMIT };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Não foi possível carregar o histórico." };
   }
 }
