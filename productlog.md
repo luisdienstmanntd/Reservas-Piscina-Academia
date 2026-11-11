@@ -61,6 +61,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **Pendências:** conferir no site publicado quando houver um horário perto do fim (minutos 50–59 de uma hora).
 - **Referências:** `src/lib/ending-soon.ts`, `src/app/actions/reservations.ts`, `src/app/recepcao/new-reservation-alerts.tsx`.
 
+### 2026-11-11 — Recepção: "Som ligado" ao lado do Sair e título "Reservas" oculto
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)
+- **Área:** Recepção (cabeçalho)
+- **Pedido:** O liga/desliga som deve ficar ao lado do botão Sair; o nome "Reservas" não deve aparecer.
+- **Decisão:** Substitui a posição anterior do som (linha de Piscina/Academia, 11/11). O título "Reservas" deixa de aparecer na tela, mas continua no HTML como `h1` só para leitores de tela (`sr-only`), para não perder a estrutura de acessibilidade.
+- **O que foi feito:** `reception-dashboard.tsx`: `SoundToggleButton` movido para antes do Sair (mesma linha, canto direito); linha das abas só com Piscina/Academia; `h1` vira `sr-only`.
+- **Validação:** tsc, ESLint, 179 testes; em navegador (1400px e 390px) som e Sair no mesmo eixo vertical, lado a lado; nenhum texto "Reservas" visível.
+- **Não fazer / evitar regressão:** Não recolocar o título visível nem o som na linha das abas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
 ### 2026-11-11 — Recepção: "Nova reserva" não lista horários que já passaram
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
