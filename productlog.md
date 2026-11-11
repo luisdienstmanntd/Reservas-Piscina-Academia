@@ -49,6 +49,14 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Ícone da piscina: escada de piscina
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial e histórico da recepção
+- **Pedido:** O ícone da piscina tinha uma escada de piscina; trocar por um ícone assim, no mesmo estilo minimalista (o PR anterior havia posto ondas).
+- **O que foi feito:** `Waves` → `WavesLadder` (lucide, mesmo traço fino) em `page.tsx` e `history-dialog.tsx`; academia segue com `Dumbbell`.
+- **Verificação:** build local (desktop, tamanho real em 2x): ícone certo no cartão "Piscina" da página inicial e nos cartões de piscina do histórico; academia com halter; nenhum calendário/ondas restante; sem erros de console. tsc, ESLint e 207 testes OK.
+
 ### 2026-11-11 — Ícone da piscina: ondas no lugar do calendário
 
 - **Status:** Concluído (PR em rascunho)
