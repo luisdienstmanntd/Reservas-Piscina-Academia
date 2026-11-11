@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — CI: TypeScript, ESLint e testes em todo PR
+
+- **Status:** Concluído (PR em rascunho; só será validado quando o PR abrir)
+- **Área:** Qualidade
+- **Motivo:** Na revisão geral não havia nenhuma verificação automática nos PRs (só o keep-alive do Supabase); as checagens eram rodadas à mão.
+- **O que foi feito:** `.github/workflows/ci.yml`: em PR e em push na `main`, roda `npx tsc --noEmit`, `npm run lint` e `npm test` (Node 22, `npm ci`). Não roda e2e (precisa de Supabase) nem usa segredos.
+- **Pendências:** conferir no próprio PR que o workflow passa; opcionalmente exigir esse check antes do merge (proteção de branch, decisão do dono do repositório).
+- **Referências:** `.github/workflows/ci.yml`.
+
 ### 2026-11-11 — Hóspede: depois de reservar ou trocar, vai para a página inicial
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
