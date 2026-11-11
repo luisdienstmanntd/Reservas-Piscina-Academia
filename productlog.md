@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Home: "Sua reserva" sem aviso do ramal e com primeira letra maiúscula
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial do hóspede
+- **Pedido:** Retirar "Alterações na recepção (ramal 9)." do cartão "Sua reserva" e escrever a reserva com a primeira letra maiúscula: "Quarta-feira 11/11 - 19h às 20h - Piscina".
+- **Problema:** O cartão mostrava o aviso do ramal e a linha toda em minúsculas ("quarta-feira 11/11 - 19h às 20h - piscina").
+- **O que foi feito:** removido o parágrafo em `src/app/page.tsx`; `myReservationLabel` (`src/lib/my-reservations.ts`) agora capitaliza o dia da semana e o local ("Piscina"/"Academia"). O rodapé do site continua com "Dúvidas, fale conosco através do ramal 9".
+- **Testes:** `my-reservations.test.ts` atualizado; tsc, ESLint e 190 testes passam.
+
 ### 2026-11-11 — Revisão geral (regressões, experiência, erros, testes) e atualização do guia
 
 - **Status:** Concluído
