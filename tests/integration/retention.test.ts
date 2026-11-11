@@ -7,7 +7,7 @@ loadEnvConfig(process.cwd());
 /**
  * Retenção: só o WhatsApp é apagado, 365 dias depois do check-out.
  * Roda SOMENTE em Supabase/Postgres local (nunca na produção). Requer a migration
- * 20261112100000_retention_whatsapp_365.sql aplicada no banco de teste.
+ * 20261111180853_retention_whatsapp_365.sql aplicada no banco de teste.
  * Atenção: a rotina vale para o banco todo; em um banco local com outras reservas antigas ela
  * também apaga o WhatsApp delas (use um banco de teste descartável, como o do `db:reset`).
  */
