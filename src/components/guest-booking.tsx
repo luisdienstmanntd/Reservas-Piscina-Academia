@@ -145,7 +145,9 @@ export function GuestBooking({
       const req = ++slotsReqRef.current;
       if (!silent) setLoadingSlots(true);
       try {
-        const r = await getReservationDaySummary(ymd, facility);
+        const r = await getReservationDaySummary(ymd, facility, {
+          asGuest: true,
+        });
         if (req !== slotsReqRef.current) return; // resposta de uma consulta antiga
         if (!r.ok) {
           if (!silent) toast.error(r.error);

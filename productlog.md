@@ -49,6 +49,21 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-10 — Tela do hóspede tratada como recepção quando o mesmo navegador tem a sessão da recepção
+
+- **Status:** Concluído (PR em rascunho; causa reproduzida e correção verificada em navegador contra PostgreSQL local; falta conferir no site publicado)
+- **Área:** Reservas (hóspede), autenticação
+- **Pedido:** Investigar por que a consulta do dia não trazia ao hóspede o horário da própria reserva em produção (pendência do PR #20).
+- **Problema observado:** Na tela de horários do hóspede não aparecia "Você já tem reserva neste dia", os horários livres não indicavam a troca e o toque criava uma segunda reserva (o servidor recusava com o limite diário). Nos logs de produção, as consultas do dia do hóspede não buscavam a estadia, o que só ocorre no caminho da recepção.
+- **Causa:** `getReservationDaySummary` decidia o papel só pelo cookie da recepção. Quando o MESMO navegador tinha a sessão da recepção aberta (caso de quem testa os dois lados no mesmo aparelho), a tela do hóspede recebia a visão da recepção (sem `ownSlot`, `ownApartmentBooked` sempre falso). Reproduzido localmente: com a recepção logada no mesmo navegador a tela não mostrava a reserva própria; sem a correção `false`, com a correção `true`.
+- **Decisão:** A tela do hóspede passa `asGuest: true`; o servidor então responde como hóspede (exige estadia válida) mesmo com a sessão da recepção. É seguro porque o modo hóspede devolve MENOS informação, nunca a lista de apartamentos. A recepção segue sem o parâmetro e recebe a visão completa.
+- **O que foi feito:** `getReservationDaySummary(date, facility, { asGuest })` em `src/app/actions/reservations.ts`; `src/components/guest-booking.tsx` envia `asGuest: true`; testes novos em `reservations-summary.test.ts`.
+- **Validação:** 173 testes, tsc e ESLint. Em navegador: antes da correção o aviso não aparecia, depois aparece; a recepção abre normalmente.
+- **Impactos e riscos:** Hóspedes reais (sem sessão da recepção) não eram afetados; a falha aparecia para quem usava recepção e hóspede no mesmo navegador. O mesmo cuidado vale para qualquer ação futura usada pelas duas telas: decidir o papel pelo contexto da tela, não só por cookie.
+- **Não fazer / evitar regressão:** Não decidir o modo de uma ação compartilhada apenas pela presença do cookie da recepção; não devolver a lista de apartamentos no modo hóspede.
+- **Pendências:** Conferir em produção com o link do hóspede no mesmo navegador da recepção.
+- **Referências:** PR #18, #19, #20; `src/app/actions/reservations.ts`.
+
 ### 2026-11-11 — Hóspede: calendário direto, sem título e sem botão "Ver horários"
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador, desktop e celular)

@@ -104,3 +104,29 @@ describe("getReservationDaySummary: privacidade e hora do servidor", () => {
     expect(mocks.getAdminClient).not.toHaveBeenCalled();
   });
 });
+
+describe("getReservationDaySummary: asGuest (mesmo navegador com a sessão da recepção)", () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it("com asGuest, a sessão da recepção é ignorada: o hóspede recebe a visão de hóspede, com a reserva própria", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(true); // o mesmo navegador também está logado na recepção
+    mocks.getValidatedGuestStay.mockResolvedValue({ id: "s1", apartmentNumber: "211", checkoutDate: "2099-01-02" });
+    fakeDb();
+    const r = await getReservationDaySummary("2099-01-01", "pool", { asGuest: true });
+    expect(r).toMatchObject({ ok: true, apartmentsBooked: [], ownApartmentBooked: true, ownSlot: "16:00:00" });
+  });
+
+  it("com asGuest e sem estadia válida: recusa (não vira recepção)", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(true);
+    mocks.getValidatedGuestStay.mockResolvedValue(null);
+    fakeDb();
+    expect(await getReservationDaySummary("2099-01-01", "pool", { asGuest: true })).toMatchObject({ ok: false });
+  });
+
+  it("sem asGuest, a recepção continua recebendo a lista completa", async () => {
+    mocks.readReceptionAuthed.mockResolvedValue(true);
+    fakeDb();
+    const r = await getReservationDaySummary("2099-01-01", "pool");
+    expect(r.ok && r.apartmentsBooked.length).toBe(2);
+  });
+});
