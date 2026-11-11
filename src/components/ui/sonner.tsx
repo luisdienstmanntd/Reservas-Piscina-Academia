@@ -10,6 +10,8 @@ export function Toaster(props: ToasterProps) {
       position="top-center"
       richColors
       closeButton
+      expand
+      visibleToasts={5}
       toastOptions={{
         classNames: {
           toast:

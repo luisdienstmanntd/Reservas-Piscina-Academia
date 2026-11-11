@@ -57,6 +57,16 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 - **O que foi feito:** `FacilityIcon` em `history-dialog.tsx` com os ícones da página inicial (`CalendarDays` = piscina, `Dumbbell` = academia), `role="img"` e `aria-label` "Piscina"/"Academia"; a linha do cartão passa a ser "[ícone] Apto 103 · 12h às 13h (atual)" via `reservationDetail` (`reservation-history.ts`); `reservationLine` (texto com o nome) continua disponível.
 - **Fora do escopo:** os avisos flutuantes ("Nova reserva", "Horário acabando") e o resto do sistema continuam com o nome por extenso.
 - **Verificação:** build local com Postgres real (desktop e 390 px): ícone certo antes do texto em todos os cartões (piscina e academia), nenhuma palavra "Piscina/Academia" na linha, sem rolagem horizontal, sem erros de console. tsc, ESLint e 207 testes OK.
+### 2026-11-11 — Avisos da recepção ficam na tela até fechar
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — avisos flutuantes (toasts)
+- **Pedido:** Os avisos de nova reserva, alteração e tempo acabando devem ficar permanentes na tela até alguém fechar.
+- **Problema:** "Nova reserva" (e "horário alterado" pelo hóspede, que usa o mesmo aviso) sumia em 20 s e "Horário acabando" em 30 s; o aviso fixo do alto ("N novas reservas") já só saía com "Marcar como vistas".
+- **O que foi feito:** `duration: Infinity` (constante `STAY_UNTIL_CLOSED`) nos 4 avisos de `new-reservation-alerts.tsx` (individuais e "+N …"); `Toaster` com `expand` e `visibleToasts={5}` para que os avisos não fiquem empilhados e escondidos atrás do primeiro (o botão de fechar já existia); aviso de horário trocado pelo hóspede agora tem o título "Reserva alterada" (antes "Nova reserva").
+- **Não mudou:** confirmações de ações próprias ("Acesso liberado", "Reserva confirmada" etc.) continuam sumindo sozinhas; o aviso de "sem conexão" já era fixo.
+- **Limite conhecido:** os avisos flutuantes vivem na página; ao recarregar a tela da recepção eles somem (o painel "N novas reservas" continua, porque é guardado no navegador; "Horário acabando" não volta, pois só é avisado uma vez por reserva).
+- **Verificação:** build local com Postgres real: "Horário acabando" (faltavam 4 min), "Nova reserva" e "Reserva alterada" apareceram; após 40 s os 3 continuavam, cada um com botão de fechar; fechar remove só o clicado; os 3 visíveis ao mesmo tempo. tsc, ESLint e 206 testes OK.
 
 ### 2026-11-11 — Histórico: ícones de quem fez (sineta e celular)
 
