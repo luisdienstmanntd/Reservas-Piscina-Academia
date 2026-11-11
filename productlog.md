@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Hóspede: tela de horários só com "Toque em um horário para reservar"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, piscina e academia)
+- **Área:** Fluxo do hóspede (passo dos horários)
+- **Pedido:** Não mostrar "Horários / quarta 11/11 · 1h/ apto./dia / 09h–13h Uso compartilhado / 13h–01h Exclusivo — Toque para reservar."; só "Toque em um horário para reservar". Na legenda da bolinha cinza, trocar "Cinza = indisponível" por "Indisponível".
+- **Decisão:** O mesmo texto vale para piscina e academia (é a mesma tela). Isto remove também a dica própria da academia ("Academia 24 horas. 1 hora por apartamento — toque num horário livre."), que não foi pedida literalmente mas era do mesmo bloco.
+- **O que foi feito:** `guest-booking.tsx`: título "Horários", data/"1h/ apto./dia" e a dica por instalação removidos; fica `STEP3_HINT`; legenda "Indisponível". Os avisos "Você já tem reserva neste dia…" e "Limite diário atingido…" continuam. `tests/e2e/guest-booking-flow.spec.ts` espera agora a dica nova.
+- **Validação:** tsc, ESLint, 190 testes; em navegador: dica única, sem "Horários", sem "1h/", sem "compartilhado", sem "Cinza", legenda "Indisponível".
+- **Não fazer / evitar regressão:** O limite de 1 reserva por apto/dia e os horários 09h–13h compartilhados continuam valendo no servidor; só deixaram de ser explicados na tela.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`.
+
 ### 2026-11-10 — Tela do hóspede tratada como recepção quando o mesmo navegador tem a sessão da recepção
 
 - **Status:** Concluído (PR em rascunho; causa reproduzida e correção verificada em navegador contra PostgreSQL local; falta conferir no site publicado)

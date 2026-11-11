@@ -80,7 +80,9 @@ test.describe("Fluxo hóspede (recepção → token → piscina)", () => {
 
     // Tocar na data já abre direto os horários.
     await expect(
-      page.locator("main").getByText("Horários", { exact: true })
+      page
+        .locator("main")
+        .getByText("Toque em um horário para reservar", { exact: true })
     ).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(PAUSE_MS);
 

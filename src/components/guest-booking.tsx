@@ -71,17 +71,11 @@ function fromYmd(localYmd: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-const copy: Record<Facility, { title: string; step3Hint: string }> = {
-  pool: {
-    title: "Agendamento da Piscina",
-    step3Hint:
-      "09h–13h Uso compartilhado\n13h–01h Exclusivo — Toque para reservar.",
-  },
-  gym: {
-    title: "Agendamento da Academia",
-    step3Hint:
-      "Academia 24 horas. 1 hora por apartamento — toque num horário livre.",
-  },
+const STEP3_HINT = "Toque em um horário para reservar";
+
+const copy: Record<Facility, { title: string }> = {
+  pool: { title: "Agendamento da Piscina" },
+  gym: { title: "Agendamento da Academia" },
 };
 
 export function GuestBooking({
@@ -520,15 +514,8 @@ export function GuestBooking({
             {step === 3 && selectedDate && (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-1 p-3 pb-2">
-                  <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Horários
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {format(selectedDate, "EEE dd/MM", { locale: ptBR })} · 1h/
-                    apto./dia
-                  </CardDescription>
-                  <p className={cn("text-muted-foreground text-[11px] leading-snug", facility === "pool" && "whitespace-pre-line text-justify [text-align-last:justify]")}>
-                    {t.step3Hint}
+                  <p className="text-muted-foreground text-xs leading-snug">
+                    {STEP3_HINT}
                   </p>
                   {ownSlot ? (
                     <p className="text-charcoal text-[11px] font-medium leading-snug">
@@ -559,7 +546,7 @@ export function GuestBooking({
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <span className="inline-block size-3 rounded-sm border border-slot-occupied bg-slot-occupied" />
-                          Cinza = indisponível
+                          Indisponível
                         </span>
                       </p>
                       {visibleSlots.length === 0 ? (
