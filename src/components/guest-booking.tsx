@@ -42,6 +42,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { guestWhatsappRequiredSchema } from "@/lib/booking-zod";
 import { PHONE_HINT } from "@/lib/phone";
+import { toUpperText } from "@/lib/text-case";
 import { cn } from "@/lib/utils";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import {
@@ -481,7 +482,7 @@ export function GuestBooking({
                         placeholder="Como prefere ser chamado"
                         className="border-border h-9 bg-white text-sm"
                         value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
+                        onChange={(e) => setGuestName(toUpperText(e.target.value))}
                       />
                     </div>
                     <div className="space-y-1">

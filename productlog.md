@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Nomes de hóspedes e observações sempre em MAIÚSCULAS
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador; reservas antigas em produção NÃO foram alteradas)
+- **Área:** Reservas (hóspede e recepção)
+- **Pedido:** Nomes dos hóspedes e observações devem ficar sempre em maiúsculo.
+- **Decisão:** A regra vale no servidor (fonte da verdade) e na tela (o campo já mostra maiúsculas ao digitar). Sem migration: só dados novos ou editados. Telefone/WhatsApp não mudam.
+- **O que foi feito:** `src/lib/text-case.ts` (`toUpperText`, pt-BR); `booking-zod.ts` (nome do hóspede e do balcão, observações do balcão); `reservations.ts` (edição inline de nome e de observações); campos de nome/observações em `guest-booking.tsx` e `reception-dashboard.tsx`.
+- **Validação:** tsc, ESLint, 179 testes (testes ajustados e novos); em navegador: hóspede e recepção digitam em minúsculo, tela e banco ficam em maiúsculo.
+- **Pendências:** em produção há 5 nomes antigos em minúsculas (dados de teste); converter só com autorização.
+- **Referências:** `src/lib/text-case.ts`, `src/lib/booking-zod.ts`, `src/app/actions/reservations.ts`.
+
 ### 2026-11-11 — Piscina: planilha da recepção só com 09h no período compartilhado
 
 - **Status:** Concluído (PR em rascunho; sem deploy ainda)

@@ -66,7 +66,7 @@ describe("createGuestSchema", () => {
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.guestWhatsapp).toBe("+5511912345678");
-      expect(r.data.guestName).toBe("João");
+      expect(r.data.guestName).toBe("JOÃO");
     }
   });
 
@@ -148,3 +148,21 @@ describe("data de calendário e texto seguro", () => {
   });
 });
 
+
+describe("nomes e observações em maiúsculas", () => {
+  it("nome e observações do balcão viram MAIÚSCULAS no servidor", () => {
+    const r = createReceptionSchema.safeParse({
+      facility: "pool",
+      apartmentNumber: "101",
+      reservationDate: "2999-01-01",
+      slotStart: "15:00:00",
+      guestName: " maria souza ",
+      notes: "aniversário, sem glúten",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.guestName).toBe("MARIA SOUZA");
+      expect(r.data.notes).toBe("ANIVERSÁRIO, SEM GLÚTEN");
+    }
+  });
+});

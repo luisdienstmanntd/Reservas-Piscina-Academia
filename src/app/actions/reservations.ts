@@ -48,6 +48,7 @@ import {
   type MyReservation,
 } from "@/lib/my-reservations";
 import { hotelCalendarDate } from "@/lib/hotel-time";
+import { toUpperText } from "@/lib/text-case";
 
 function isPostgresUniqueViolation(err: unknown): boolean {
   const o = err as { code?: string; message?: string };
@@ -818,7 +819,7 @@ export async function updateReservationGuestName(
       code: "validation",
     };
   }
-  const normalized = t.length ? t : null;
+  const normalized = t.length ? toUpperText(t) : null;
 
   const supabaseGn = getAdminClient();
   if (!supabaseGn) {
@@ -875,7 +876,7 @@ export async function updateReservationNotes(
       code: "validation",
     };
   }
-  const normalized = t.length ? t : null;
+  const normalized = t.length ? toUpperText(t) : null;
 
   const supabaseNotes = getAdminClient();
   if (!supabaseNotes) {
