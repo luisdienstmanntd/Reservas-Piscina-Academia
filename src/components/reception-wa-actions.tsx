@@ -85,7 +85,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
     "Preencha o WhatsApp ao criar a reserva (balcão) para abrir o WhatsApp Web aqui.";
 
   return (
-    <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap xl:justify-end">
+    <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap lg:justify-end">
       {/* Só o ícone, minimalista (traço fino, como celular/recepção): cinza = ainda não enviada; verde = enviada. */}
       <Button
         type="button"
@@ -101,7 +101,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
         }
         aria-label={confirmDone ? "Confirmação enviada" : "Enviar confirmação"}
         className={cn(
-          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none xl:size-8",
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none lg:size-8",
           hasPhone && !confirmDone && "hover:bg-transparent hover:text-green-600",
           // Enviada: verde e sem escurecer como botão desabilitado.
           confirmDone && "text-green-600 opacity-100 disabled:opacity-100"
@@ -133,7 +133,7 @@ export function ReceptionWaActions({ row, onUpdated }: Props) {
               : "Enviar aviso"
         }
         className={cn(
-          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none xl:size-8",
+          "size-9 border-0 bg-transparent p-0 text-muted-foreground shadow-none lg:size-8",
           hasPhone && !warnDone && !showWarningPulse && "hover:bg-transparent hover:text-foreground",
           hasPhone &&
             showWarningPulse &&

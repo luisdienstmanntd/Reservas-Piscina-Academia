@@ -151,7 +151,7 @@ function ReceptionGuestWhatsappCell({
       type="tel"
       inputMode="tel"
       autoComplete="tel"
-      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs lg:h-8"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
@@ -203,7 +203,7 @@ function ReceptionGuestNameCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
       value={value}
       onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
@@ -258,7 +258,7 @@ function ReceptionNotesCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm xl:h-8"
+      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
       title={value || "Observações"}
       value={value}
       onChange={(e) => setValue(toUpperText(e.target.value))}
@@ -273,12 +273,12 @@ function ReceptionNotesCell({
 
 /** Colunas da grade em telas largas (xl+). Abaixo disso cada reserva vira um cartão. */
 const GRID_TEMPLATE =
-  "xl:grid-cols-[7.5rem_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_18rem_2.25rem]";
-const GRID = `xl:grid xl:items-center xl:gap-x-3 ${GRID_TEMPLATE}`;
+  "lg:grid-cols-[3.75rem_4.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem]";
+const GRID = `lg:grid lg:items-center lg:gap-x-2 ${GRID_TEMPLATE}`;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-0.5 block text-xs text-muted-foreground xl:hidden">
+    <span className="mb-0.5 block text-xs text-muted-foreground lg:hidden">
       {children}
     </span>
   );
@@ -286,7 +286,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 /** Horário sem reserva: só a hora, numa linha compacta (a planilha mostra o dia inteiro, uma linha por hora). */
 /** Altura única das linhas da planilha em telas largas (livres e reservadas ficam iguais). */
-const ROW_HEIGHT = "xl:h-14";
+const ROW_HEIGHT = "lg:h-14";
 
 /** Campo vazio e desativado, só para mostrar onde os dados aparecem numa linha livre. */
 function GhostField({ placeholder }: { placeholder: string }) {
@@ -296,7 +296,7 @@ function GhostField({ placeholder }: { placeholder: string }) {
       tabIndex={-1}
       aria-hidden
       placeholder={placeholder}
-      className="hidden h-8 w-full min-w-0 border-border bg-white text-sm opacity-60 xl:block"
+      className="hidden h-8 w-full min-w-0 border-border bg-white text-sm opacity-60 lg:block"
     />
   );
 }
@@ -306,16 +306,16 @@ function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
     <li
       className={cn(
         "flex items-center rounded-md border border-dashed px-3 py-1 text-sm tabular-nums",
-        "xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0 xl:py-2 xl:text-base",
+        "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-0 lg:py-2 lg:text-base",
         ROW_HEIGHT,
         GRID,
         past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
       )}
     >
-      <span className="whitespace-nowrap font-medium xl:w-[7.5rem]">
+      <span className="whitespace-nowrap font-medium lg:w-auto">
         {slotStartLabel(slot)}
       </span>
-      <span className="hidden xl:block" aria-hidden />
+      <span className="hidden lg:block" aria-hidden />
       <GhostField placeholder="Hóspede" />
       <GhostField placeholder="Observações" />
       <GhostField placeholder="WhatsApp" />
@@ -340,16 +340,16 @@ function ReservationSlotRow({
     <li
       className={cn(
         "space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm",
-        "xl:space-y-0 xl:rounded-none xl:border-0 xl:border-b xl:border-border/60 xl:bg-transparent xl:px-0 xl:py-2 xl:shadow-none",
+        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-border/60 lg:bg-transparent lg:px-0 lg:py-2 lg:shadow-none",
         ROW_HEIGHT,
         GRID
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 xl:contents">
-        <span className="order-1 whitespace-nowrap font-medium tabular-nums xl:order-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:contents">
+        <span className="order-1 whitespace-nowrap font-medium tabular-nums lg:order-1">
           {label}
         </span>
-        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto xl:order-2">
+        <span className="order-3 flex basis-full items-center gap-2 sm:order-2 sm:basis-auto lg:order-2">
           {row.created_by === "reception" ? (
             <ConciergeBell
               className="size-4 shrink-0 text-muted-foreground"
@@ -363,8 +363,8 @@ function ReservationSlotRow({
               role="img"
             />
           )}
-          <span className="font-mono text-base xl:text-lg">
-            <span className="font-sans text-sm text-muted-foreground xl:hidden">
+          <span className="font-mono text-base lg:text-lg">
+            <span className="font-sans text-sm text-muted-foreground lg:hidden">
               Apto{" "}
             </span>
             {row.apartment_number}
@@ -374,7 +374,7 @@ function ReservationSlotRow({
           type="button"
           variant="ghost"
           size="sm"
-          className="order-2 ml-auto size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 xl:order-7 xl:ml-0 xl:size-8"
+          className="order-2 ml-auto size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 lg:order-7 lg:ml-0 lg:size-8"
           onClick={() => onAskCancel(row.id)}
           title="Cancelar reserva"
         >
@@ -382,21 +382,21 @@ function ReservationSlotRow({
           <span className="sr-only">Cancelar</span>
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] xl:contents">
-        <div className="order-1 min-w-0 xl:order-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] lg:contents">
+        <div className="order-1 min-w-0 lg:order-3">
           <FieldLabel>Hóspede</FieldLabel>
           <ReceptionGuestNameCell row={row} onSaved={onChanged} />
         </div>
-        <div className="order-3 col-span-2 min-w-0 sm:col-span-1 xl:order-4">
+        <div className="order-3 col-span-2 min-w-0 sm:col-span-1 lg:order-4">
           <FieldLabel>Observações</FieldLabel>
           <ReceptionNotesCell row={row} onSaved={onChanged} />
         </div>
-        <div className="order-2 min-w-0 xl:order-5">
+        <div className="order-2 min-w-0 lg:order-5">
           <FieldLabel>WhatsApp</FieldLabel>
           <ReceptionGuestWhatsappCell row={row} onSaved={onChanged} />
         </div>
       </div>
-      <div className="xl:order-6">
+      <div className="lg:order-6">
         <ReceptionWaActions row={row} onUpdated={onChanged} />
       </div>
     </li>
@@ -921,7 +921,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <div
               className={cn(
                 "hidden border-b pb-2 text-left text-sm font-medium",
-                "xl:grid xl:items-center xl:gap-x-3",
+                "lg:grid lg:items-center lg:gap-x-2",
                 GRID_TEMPLATE
               )}
               aria-hidden
@@ -934,7 +934,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span className="text-right">Mensagens</span>
               <span />
             </div>
-            <ul className="space-y-2 xl:space-y-0">
+            <ul className="space-y-2 lg:space-y-0">
               {receptionSlotOrder(slotList).map((slot) => {
                 const row = bySlot.get(normalizeSlotStart(slot));
                 return row ? (
