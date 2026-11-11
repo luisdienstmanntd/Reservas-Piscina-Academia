@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ConciergeBell, Dumbbell, Settings, Smartphone, Waves, X } from "lucide-react";
+import { ConciergeBell, Dumbbell, Settings, Smartphone, WavesLadder, X } from "lucide-react";
 
 import { listReservationHistory } from "@/app/actions/reservations";
 import { Button } from "@/components/ui/button";
@@ -44,9 +44,9 @@ function ActorIcon({ actor }: { actor: string | null }) {
   return null;
 }
 
-/** Instalação: mesmos ícones da página inicial (ondas = piscina, halter = academia). */
+/** Instalação: mesmos ícones da página inicial (escada de piscina = piscina, halter = academia). */
 function FacilityIcon({ facility }: { facility: "pool" | "gym" }) {
-  const Icon = facility === "gym" ? Dumbbell : Waves;
+  const Icon = facility === "gym" ? Dumbbell : WavesLadder;
   const label = facility === "gym" ? "Academia" : "Piscina";
   return (
     <Icon

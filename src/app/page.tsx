@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarCheck, Dumbbell, Waves } from "lucide-react";
+import { CalendarCheck, Dumbbell, WavesLadder } from "lucide-react";
 
 import { listMyReservations } from "@/app/actions/reservations";
 import { myReservationLabel } from "@/lib/my-reservations";
@@ -72,7 +72,7 @@ export default async function Home() {
           <Card className="border-border/80 bg-card shadow-md transition-shadow hover:shadow-lg">
             <CardHeader>
               <div className="text-primary mb-1 flex items-center gap-2">
-                <Waves className="size-5" aria-hidden />
+                <WavesLadder className="size-5" aria-hidden />
                 <CardTitle className="font-serif text-lg font-semibold text-charcoal">
                   Piscina
                 </CardTitle>
