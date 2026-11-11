@@ -100,7 +100,7 @@ export default async function Home() {
                 </CardTitle>
               </div>
               <CardDescription>
-                Academia 24 horas · 1 hora por apartamento.
+                Academia 24 horas · 1 hora por apto.
               </CardDescription>
             </CardHeader>
             <CardContent>

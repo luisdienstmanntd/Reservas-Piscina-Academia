@@ -49,6 +49,16 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Home do hóspede: texto da Academia com "apto"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Página inicial do hóspede
+- **Pedido:** A descrição do cartão Academia deve ser "Academia 24 horas · 1 hora por apto."
+- **O que foi feito:** `src/app/page.tsx`: "…1 hora por apartamento." passou a "…1 hora por apto." Só esse texto; o cartão da Piscina e a tela de agendamento (`guest-booking.tsx`, que ainda diz "por apartamento") não mudaram.
+- **Validação:** tsc, ESLint e testes; texto conferido no código.
+- **Pendências:** se quiser o mesmo "apto" na tela de agendamento da academia, é uma linha em `guest-booking.tsx`.
+- **Referências:** `src/app/page.tsx`.
+
 ### 2026-11-11 — Recepção: "Nova reserva" lista só os horários disponíveis
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
