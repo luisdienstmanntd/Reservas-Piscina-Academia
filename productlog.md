@@ -51,15 +51,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-11 — Piscina: recepção pode reservar o uso compartilhado (09h às 12h)
 
-- **Status:** Em andamento (PR em rascunho; verificado em navegador com banco real; **a migration `20261111100000_pool_shared_slots.sql` ainda NÃO foi aplicada em produção**)
+- **Status:** Concluído (PR #24 mergeado; migration `20261111100000_pool_shared_slots.sql` aplicada em produção em 11/11/2026 antes do merge)
 - **Área:** Reservas (recepção), banco de dados
 - **Pedido:** Na piscina, 09h às 12h é de uso compartilhado e não precisa de reserva, mas a recepção pode registrar reserva manualmente nesses horários.
 - **Decisão:** "09h às 12h" foi lido como a lista de horas de início 09h, 10h, 11h e 12h (o mesmo texto da página inicial: "09h–13h uso compartilhado"). O HÓSPEDE continua sem poder reservar esses horários (a regra fica no servidor: `validateStayAndSlot` só aceita `receptionSlotStartsFor` quando chamado pela recepção). A planilha e o formulário "Nova reserva" da recepção passam a incluir 09h–12h: piscina com 16 linhas (09h00 a 00h00). O padrão do formulário continua sendo o primeiro horário normal (13h00). O limite de 1 reserva por apartamento por dia continua valendo para todos os horários. Reserva manual nesses horários aparece ao hóspede em "Suas reservas" e ele pode trocá-la por um horário normal.
 - **O que foi feito:** `POOL_SHARED_SLOT_STARTS` e `receptionSlotStartsFor` em `src/lib/reservations.ts`; parâmetro `forReception` em `validateStayAndSlot`; `createReceptionReservation` o usa; `reception-dashboard.tsx` usa a lista da recepção na planilha e no formulário; migration `20261111100000_pool_shared_slots.sql` amplia a regra do banco (`reservations_slot_valid`) para aceitar piscina a partir de 09h (só amplia: nenhuma reserva existente fica inválida); nota no `docs/POWERBI.md` (essas reservas não entram na capacidade de 12 horários).
 - **Validação:** 175 testes, tsc e ESLint. Em navegador com PostgreSQL real (18 migrations): a planilha da piscina tem 16 linhas; a recepção registra uma reserva às 10h pelo formulário e ela aparece na linha 10h00 e no banco (`10:00:00`, criada pela recepção); o hóspede continua vendo só 13h00 a 00h00.
-- **Impactos e riscos:** Sem a migration em produção, registrar reserva às 09h–12h falha no banco (a recepção vê mensagem de erro; o resto não é afetado). Aplicar a migration antes de usar. A rotina de anonimização, as views do Power BI e os avisos de novas reservas não precisam de mudança.
+- **Impactos e riscos:** A migration já está aplicada em produção (conferido: a regra do banco aceita piscina a partir das 09h; as 20 reservas existentes seguem intactas; histórico de migrations alinhado com a versão do arquivo). A rotina de anonimização, as views do Power BI e os avisos de novas reservas não precisam de mudança.
 - **Não fazer / evitar regressão:** Não liberar 09h–12h para o hóspede; não remover o limite de 1 reserva por dia; não aceitar horário quebrado (minutos) nem antes das 09h.
-- **Pendências:** Aplicar a migration em produção (aguarda autorização do responsável); conferir no site publicado.
+- **Pendências:** Conferir no site publicado: a recepção reserva um horário de 09h a 12h na piscina e o hóspede não vê esses horários.
 - **Referências:** `supabase/migrations/20261111100000_pool_shared_slots.sql`, `src/lib/reservations.ts`, `src/lib/reservation-slot-validation.ts`.
 
 ### 2026-11-11 — Tela da recepção mais limpa e planilha completa, uma linha por hora
