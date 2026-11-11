@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: "Nova reserva" não lista horários que já passaram
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Horários que já passaram não devem aparecer na lista de horários.
+- **O que foi feito:** `reception-dashboard.tsx`: as opções com motivo "já passou" deixam de ser renderizadas no seletor. Horários ocupados continuam aparecendo, desativados e com "— ocupado". A planilha do dia (linhas por hora) não mudou: a recepção continua vendo o dia inteiro para controle.
+- **Validação:** tsc, ESLint, 176 testes; em navegador, hoje (já passado das 23h) mostra só 23h–00h e 00h–01h; amanhã mostra os 13 horários.
+- **Não fazer / evitar regressão:** Não esconder horários ocupados (a recepção precisa ver que estão ocupados). A regra do servidor continua recusando horário passado.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
 ### 2026-11-11 — Recepção: linhas da planilha do mesmo tamanho e ícones minimalistas
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador, desktop)
