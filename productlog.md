@@ -49,6 +49,16 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: removido o texto do cartão "Gerar acesso hóspede"
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção
+- **Pedido:** Na tela inicial, em "Gerar acesso hóspede", não mostrar o texto "Link com token de estadia para agendar piscina ou academia no telemóvel do hóspede."
+- **O que foi feito:** removido o `CardDescription` desse cartão em `src/app/recepcao/reception-dashboard.tsx`; título, formulário e geração do link não mudaram.
+- **Validação:** tsc e ESLint sem erros; o texto não existe em mais nenhum lugar do código.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
 ### 2026-11-11 — Documentação: `ia.navegation.md` atualizado após a revisão geral
 
 - **Status:** Concluído (PR #27 mergeado)
