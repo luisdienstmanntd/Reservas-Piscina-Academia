@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: "Nova reserva" lista só os horários disponíveis
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Recepção (formulário Nova reserva)
+- **Pedido:** Fazer com os horários o mesmo que com os apartamentos: mostrar apenas os disponíveis.
+- **Decisão:** Substitui a decisão anterior de manter horários ocupados na lista, desativados. Agora o seletor mostra só horários livres (nem passados nem ocupados). Exceção: o horário que está selecionado fica visível mesmo se ficar ocupado (ex.: outra pessoa reservou), e o aviso vermelho explica. O pré-selecionado continua sendo o primeiro livre.
+- **O que foi feito:** `reception-dashboard.tsx`: opções com motivo (ocupado/já passou) deixam de ser renderizadas.
+- **Validação:** tsc, ESLint, 187 testes; em navegador: com 14h e 22h ocupados e horários passados, a lista só mostra os livres.
+- **Não fazer / evitar regressão:** A planilha do dia continua mostrando todas as linhas; o servidor continua recusando horário ocupado ou passado.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`.
+
 ### 2026-11-11 — Recepção: apartamento que já tem reserva no dia não aparece na lista
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador)
