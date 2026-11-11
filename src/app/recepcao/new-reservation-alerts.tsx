@@ -4,8 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Volume2, VolumeX, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
-import { listNewReservations } from "@/app/actions/reservations";
+import {
+  listEndingSoonReservations,
+  listNewReservations,
+} from "@/app/actions/reservations";
 import { Button } from "@/components/ui/button";
+import { endingSoonLabel } from "@/lib/ending-soon";
 import {
   alertLabel,
   mergeNewItems,
@@ -21,6 +25,24 @@ const CURSOR_KEY = "valle.reception.newReservationsCursor";
 const SOUND_KEY = "valle.reception.alertSound";
 const UNREAD_KEY = "valle.reception.unreadAlerts";
 const UNREAD_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/** Reservas cujo alarme dos 10 min finais já tocou (id -> instante), para não repetir ao recarregar a página. */
+const ENDING_KEY = "valle.reception.endingAlerted";
+const ENDING_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+
+function readEndingAlerted(): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(readStorage(ENDING_KEY) ?? "{}");
+    if (!parsed || typeof parsed !== "object") return {};
+    const limit = Date.now() - ENDING_MAX_AGE_MS;
+    const out: Record<string, number> = {};
+    for (const [id, at] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof at === "number" && at >= limit) out[id] = at;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 function readStorage(key: string): string | null {
   try {
@@ -63,6 +85,7 @@ export function useNewReservationAlerts({
   const inFlightRef = useRef(false);
   const failuresRef = useRef(0);
   const soundOnRef = useRef(true);
+  const endingAlertedRef = useRef<Record<string, number> | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
   const todayRef = useRef(todayYmd);
   const onFreshRef = useRef(onFresh);
@@ -174,6 +197,37 @@ export function useNewReservationAlerts({
     };
   }, [enabled, ensureAudio]);
 
+  // Faltam 10 min para o fim de algum horário: mesmo alarme sonoro + mensagem na tela (uma vez por reserva).
+  const checkEnding = useCallback(async () => {
+    try {
+      const r = await listEndingSoonReservations();
+      if (!r.ok) return;
+      if (endingAlertedRef.current === null) {
+        endingAlertedRef.current = readEndingAlerted();
+      }
+      const done = endingAlertedRef.current;
+      const fresh = r.items.filter((i) => !(i.id in done));
+      if (fresh.length === 0) return;
+      const now = Date.now();
+      for (const i of fresh) done[i.id] = now;
+      writeStorage(ENDING_KEY, JSON.stringify(done));
+      for (const item of fresh.slice(0, 3)) {
+        toast.warning("Horário acabando", {
+          description: endingSoonLabel(item),
+          duration: 30_000,
+        });
+      }
+      if (fresh.length > 3) {
+        toast.warning(`+${fresh.length - 3} horários acabando`, {
+          duration: 30_000,
+        });
+      }
+      void beep();
+    } catch {
+      /* falha aqui não afeta o aviso de reservas novas */
+    }
+  }, [beep]);
+
   const poll = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
@@ -218,13 +272,14 @@ export function useNewReservationAlerts({
         void beep();
         onFreshRef.current(fresh);
       }
+      await checkEnding();
     } catch {
       failuresRef.current += 1;
       if (failuresRef.current >= OFFLINE_AFTER_FAILURES) setOffline(true);
     } finally {
       inFlightRef.current = false;
     }
-  }, [beep, persistUnread]);
+  }, [beep, persistUnread, checkEnding]);
 
   // Verificação periódica (também com a aba em segundo plano) e ao voltar para a aba.
   useEffect(() => {

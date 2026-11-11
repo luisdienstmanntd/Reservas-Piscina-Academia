@@ -49,6 +49,7 @@ import {
 } from "@/lib/my-reservations";
 import { hotelCalendarDate } from "@/lib/hotel-time";
 import { toUpperText } from "@/lib/text-case";
+import { isEndingSoon, minutesLeft, type EndingSoonItem } from "@/lib/ending-soon";
 
 function isPostgresUniqueViolation(err: unknown): boolean {
   const o = err as { code?: string; message?: string };
@@ -1187,4 +1188,46 @@ export async function listMyReservations(): Promise<
     ];
   });
   return { ok: true, items: upcomingReservations(rows, todayYmd, Date.now()) };
+}
+
+/**
+ * Reservas ativas cujo horário termina em até 10 minutos (qualquer instalação), para a recepção
+ * tocar o alarme e mostrar a mensagem. O horário do servidor é a referência.
+ */
+export async function listEndingSoonReservations(): Promise<
+  | { ok: true; items: EndingSoonItem[] }
+  | { ok: false; error: string; unauthorized?: boolean }
+> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Sessão da recepção expirada.", unauthorized: true };
+  }
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, error: supabaseConfigErrorMessage() };
+  const nowMs = Date.now();
+  const today = hotelCalendarDate(new Date(nowMs));
+  const yesterday = hotelCalendarDate(new Date(nowMs - 24 * 60 * 60 * 1000));
+  try {
+    const { data, error } = await supabase
+      .from("reservations")
+      .select("id, facility, reservation_date, slot_start, apartment_number, guest_name")
+      .eq("status", "active")
+      .in("reservation_date", [yesterday, today])
+      .limit(200);
+    if (error) throw error;
+    const items: EndingSoonItem[] = [];
+    for (const r of data ?? []) {
+      const row = r as Omit<EndingSoonItem, "minutes_left">;
+      const slot = normalizeSlotStart(String(row.slot_start));
+      if (!isEndingSoon(row.reservation_date, slot, nowMs)) continue;
+      items.push({
+        ...row,
+        slot_start: slot,
+        minutes_left: minutesLeft(row.reservation_date, slot, nowMs),
+      });
+    }
+    return { ok: true, items };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Não foi possível verificar os horários." };
+  }
 }

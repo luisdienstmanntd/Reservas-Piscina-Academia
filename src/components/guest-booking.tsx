@@ -188,7 +188,7 @@ export function GuestBooking({
           )
         : null;
       if (saved && guestCheckoutDate >= hotelCalendarDate()) {
-        setGuestName(saved.name);
+        setGuestName(toUpperText(saved.name));
         setWhatsapp(saved.whatsapp);
         setStep(2);
       }
