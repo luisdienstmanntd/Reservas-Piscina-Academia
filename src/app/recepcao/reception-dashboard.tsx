@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { buildGridItems } from "@/lib/reservation-grid";
+import { receptionSlotOrder, slotStartLabel } from "@/lib/reservation-grid";
 import {
   NewReservationBanner,
   useNewReservationAlerts,
@@ -275,6 +275,23 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Horário sem reserva: só a hora, numa linha compacta (a planilha mostra o dia inteiro, uma linha por hora). */
+function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
+  return (
+    <li
+      className={cn(
+        "flex items-center rounded-md border border-dashed px-3 py-1 text-sm tabular-nums",
+        "xl:rounded-none xl:border-0 xl:border-b xl:border-solid xl:border-border/60 xl:px-0",
+        past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
+      )}
+    >
+      <span className="whitespace-nowrap font-medium xl:w-[7.5rem]">
+        {slotStartLabel(slot)}
+      </span>
+    </li>
+  );
+}
+
 function ReservationSlotRow({
   slot,
   row,
@@ -286,7 +303,7 @@ function ReservationSlotRow({
   onChanged: () => void;
   onAskCancel: (id: string) => void;
 }) {
-  const label = slotLabel(slot);
+  const label = slotStartLabel(slot);
 
   return (
     <li
@@ -867,27 +884,25 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span />
             </div>
             <ul className="space-y-2 xl:space-y-0">
-              {buildGridItems(
-                slotList,
-                (slot) => bySlot.get(normalizeSlotStart(slot)),
-                (slot) => isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)
-              ).map((item) =>
-                item.kind === "booked" ? (
+              {receptionSlotOrder(slotList).map((slot) => {
+                const row = bySlot.get(normalizeSlotStart(slot));
+                return row ? (
                   <ReservationSlotRow
-                    key={item.slot}
-                    slot={item.slot}
-                    row={item.row}
+                    key={slot}
+                    slot={slot}
+                    row={row}
                     onChanged={() => void load()}
                     onAskCancel={setPendingDelete}
                   />
-                ) : null
-              )}
+                ) : (
+                  <EmptySlotRow
+                    key={slot}
+                    slot={slot}
+                    past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                  />
+                );
+              })}
             </ul>
-            {rows.length === 0 && !loading ? (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                Nenhuma reserva neste dia.
-              </p>
-            ) : null}
           </CardContent>
         </Card>
 
