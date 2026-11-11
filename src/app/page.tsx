@@ -81,7 +81,7 @@ export default async function Home() {
                 Uso exclusivo 13h às 01h - 1 hora por apto.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-auto">
               <Button className="w-full" size="lg" asChild>
                 <Link href="/hospede/piscina">Agendar piscina</Link>
               </Button>
@@ -100,7 +100,7 @@ export default async function Home() {
                 Academia 24 horas · 1 hora por apto.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-auto">
               <Button className="w-full" size="lg" asChild>
                 <Link href="/hospede/academia">Agendar academia</Link>
               </Button>
