@@ -9,7 +9,7 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Cliente:** Hotel Valle D’incanto.
 - **Objetivo:** Reservas de **uso exclusivo** (slots de **1 hora**) na **piscina** e na **academia**, com limite **1 reserva por apartamento por dia** **por instalação** (`pool` vs `gym`), e **1 reserva por horário** por instalação/dia.
 - **Público:**
-  - **Hóspede:** link com **token de estadia** (`active_stays`, cookie `guest_token`); apartamento e check-out vêm do **servidor**; **WhatsApp obrigatório** + nome opcional + calendário da estadia + grid.
+  - **Hóspede:** link com **token de estadia** (`active_stays`, cookie `guest_token`); apartamento e check-out vêm do **servidor**; **WhatsApp obrigatório** + nome opcional + calendário da estadia + grid. Fluxo: identificação (pulada se o contato já estiver lembrado) → calendário (tocar numa data abre direto os horários, sem botão) → horários → ao reservar ou trocar o hóspede é levado à **página inicial** (`/`), onde "Sua reserva" lista o que ele reservou (não há tela própria de confirmação).
   - **Recepção:** senha (`RECEPTION_PASSWORD`) + cookie HTTP-only `reception_auth` **assinado com HMAC** (`SESSION_SECRET`, validade 12h, `src/lib/reception-session.ts`); login limitado a 5 falhas/15 min por IP (`login_attempts`); **grade** ligada ao seletor “Dia (grade)” (abre em **hoje** ao login; criar reserva noutra data **não** altera esse dia). Formulário **balcão** (apto, data da reserva, horário, WhatsApp opcional, observações).
 
 ---
@@ -73,6 +73,10 @@ Este ficheiro orienta **assistentes de código** sobre o domínio, invariantes e
 - **Recepção:** opcional no balcão; **edição inline** na coluna WhatsApp da grade — `updateReservationGuestWhatsapp` em `reservations.ts` (validação igual ao balcão).
 - **`confirmation_sent` / `warning_sent`:** booleanos; `markMessageAsSent` após abrir WhatsApp Web. UI em `reception-wa-actions.tsx`; links e textos em `src/lib/wa-me.ts`. Sem número válido (`whatsappDigitsForWaMe`), botões ficam desativados. Os botões são **só ícone** (sino = aviso; check = confirmação) — sem texto e, no caso do sino, sem borda.
 - **Planilha da recepção:** uma linha por hora (`EmptySlotRow` para livres, `ReservationSlotRow` para reservadas), horário inicial um abaixo do outro.
+- **Alarme dos 10 minutos finais (recepção):** `src/lib/ending-soon.ts` (`isEndingSoon`: faltam >0 e ≤10 min) + `listEndingSoonReservations` (só recepção, relógio do servidor, qualquer instalação) consultada junto com as reservas novas em `new-reservation-alerts.tsx`; toca o mesmo `beep` e mostra "Horário acabando"; uma vez por reserva (`localStorage`, 3 h). O sino laranja da planilha usa outra janela (15 min, `isWarningAlertWindow`) e é só o lembrete do aviso ao hóspede.
+- **Nome e observações em MAIÚSCULAS:** `toUpperText` (`src/lib/text-case.ts`) no servidor (schemas Zod e edições inline) e nos campos da tela. Telefone não muda.
+- **Mesmo navegador (recepção + hóspede):** `getReservationDaySummary(date, facility, { asGuest: true })` — a tela do hóspede sempre pede como hóspede, para não receber a visão da recepção.
+- **Formulário "Nova reserva" da recepção:** lista só apartamentos sem reserva no dia/instalação e só horários livres (nem ocupados nem passados), exceto o item já selecionado.
 - **Hóspede:** a home lista "Suas reservas" (`listMyReservations`, `my-reservations.ts`); contato lembrado em `localStorage` (`src/lib/guest-contact-storage.ts`); troca de horário via `changeGuestReservation` (confirmação em AlertDialog); a recepção é avisada de novas reservas e de alterações (`listNewReservations`, `kind: "changed"`).
 
 ### 3.7 Copy vs lógica (marketing)

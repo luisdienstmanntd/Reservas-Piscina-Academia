@@ -49,6 +49,14 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Revisão geral (regressões, experiência, erros, testes) e atualização do guia
+
+- **Status:** Concluído
+- **Área:** Qualidade / documentação
+- **Pedido:** Revisão geral: regressões, experiência do usuário, erros e cobertura de testes.
+- **Resultado:** tsc, ESLint, 190 testes e build OK; teste ponta a ponta no navegador (hóspede no celular, recepção em desktop e celular): 29 de 30 verificações OK, a restante era uma suposição errada do teste (a página inicial sem link continua visível, mas "Agendar" leva a "Acesso indisponível"); 0 erros de console; produção (somente leitura): sem horários/apartamentos duplicados, sem reservas em 10h–12h, nomes e observações já em maiúsculas, nenhum 5xx; migration mais recente aplicada. `ia.navegation.md` atualizado (fluxo do hóspede, alarme, maiúsculas, `asGuest`, Nova reserva).
+- **Lacunas de teste registradas:** não há testes das telas (hóspede, recepção, alertas) nem CI que rode tsc/ESLint/testes nos PRs (só o keep-alive do Supabase); o e2e do repositório precisa de Supabase real.
+- **Referências:** `ia.navegation.md`.
 ### 2026-11-11 — CI: TypeScript, ESLint e testes em todo PR
 
 - **Status:** Concluído (PR em rascunho; só será validado quando o PR abrir)
