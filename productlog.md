@@ -49,6 +49,18 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: linhas da planilha do mesmo tamanho e ícones minimalistas
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador, desktop)
+- **Área:** Recepção (planilha)
+- **Pedido:** Todas as linhas com o mesmo tamanho e com os campos a preencher visíveis; ícones de confirmação, aviso e excluir minimalistas, como os de celular e recepção.
+- **Decisão:** (1) Em telas largas (xl+) todas as linhas têm a mesma altura (`ROW_HEIGHT`, 56px). Nas linhas livres aparecem os três campos (Hóspede, Observações, WhatsApp) como caixas desativadas e esmaecidas, só para mostrar onde os dados aparecem: a reserva continua sendo criada pelo formulário "Nova reserva". (2) Ícones em traço fino (lucide, 16px, cinza): confirmação = `CircleCheck` (cinza; verde quando enviada), aviso = `Bell` (cinza; laranja piscando na hora de avisar; verde quando enviado), excluir = `Trash2` (cinza; vermelho ao passar o mouse). Isto substitui os ícones de círculo verde cheio da decisão de 11/11 ("botões só com ícone").
+- **O que foi feito:** `reception-dashboard.tsx` (`ROW_HEIGHT`, `GhostField`, `EmptySlotRow` em grade, lixeira); `reception-wa-actions.tsx` (SVGs próprios removidos).
+- **Validação:** tsc, ESLint, 176 testes; em navegador: 13 linhas, todas com 56px; campos visíveis nas livres; ícones conferidos nos estados.
+- **Não fazer / evitar regressão:** Não voltar a misturar alturas; manter o laranja piscando do aviso pendente (alerta da recepção). No celular/tablet (abaixo de xl) as linhas livres continuam compactas.
+- **Pendências:** nenhuma.
+- **Referências:** `src/app/recepcao/reception-dashboard.tsx`, `src/components/reception-wa-actions.tsx`.
+
 ### 2026-11-11 — Nomes de hóspedes e observações sempre em MAIÚSCULAS
 
 - **Status:** Concluído (PR em rascunho; verificado em navegador; reservas antigas em produção NÃO foram alteradas)
