@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Retenção aplicada em produção (nada de dado passado é apagado; só o WhatsApp após 1 ano)
+
+- **Status:** Concluído e aplicado em produção, com autorização explícita do responsável.
+- **Pedido:** "lgpd não deve apagar nenhum dado passado, somente o whatsapp depois de 1 ano".
+- **O que foi feito:** apliquei na produção a migration de retenção (registrada como `20261111180853_retention_whatsapp_365`; o arquivo do repositório foi renomeado para essa versão). O job `lgpd_anonymize_reservations` (03:00 UTC) agora chama `public.anonymize_old_whatsapp()`: só apaga o WhatsApp 365 dias após o check-out; nome, apartamento, observações, cancelamentos e eventos não são mais apagados.
+- **Verificação (somente leitura, antes e depois):** 32 reservas, 71 eventos, 12 já anonimizadas, 20 com WhatsApp e o mesmo hash das colunas das reservas (`885c9aa8…`): nenhum dado mudou. Job ativo, agenda `0 3 * * *`, 2 jobs no total (o outro é `cleanup_orphan_stays`); `anon` não executa a função e `service_role` executa.
+- **Irrecuperável:** as 12 reservas já anonimizadas seguem sem nome e observações.
+- **Riscos:** plano Free sem backup; política sujeita à validação de LGPD (ver `docs/RETENCAO_DADOS.md`); observações podem conter dado sensível.
+
 ### 2026-11-12 — Retenção: só o WhatsApp é apagado, 365 dias após o check-out (Etapa 4, preparada)
 
 - **Status:** Preparada (PR em rascunho). **NÃO aplicada em produção.**

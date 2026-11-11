@@ -14,7 +14,7 @@
 -- Aditiva: não apaga nem altera nenhum dado existente ao ser aplicada. Linhas que o job anterior
 -- JÁ anonimizou (anonymized = true) NÃO são tocadas nem recuperadas.
 -- Reversão: docs/RETENCAO_DADOS.md.
--- PENDENTE de aprovação de LGPD antes de aplicar em produção.
+-- APLICADA em produção em 11/11/2026 (registrada pelo Supabase como versão 20261111180853).
 
 ALTER TABLE public.reservations
   ADD COLUMN whatsapp_anonymized_at timestamptz;

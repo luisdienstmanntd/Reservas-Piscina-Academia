@@ -1,7 +1,7 @@
 # Retenção de dados — histórico de reservas
 
-> **Status: preparado, NÃO aplicado em produção.** Decisão de negócio do responsável (11/11/2026),
-> **pendente de aprovação de LGPD**. Este documento não afirma que a política esteja em conformidade
+> **Status: APLICADO em produção em 11/11/2026**, com autorização do responsável. Decisão de negócio do
+> responsável (11/11/2026), **sujeita à validação de LGPD**. Este documento não afirma que a política esteja em conformidade
 > com a legislação; isso cabe ao responsável pela LGPD.
 
 ## Objetivo
@@ -26,7 +26,7 @@ Manter o histórico operacional completo. Nenhum registro de reserva é excluíd
 
 ## Comportamento anterior × novo
 
-| | Antes (migration `20261110100000`) | Depois (migration `20261112100000`) |
+| | Antes (migration `20261110100000`) | Depois (migration `20261111180853`) |
 |---|---|---|
 | Quando | dia seguinte ao check-out | 365 dias após o check-out |
 | O que apaga | nome, WhatsApp **e observações** (`anonymized = true`) | **só o WhatsApp** |
@@ -35,12 +35,11 @@ Manter o histórico operacional completo. Nenhum registro de reserva é excluíd
 
 **Já perdido, irrecuperável:** reservas que o job antigo já anonimizou (12 de 32 na produção em
 11/11/2026) continuam sem nome e observações. A migration **não** as toca nem tenta recuperá-las.
-Enquanto a migration nova não for aplicada, **o job antigo continua apagando nome e observações todas
-as noites** (03:00 UTC).
+A partir da aplicação, **o job deixou de apagar nome e observações**; só o WhatsApp vencido é apagado.
 
 ## O que a migration faz
 
-`supabase/migrations/20261112100000_retention_whatsapp_365.sql` (aditiva, não apaga nada ao aplicar):
+`supabase/migrations/20261111180853_retention_whatsapp_365.sql` (aditiva, não apaga nada ao aplicar):
 
 1. Nova coluna `reservations.whatsapp_anonymized_at` (quando o WhatsApp foi apagado).
 2. Atualiza `reservations_log_event()` para atribuir a remoção ao `system` (e não à recepção).
@@ -50,15 +49,18 @@ as noites** (03:00 UTC).
 
 A regra é espelhada e testada em `src/lib/retention.ts` (`whatsappExpired`).
 
-## Como aplicar (somente com autorização explícita)
+## Como foi aplicada (e como aplicar de novo em outro ambiente)
 
 1. Aprovação do responsável pela LGPD (ver pontos abaixo).
 2. Aplicar a migration na produção (ex.: `apply_migration` do Supabase ou `supabase db push`).
 3. Conferir: `select jobname, command from cron.job where jobname='lgpd_anonymize_reservations';`
    deve mostrar `SELECT public.anonymize_old_whatsapp();`.
 
-Para **parar o apagamento de nome e observações já**, sem esperar o restante, basta aplicar esta
-migration (ou, só como medida emergencial, `select cron.unschedule('lgpd_anonymize_reservations');`).
+**Aplicação na produção (11/11/2026):** estado antes, 32 reservas, 71 eventos, 12 já anonimizadas e hash
+das colunas das reservas `885c9aa8…`; depois da migration, os mesmos números e o mesmo hash (nenhum dado
+mudou). Job ativo com `SELECT public.anonymize_old_whatsapp();` às 03:00 UTC; só `service_role` executa
+a função. O Supabase registrou a migration com a versão `20261111180853` (o arquivo do repositório foi
+renomeado para a mesma versão, para um futuro `db push` não tentar aplicá-la de novo).
 
 ## Reversão
 
