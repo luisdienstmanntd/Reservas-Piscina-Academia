@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Hóspede: tela de identificação só com "APTO 104" e rótulo "Nome do hóspede"
+
+- **Status:** Concluído (PR em rascunho; verificado em navegador)
+- **Área:** Fluxo do hóspede (passo de identificação)
+- **Pedido:** Não mostrar "Identificação" nem "Apto. 404 · check-out 11/11/26. Nome (opcional) e WhatsApp (obrigatório)."; mostrar só o número do apto em maiúsculo (ex.: APTO 101); trocar "Nome do hóspede (opcional)" por "Nome do hóspede".
+- **O que foi feito:** `src/components/guest-booking.tsx`: título do cartão passou a "APTO {número}", descrição removida, rótulo sem "(opcional)". O campo de nome continua opcional e o WhatsApp continua obrigatório (comportamento inalterado; só o texto mudou).
+- **Validação:** tsc, ESLint, 187 testes; em navegador (link do apto 104): título "APTO 104", sem "Identificação", sem a frase longa, rótulo "Nome do hóspede".
+- **Não fazer / evitar regressão:** Não voltar a mostrar a data de check-out nesse passo; a regra de nome opcional/WhatsApp obrigatório não depende do texto.
+- **Pendências:** nenhuma.
+- **Referências:** `src/components/guest-booking.tsx`.
+
 ### 2026-11-11 — Home do hóspede: texto da Academia com "apto"
 
 - **Status:** Concluído (PR em rascunho)

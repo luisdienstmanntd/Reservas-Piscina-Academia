@@ -453,17 +453,8 @@ export function GuestBooking({
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-0.5 p-3 pb-2">
                   <CardTitle className="font-serif text-charcoal text-base font-semibold">
-                    Identificação
+                    APTO {apartment || "—"}
                   </CardTitle>
-                  <CardDescription className="text-xs">
-                    Apto. {apartment || "—"} · check-out{" "}
-                    {guestCheckoutDate
-                      ? format(fromYmd(guestCheckoutDate), "dd/MM/yy", {
-                          locale: ptBR,
-                        })
-                      : "—"}
-                    . Nome (opcional) e WhatsApp (obrigatório).
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 p-3 pt-0">
                   <form
@@ -472,7 +463,7 @@ export function GuestBooking({
                   >
                     <div className="space-y-1">
                       <Label htmlFor="gn" className="text-charcoal text-xs">
-                        Nome do hóspede (opcional)
+                        Nome do hóspede
                       </Label>
                       <Input
                         id="gn"
