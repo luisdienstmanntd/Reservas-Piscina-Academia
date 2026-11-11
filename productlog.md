@@ -49,6 +49,16 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-12 — Retenção: só o WhatsApp é apagado, 365 dias após o check-out (Etapa 4, preparada)
+
+- **Status:** Preparada (PR em rascunho). **NÃO aplicada em produção.**
+- **Área:** Banco de dados (retenção) — pendente de aprovação de LGPD
+- **Decisão do responsável:** preservar todos os dados; o único dado apagado é o WhatsApp, 365 dias após o check-out (marco = check-out).
+- **Comportamento anterior:** o job `lgpd_anonymize_reservations` (diário, 03:00 UTC) apaga nome, WhatsApp **e observações** no dia seguinte ao check-out. Na produção, 12 de 32 reservas já estavam anonimizadas (irrecuperável) em 11/11/2026.
+- **O que foi feito:** migration `20261112100000_retention_whatsapp_365.sql` (coluna `whatsapp_anonymized_at`; função `anonymize_old_whatsapp(p_today)` só para `service_role`; auditoria atribui a remoção ao `system`; job reagendado para chamar a função); `src/lib/retention.ts` (regra espelhada, dia 365 mantém, 366 apaga); `docs/RETENCAO_DADOS.md` (política, antes × depois, aplicação, reversão, pontos de LGPD, riscos).
+- **Testes:** `retention.test.ts` (5) e `tests/integration/retention.test.ts` (7, banco local descartável); verificação da migration sobre banco populado: mesmas contagens, 0 linhas alteradas. Integração (10/10) rodou em Postgres 16 real com as migrations aplicadas, via camada REST de teste (o Docker/Supabase local não existe neste ambiente). tsc, ESLint e testes OK.
+- **Riscos:** enquanto a migration não for aplicada, o job antigo continua apagando nome e observações todas as noites; plano Free sem backup; observações podem conter dado sensível; a política não está aprovada pela LGPD.
+
 ### 2026-11-11 — Ícone da piscina: escada de piscina
 
 - **Status:** Concluído (PR em rascunho)

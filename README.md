@@ -192,7 +192,7 @@ nem altera reservas.
 ### Limitações conhecidas
 - Sem vínculo reserva ↔ estadia (`stay_id`) para medir a conversão do link.
 - Reservas de balcão não têm data de check-out (`NULL`), por não ser informada.
-- As observações livres (`notes`) podem conter dados pessoais e não entram na anonimização LGPD.
+- As observações livres (`notes`) podem conter dados pessoais. Política em preparo (pendente de aprovação de LGPD): preservar o histórico e apagar só o WhatsApp 365 dias após o check-out; ver [`docs/RETENCAO_DADOS.md`](./docs/RETENCAO_DADOS.md).
 
 Detalhes e plano em [`REVISAO_TECNICA.md`](./REVISAO_TECNICA.md).
 
