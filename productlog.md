@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Histórico: filtros por data, apto e nome
+
+- **Status:** Concluído (PR em rascunho; inclui as mudanças do PR #53, ainda não mergeado)
+- **Área:** Recepção — histórico de alterações
+- **Pedido:** Filtro de busca no histórico por data, apto e nome.
+- **O que foi feito:** três campos no topo do histórico (Data, Apto, Nome) + "Limpar" (aparece com filtro ativo); consulta ao servidor após 300 ms sem digitar. `listReservationHistory({ date, apartment, name })`: apto e nome filtram `reservations` (apto por início do número; nome por trecho, sem diferenciar maiúsculas/minúsculas, `%` e `_` escapados) e depois buscam só os eventos dessas reservas; data filtra o dia do evento (o mesmo mostrado à direita) no fuso do hotel. Entrada validada em `normalizeHistoryFilters`. Os filtros combinam (E) e são limpos ao reabrir.
+- **Limites:** até 150 eventos por busca (150 reservas mais recentes que casam com apto/nome); a data é a do EVENTO, não a do dia reservado.
+- **Verificação:** build local com Postgres real, desktop e celular (390 px): 28/28 checagens (apto, prefixo, nome em minúsculas, `%` literal, data de ontem/hoje, combinação sem resultado com mensagem, Limpar, reabrir limpa, sem rolagem horizontal, sem erros de console). tsc, ESLint e 199 testes OK.
+
 ### 2026-11-11 — Histórico: formato dos cartões e da data
 
 - **Status:** Concluído (PR em rascunho)
