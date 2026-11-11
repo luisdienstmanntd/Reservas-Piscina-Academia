@@ -49,6 +49,17 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-11 — Recepção: histórico de alterações (engrenagem ao lado de "Sair")
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção
+- **Pedido:** Ícone de engrenagem ao lado de "Sair" que abre um histórico de alterações, parecido com a linha do tempo enviada (cartões alternando os lados, linha central, data no lado oposto), com reservas incluídas, quem fez, quem alterou/excluiu, datas e horários. Depois: visual minimalista, na paleta e no estilo já usados.
+- **O que foi feito:** `HistoryButton` (`history-dialog.tsx`) abre um modal (Esc, X ou clique fora fecham); `listReservationHistory` (ação só da recepção) lê os 150 eventos mais recentes de `reservation_events` e junta com `reservations`; `reservation-history.ts` formata título ("Reserva incluída/alterada/excluída"), autor (Hóspede/Recepção/Sistema), campos alterados e data/hora no fuso do hotel. Visual: cartões com borda leve, linha e pontos na cor primária, sem cores de status nem sombras; no celular vira uma coluna.
+- **Sem mudança de banco:** usa só o que a auditoria já grava.
+- **Limitação conhecida:** a auditoria não guarda valores antigos; dia/horário exibidos são os atuais da reserva, e aparecem com "(atual)" quando a reserva foi remarcada. Mostrar "de → para" exigiria uma migration (coluna em `reservation_events`), que só será feita com autorização.
+- **Verificação:** build em produção local com Postgres real: 3 reservas criadas (hóspede e recepção), 2 alterações, 1 exclusão → 6 eventos corretos na tela, desktop e celular (390 px), sem rolagem horizontal e sem erros de console; Esc e X fecham. tsc, ESLint e 195 testes OK (5 novos).
+- **Observação:** o cursor "mãozinha" da engrenagem depende do PR #51 (regra global).
+
 ### 2026-11-11 — Home: "Sua reserva" sem aviso do ramal e com primeira letra maiúscula
 
 - **Status:** Concluído (PR em rascunho)
