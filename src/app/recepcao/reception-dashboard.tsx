@@ -850,11 +850,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 height={364}
                 className="block h-8 w-auto max-w-none object-contain object-left sm:h-9 md:h-10"
               />
-              <h1 className="font-serif text-2xl font-semibold tracking-tight text-charcoal lg:text-3xl xl:text-4xl">
-                Reservas
-              </h1>
+              {/* O título não aparece na tela; fica só para leitores de tela. */}
+              <h1 className="sr-only">Reservas</h1>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <SoundToggleButton alerts={newReservationAlerts} />
               <Button
                 type="button"
                 variant="outline"
@@ -866,7 +866,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -887,7 +887,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 Academia
               </Button>
             </div>
-            <SoundToggleButton alerts={newReservationAlerts} />
           </div>
         </header>
 
