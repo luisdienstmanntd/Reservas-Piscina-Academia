@@ -51,7 +51,7 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-12 — Ícones em todas as linhas, bloqueio de horário e data na linha de Piscina/Academia
 
-- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112110000_slot_blocks.sql`) que ainda NÃO foi aplicada em produção: precisa de autorização e deve ser aplicada ANTES de publicar o código.
+- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112022527_slot_blocks.sql`), já aplicada em produção com autorização do responsável (tabela vazia, 33 reservas intactas, gatilho criado, RLS ativo, `service_role` com acesso e `anon` sem).
 - **Área:** Recepção — planilha do dia e consulta do hóspede
 - **Pedido:** (1) ícones em todas as linhas, em cinza nas livres; (2) um ícone antes da lixeira para bloquear o horário (recepção e hóspede); (3) data e calendário na mesma linha de Piscina/Academia, na ordem "Quarta-feira | 11/11/2026" + calendário.
 - **O que foi feito:**
