@@ -49,6 +49,19 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-12 — Ícones em todas as linhas, bloqueio de horário e data na linha de Piscina/Academia
+
+- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112022527_slot_blocks.sql`), já aplicada em produção com autorização do responsável (tabela vazia, 33 reservas intactas, gatilho criado, RLS ativo, `service_role` com acesso e `anon` sem).
+- **Área:** Recepção — planilha do dia e consulta do hóspede
+- **Pedido:** (1) ícones em todas as linhas, em cinza nas livres; (2) um ícone antes da lixeira para bloquear o horário (recepção e hóspede); (3) data e calendário na mesma linha de Piscina/Academia, na ordem "Quarta-feira | 11/11/2026" + calendário.
+- **O que foi feito:**
+  - Linhas livres mostram os ícones de mensagem (confirmação e aviso), o cadeado e a lixeira; os sem função ficam em cinza claro, e só o cadeado é clicável.
+  - Cadeado antes da lixeira: aberto = livre (clique bloqueia); fechado = bloqueado (clique libera). A linha bloqueada mostra "Horário bloqueado" com fundo suave. Em linha com reserva, o cadeado fica desativado ("cancele a reserva antes de bloquear").
+  - Horário bloqueado não aceita reserva: o hóspede o vê como ocupado; a recepção não o oferece no formulário; criar reserva (hóspede ou recepção) e trocar de horário são recusados com mensagem; o banco também recusa (gatilho), mesmo numa corrida.
+  - Nada é apagado: a tabela nova `slot_blocks` guarda cada bloqueio; liberar só preenche `released_at`.
+  - Cabeçalho: "Quarta-feira | 11/11/2026" e o botão de calendário à direita, na linha de Piscina/Academia (no celular também, em uma linha).
+- **Verificação (Postgres real, migrations do repositório):** 23 checagens no navegador (desktop e celular): rótulo e ordem, mesma linha, ícones em todas as linhas e na ordem sino/cadeado/lixeira, bloquear grava, liberar mantém o registro, banco recusa reserva em horário bloqueado, formulário não oferece horário bloqueado, alturas iguais, sem rolagem horizontal. 230 testes (9 novos), tsc e ESLint OK. Não testei o fluxo do hóspede ponta a ponta no navegador; ele usa a mesma lista de horários ocupados, coberta por teste de unidade.
+
 ### 2026-11-12 — Planilha sem caixas ao redor dos textos (estilo do anexo)
 
 - **Status:** Concluído (PR em rascunho)

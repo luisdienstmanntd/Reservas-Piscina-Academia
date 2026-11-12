@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blocksAware } from "./test-blocks";
 
 const mocks = vi.hoisted(() => ({
   getAdminClient: vi.fn(),
@@ -24,6 +25,7 @@ const ID = "11111111-1111-4111-8111-111111111111";
 describe("endurecimento: entradas inválidas viram erro claro, nunca 500", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 

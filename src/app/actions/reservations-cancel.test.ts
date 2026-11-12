@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blocksAware } from "./test-blocks";
 
 const mocks = vi.hoisted(() => ({
   getAdminClient: vi.fn(),
@@ -25,6 +26,7 @@ const id = "11111111-1111-4111-8111-111111111111";
 describe("cancelReservation (soft delete)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 
@@ -73,6 +75,7 @@ describe("cancelReservation (soft delete)", () => {
 describe("leituras só consideram reservas ativas", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 
@@ -90,6 +93,7 @@ describe("leituras só consideram reservas ativas", () => {
 describe("reserva de balcão", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 

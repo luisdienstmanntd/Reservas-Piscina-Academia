@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blocksAware } from "./test-blocks";
 
 import { addDaysYmd, hotelCalendarDate } from "@/lib/hotel-time";
 
@@ -73,6 +74,7 @@ const res = (over: Record<string, unknown>) => ({
 describe("histórico: consulta de dias anteriores", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 
@@ -146,6 +148,7 @@ describe("histórico: consulta de dias anteriores", () => {
 describe("reservas passadas: a recepção pode alterar e excluir; criar continua bloqueado", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.readReceptionAuthed.mockResolvedValue(true);
   });
 
