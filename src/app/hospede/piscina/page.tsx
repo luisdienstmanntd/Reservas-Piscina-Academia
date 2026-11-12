@@ -17,6 +17,11 @@ export default async function HospedePiscinaPage() {
       facility="pool"
       apartmentNumber={stay.apartmentNumber}
       guestCheckoutDate={stay.checkoutDate}
+      savedContact={
+        stay.guestWhatsapp
+          ? { name: stay.guestName ?? "", whatsapp: stay.guestWhatsapp }
+          : null
+      }
     />
   );
 }

@@ -1,10 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  purgeExpiredContacts,
-  readGuestContact,
-  saveGuestContact,
-} from "./guest-contact-storage";
+import { clearLegacyGuestContacts } from "./guest-contact-storage";
 
 class MemStorage {
   private m = new Map<string, string>();
@@ -15,45 +11,19 @@ class MemStorage {
   removeItem(k: string) { this.m.delete(k); }
 }
 
-const ok = (w: string) => (/^\+?\d{10,}$/.test(w) ? w : null);
-
-describe("guest-contact-storage", () => {
-  let s: MemStorage;
-  beforeEach(() => { s = new MemStorage(); });
-
-  it("salva e lê por apartamento e check-out", () => {
-    saveGuestContact(s, "207", "2026-11-12", { name: "Ana", whatsapp: "5554999999999" });
-    expect(readGuestContact(s, "207", "2026-11-12", ok)).toEqual({ name: "Ana", whatsapp: "5554999999999" });
-    expect(readGuestContact(s, "208", "2026-11-12", ok)).toBeNull();
-    expect(readGuestContact(s, "207", "2026-11-15", ok)).toBeNull();
-  });
-
-  it("ignora WhatsApp inválido e dados corrompidos", () => {
-    saveGuestContact(s, "207", "2026-11-12", { name: "", whatsapp: "abc" });
-    expect(readGuestContact(s, "207", "2026-11-12", ok)).toBeNull();
-    s.setItem("valle.guest.contact.v1:101:2026-11-12", "{não é json");
-    expect(readGuestContact(s, "101", "2026-11-12", ok)).toBeNull();
-  });
-
-  it("apaga estadias já encerradas e mantém as atuais", () => {
-    saveGuestContact(s, "1", "2026-11-09", { name: "", whatsapp: "5554999999999" });
-    saveGuestContact(s, "2", "2026-11-10", { name: "", whatsapp: "5554999999999" });
+describe("clearLegacyGuestContacts", () => {
+  it("apaga só os contatos antigos guardados no navegador, nada mais", () => {
+    const s = new MemStorage();
+    s.setItem("valle.guest.contact.v1:207:2026-11-12", "{}");
+    s.setItem("valle.guest.contact.v1:101:2026-11-20", "{}");
     s.setItem("outra.chave", "x");
-    purgeExpiredContacts(s, "2026-11-10");
-    expect(readGuestContact(s, "1", "2026-11-09", ok)).toBeNull();
-    expect(readGuestContact(s, "2", "2026-11-10", ok)).not.toBeNull();
+    clearLegacyGuestContacts(s);
+    expect(s.length).toBe(1);
     expect(s.getItem("outra.chave")).toBe("x");
   });
 
-  it("não quebra quando o armazenamento lança erro", () => {
-    const bad = {
-      length: 0,
-      key: () => null,
-      getItem: () => { throw new Error("x"); },
-      setItem: () => { throw new Error("x"); },
-      removeItem: () => { throw new Error("x"); },
-    };
-    expect(() => saveGuestContact(bad, "1", "2026-11-12", { name: "", whatsapp: "1" })).not.toThrow();
-    expect(readGuestContact(bad, "1", "2026-11-12", ok)).toBeNull();
+  it("não quebra quando o armazenamento está indisponível", () => {
+    const broken = { get length(): number { throw new Error("bloqueado"); }, key: () => null, removeItem: () => undefined };
+    expect(() => clearLegacyGuestContacts(broken)).not.toThrow();
   });
 });

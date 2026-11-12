@@ -4,11 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import {
-  purgeExpiredContacts,
-  readGuestContact,
-  saveGuestContact,
-} from "@/lib/guest-contact-storage";
+import { clearLegacyGuestContacts } from "@/lib/guest-contact-storage";
+import { saveStayGuestContact } from "@/app/actions/stays";
 import { CalendarDays, ChevronLeft, Home } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -74,20 +71,24 @@ export function GuestBooking({
   facility,
   apartmentNumber,
   guestCheckoutDate,
+  savedContact = null,
 }: {
   facility: Facility;
   apartmentNumber: string;
   guestCheckoutDate: string;
+  /** Nome e WhatsApp já gravados na estadia deste link (valem até o check-out, em qualquer aparelho). */
+  savedContact?: { name: string; whatsapp: string } | null;
 }) {
   const slots = useMemo(() => slotStartsFor(facility), [facility]);
   const t = copy[facility];
   const apartment = apartmentNumber.trim();
 
-  const [step, setStep] = useState<Step>(1);
-  /** Só depois de checar os dados lembrados neste aparelho (evita piscar o formulário). */
-  const [contactChecked, setContactChecked] = useState(false);
-  const [guestName, setGuestName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
+  // Quem já informou nome e WhatsApp nesta estadia vai direto ao calendário (os dados vêm do servidor).
+  const [step, setStep] = useState<Step>(savedContact ? 2 : 1);
+  const [guestName, setGuestName] = useState(
+    savedContact ? toUpperText(savedContact.name) : ""
+  );
+  const [whatsapp, setWhatsapp] = useState(savedContact?.whatsapp ?? "");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [occupied, setOccupied] = useState<Set<string>>(new Set());
   const [apartmentBookedThisDay, setApartmentBookedThisDay] = useState(false);
@@ -157,31 +158,14 @@ export function GuestBooking({
     [facility]
   );
 
-  // Se o hóspede já informou nome e WhatsApp nesta estadia, vai direto ao calendário.
+  // Versões antigas guardavam os dados no navegador: apaga o que sobrou (agora ficam só na estadia, no servidor).
   useEffect(() => {
     try {
-      purgeExpiredContacts(window.localStorage, hotelCalendarDate());
-      const saved = apartment
-        ? readGuestContact(
-            window.localStorage,
-            apartment,
-            guestCheckoutDate,
-            (w) => {
-              const p = guestWhatsappRequiredSchema.safeParse(w);
-              return p.success ? p.data : null;
-            }
-          )
-        : null;
-      if (saved && guestCheckoutDate >= hotelCalendarDate()) {
-        setGuestName(toUpperText(saved.name));
-        setWhatsapp(saved.whatsapp);
-        setStep(2);
-      }
+      clearLegacyGuestContacts(window.localStorage);
     } catch {
-      /* sem armazenamento: mostra a identificação normalmente */
+      /* sem armazenamento: nada a limpar */
     }
-    setContactChecked(true);
-  }, [apartment, guestCheckoutDate]);
+  }, []);
 
   useEffect(() => {
     if (step !== 3 || !selectedDate) return;
@@ -221,14 +205,11 @@ export function GuestBooking({
       return;
     }
     setWhatsapp(phone.data);
-    try {
-      saveGuestContact(window.localStorage, apartment, guestCheckoutDate, {
-        name: guestName.trim(),
-        whatsapp: phone.data,
-      });
-    } catch {
-      /* sem armazenamento: segue sem lembrar */
-    }
+    // Grava na estadia (vale até o check-out, em qualquer aparelho). Se falhar, segue: a reserva grava de novo.
+    void saveStayGuestContact({
+      guestName: guestName.trim() || undefined,
+      guestWhatsapp: phone.data,
+    }).catch(() => undefined);
     setStep(2);
     setSelectedDate(undefined);
   }
@@ -421,7 +402,7 @@ export function GuestBooking({
               </Button>
             )}
 
-            {step === 1 && contactChecked && (
+            {step === 1 && (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="space-y-0.5 p-3 pb-2">
                   <CardTitle className="font-serif text-charcoal text-base font-semibold">
