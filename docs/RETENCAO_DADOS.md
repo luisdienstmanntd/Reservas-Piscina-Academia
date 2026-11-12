@@ -26,7 +26,7 @@ Manter o histórico operacional completo. Nenhum registro de reserva é excluíd
 
 ## Contato do hóspede na estadia (link de reservas)
 
-Para o hóspede não digitar nome e WhatsApp de novo, os dois ficam gravados na estadia (`active_stays.guest_name` e `guest_whatsapp`), valendo em qualquer aparelho que abra o link, até o check-out. Um job diário (`clear_stay_guest_contact`, 03:40 UTC = 00:40 em Brasília) esvazia os dois campos das estadias com check-out anterior a hoje. As reservas continuam com nome e WhatsApp sob a regra acima (WhatsApp apagado 365 dias após o check-out); `analytics.vw_estadias` não expõe esses campos. Migration: `20261112200000_stay_guest_contact.sql`.
+Para o hóspede não digitar nome e WhatsApp de novo, os dois ficam gravados na estadia (`active_stays.guest_name` e `guest_whatsapp`), valendo em qualquer aparelho que abra o link, até o check-out. Um job diário (`clear_stay_guest_contact`, 03:40 UTC = 00:40 em Brasília) esvazia os dois campos das estadias com check-out anterior a hoje. As reservas continuam com nome e WhatsApp sob a regra acima (WhatsApp apagado 365 dias após o check-out); `analytics.vw_estadias` não expõe esses campos. Migration: `20261112145112_stay_guest_contact.sql`.
 
 ## Comportamento anterior × novo
 

@@ -51,7 +51,7 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ### 2026-11-12 — Nome e WhatsApp do hóspede ficam gravados na estadia até o check-out
 
-- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112200000_stay_guest_contact.sql`) ainda NÃO aplicada em produção: precisa de autorização e deve ser aplicada ANTES de publicar o código.
+- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112145112_stay_guest_contact.sql`), já aplicada em produção com autorização do responsável (3 colunas novas, job `clear_stay_guest_contact` agendado, 24 estadias e 34 reservas intactas).
 - **Área:** Link de reservas do hóspede (`/hospede/*`)
 - **Pedido:** Revisar a permanência de nome e telefone: o hóspede acessa o link em vários dias e momentos e não deve cadastrar de novo até o check-out.
 - **Diagnóstico (reproduzido em teste):** os dados só ficavam no navegador do aparelho (`localStorage`), por apartamento + data de check-out. Falhas: (1) outro aparelho ou navegador com o mesmo link (ex.: abrir do WhatsApp e depois no Safari, ou limpar os dados) pedia tudo de novo; (2) outra estadia do mesmo apartamento e mesmo check-out (novo link) herdava o nome e o WhatsApp do hóspede anterior, uma falha de privacidade.
