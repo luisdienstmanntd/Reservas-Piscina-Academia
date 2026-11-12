@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blocksAware } from "./test-blocks";
 
 const mocks = vi.hoisted(() => ({
   getAdminClient: vi.fn(),
@@ -31,7 +32,10 @@ function fakeDb(eqs: Array<[string, unknown]> = []) {
 }
 
 describe("getReservationDaySummary: privacidade e hora do servidor", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
+  });
 
   it("hóspede não recebe a lista de apartamentos, só se o PRÓPRIO apartamento já reservou", async () => {
     mocks.readReceptionAuthed.mockResolvedValue(false);
@@ -106,7 +110,10 @@ describe("getReservationDaySummary: privacidade e hora do servidor", () => {
 });
 
 describe("getReservationDaySummary: asGuest (mesmo navegador com a sessão da recepção)", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
+  });
 
   it("com asGuest, a sessão da recepção é ignorada: o hóspede recebe a visão de hóspede, com a reserva própria", async () => {
     mocks.readReceptionAuthed.mockResolvedValue(true); // o mesmo navegador também está logado na recepção

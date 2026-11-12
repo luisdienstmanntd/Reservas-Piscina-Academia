@@ -7,9 +7,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  Bell,
+  CalendarDays,
+  CircleCheck,
   ConciergeBell,
   Eye,
   EyeOff,
+  Lock,
+  LockOpen,
   LogOut,
   RefreshCw,
   Smartphone,
@@ -23,6 +28,7 @@ import {
   getReservationsForDate,
   loginReception,
   logoutReception,
+  setSlotBlocked,
   updateReservationGuestName,
   updateReservationNotes,
   updateReservationGuestWhatsapp,
@@ -284,7 +290,7 @@ function ReceptionNotesCell({
 
 /** Colunas da grade em telas largas (xl+). Abaixo disso cada reserva vira um cartão. */
 const GRID_TEMPLATE =
-  "lg:grid-cols-[3.75rem_5.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem]";
+  "lg:grid-cols-[3.75rem_5.5rem_minmax(0,1fr)_minmax(0,1.4fr)_9.5rem_5.5rem_2rem_2rem]";
 const GRID = `lg:grid lg:items-center lg:gap-x-2 ${GRID_TEMPLATE}`;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -312,7 +318,83 @@ function GhostField({ placeholder }: { placeholder: string }) {
   );
 }
 
-function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
+/** Cadeado do horário: aberto = livre (clique bloqueia); fechado = bloqueado (clique libera). */
+function BlockButton({
+  blocked,
+  disabled = false,
+  title,
+  onClick,
+  className,
+}: {
+  blocked: boolean;
+  disabled?: boolean;
+  title: string;
+  onClick: () => void;
+  className?: string;
+}) {
+  const Icon = blocked ? Lock : LockOpen;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      aria-pressed={blocked}
+      className={cn(
+        "size-9 border-0 bg-transparent p-0 shadow-none hover:bg-transparent lg:size-8",
+        blocked
+          ? "text-charcoal hover:text-charcoal/70"
+          : "text-muted-foreground hover:text-foreground",
+        className
+      )}
+      onClick={onClick}
+    >
+      <Icon className="size-4" aria-hidden />
+    </Button>
+  );
+}
+
+/** Ícones de mensagem e lixeira sem função (linha livre ou bloqueada): mesmos ícones, em cinza claro. */
+function InertIcon({
+  icon: Icon,
+  className,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "hidden size-8 items-center justify-center text-muted-foreground/40 lg:flex",
+        className
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+    </span>
+  );
+}
+
+function InertWaIcons() {
+  return (
+    <span className="hidden items-center justify-end gap-2 lg:flex" aria-hidden>
+      <InertIcon icon={CircleCheck} />
+      <InertIcon icon={Bell} />
+    </span>
+  );
+}
+
+function EmptySlotRow({
+  slot,
+  past,
+  onBlock,
+}: {
+  slot: string;
+  past: boolean;
+  onBlock: () => void;
+}) {
   return (
     <li
       className={cn(
@@ -330,6 +412,51 @@ function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
       <GhostField placeholder="Hóspede" />
       <GhostField placeholder="Observações" />
       <GhostField placeholder="WhatsApp" />
+      <InertWaIcons />
+      <BlockButton
+        blocked={false}
+        title="Bloquear horário"
+        onClick={onBlock}
+        className="ml-auto lg:ml-0"
+      />
+      <InertIcon icon={Trash2} />
+    </li>
+  );
+}
+
+function BlockedSlotRow({
+  slot,
+  onUnblock,
+}: {
+  slot: string;
+  onUnblock: () => void;
+}) {
+  return (
+    <li
+      data-testid="blocked-row"
+      className={cn(
+        "flex items-center rounded-md border border-border/70 bg-muted/60 px-3 py-1 text-sm tabular-nums",
+        "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-3 lg:py-2 lg:text-base",
+        ROW_HEIGHT,
+        GRID
+      )}
+    >
+      <span className="whitespace-nowrap font-medium lg:w-auto">
+        {slotStartLabel(slot)}
+      </span>
+      <span className="hidden lg:block" aria-hidden />
+      <span className="ml-3 flex min-w-0 items-center gap-2 text-sm font-medium text-charcoal lg:col-span-3 lg:ml-0">
+        <Lock className="size-4 shrink-0" aria-hidden />
+        Horário bloqueado
+      </span>
+      <InertWaIcons />
+      <BlockButton
+        blocked
+        title="Liberar horário"
+        onClick={onUnblock}
+        className="ml-auto lg:ml-0"
+      />
+      <InertIcon icon={Trash2} />
     </li>
   );
 }
@@ -391,11 +518,18 @@ function ReservationSlotRow({
             />
           ) : null}
         </span>
+        <BlockButton
+          blocked={false}
+          disabled
+          title="Para bloquear, cancele a reserva antes"
+          onClick={() => undefined}
+          className="order-2 ml-auto disabled:opacity-40 sm:order-3 lg:order-7 lg:ml-0"
+        />
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="order-2 ml-auto size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 lg:order-7 lg:ml-0 lg:size-8"
+          className="order-2 size-9 p-0 text-muted-foreground hover:bg-transparent hover:text-destructive sm:order-3 lg:order-8 lg:ml-0 lg:size-8"
           onClick={() => onAskCancel(row.id)}
           title="Cancelar reserva"
         >
@@ -458,7 +592,7 @@ function CancelledSlotRow({ slot, row }: { slot: string; row: ReservationRow }) 
         {row.notes || "—"}
       </span>
       <span className="min-w-0 truncate font-mono">{row.guest_whatsapp || "—"}</span>
-      <span className="text-xs leading-tight lg:col-span-2">
+      <span className="text-xs leading-tight lg:col-span-3">
         <span className="block font-semibold text-charcoal">Cancelada</span>
         <span className="block whitespace-nowrap text-[11px]">
           {row.cancelled_by === "guest" ? "Hóspede" : "Recepção"}
@@ -494,6 +628,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [rows, setRows] = useState<ReservationRow[]>([]);
   /** Canceladas do dia (só vêm em datas anteriores a hoje). */
   const [cancelledRows, setCancelledRows] = useState<ReservationRow[]>([]);
+  /** Horários (HH:MM:SS) bloqueados pela recepção no dia/instalação em tela. */
+  const [blockedSlots, setBlockedSlots] = useState<Set<string>>(new Set());
   /** Dia e instalação a que `rows` se refere (evita misturar dados de outra instalação). */
   const [rowsKey, setRowsKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -600,6 +736,23 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     };
   }, [authed, refreshFormSummary]);
 
+  const dayInputRef = useRef<HTMLInputElement>(null);
+  function openDayPicker() {
+    const el = dayInputRef.current;
+    if (!el) return;
+    try {
+      el.showPicker();
+    } catch {
+      el.focus();
+    }
+  }
+  /** "Quarta-feira | 11/11/2026" */
+  const dayLabel = (() => {
+    const d = fromYmd(dateStr);
+    const wd = format(d, "EEEE", { locale: ptBR });
+    return `${wd.charAt(0).toUpperCase()}${wd.slice(1)} | ${format(d, "dd/MM/yyyy")}`;
+  })();
+
   const bySlot = useMemo(() => {
     const m = new Map<string, ReservationRow>();
     for (const r of rows) {
@@ -638,6 +791,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         }
         setRows(r.rows);
         setCancelledRows(r.cancelled);
+        setBlockedSlots(new Set(r.blocked.map((x) => normalizeSlotStart(x))));
         setRowsKey(`${ymd}|${facility}`);
       } catch {
         if (!silent) toast.error("Falha de rede ao carregar reservas.");
@@ -703,8 +857,28 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     setAuthed(false);
     setRows([]);
     setCancelledRows([]);
+    setBlockedSlots(new Set());
     router.refresh();
     toast.message("Sessão encerrada.");
+  }
+
+  async function toggleBlock(slot: string, blocked: boolean) {
+    try {
+      const r = await setSlotBlocked({
+        facility,
+        reservationDate: dateStr,
+        slotStart: slot,
+        blocked,
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+      } else {
+        toast.success(blocked ? "Horário bloqueado." : "Horário liberado.");
+      }
+    } catch {
+      toast.error("Falha de rede. Tente novamente.");
+    }
+    await Promise.all([load(), refreshFormSummary({ silent: true })]);
   }
 
   async function confirmDelete() {
@@ -953,8 +1127,8 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -974,6 +1148,36 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 Academia
               </Button>
             </div>
+            {/* Dia em tela: "Quarta-feira | 11/11/2026" e o calendário, na mesma linha de Piscina/Academia. */}
+            <div className="relative ml-auto flex shrink-0 items-center gap-2">
+              <p
+                className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
+                data-testid="day-label"
+              >
+                {dayLabel}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="size-9 p-0 lg:size-10"
+                title="Escolher a data"
+                aria-label="Escolher a data"
+                onClick={openDayPicker}
+              >
+                <CalendarDays className="size-4" aria-hidden />
+              </Button>
+              <Input
+                ref={dayInputRef}
+                id="day"
+                type="date"
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                aria-label="Dia"
+                tabIndex={-1}
+                className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
+              />
+            </div>
           </div>
         </header>
 
@@ -982,22 +1186,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           todayYmd={hotelToday}
           onView={viewNewReservation}
         />
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 lg:gap-6">
-          <div className="min-w-0 space-y-1">
-            <Input
-              id="day"
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              aria-label="Dia"
-              className="h-10 w-full max-w-full border-border bg-white sm:w-auto sm:min-w-[220px] lg:min-w-[240px]"
-            />
-          </div>
-          <p className="text-muted-foreground text-sm sm:ml-auto lg:text-base">
-            {format(fromYmd(dateStr), "EEEE, dd/MM/yyyy", { locale: ptBR })}
-          </p>
-        </div>
 
         <Card className="border-border/80 shadow-sm">
           <CardContent
@@ -1019,6 +1207,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               <span>Observações</span>
               <span>WhatsApp</span>
               <span className="text-right">Mensagens</span>
+              <span />
               <span />
             </div>
             <ul className="space-y-2 lg:space-y-0">
@@ -1042,6 +1231,16 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                     ...items,
                   ];
                 }
+                if (blockedSlots.has(key)) {
+                  return [
+                    ...items,
+                    <BlockedSlotRow
+                      key={slot}
+                      slot={slot}
+                      onUnblock={() => void toggleBlock(slot, false)}
+                    />,
+                  ];
+                }
                 // Horário livre que já teve reserva cancelada: mostra o histórico no lugar da linha vazia.
                 return items.length > 0
                   ? items
@@ -1050,6 +1249,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                         key={slot}
                         slot={slot}
                         past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                        onBlock={() => void toggleBlock(slot, true)}
                       />,
                     ];
               })}

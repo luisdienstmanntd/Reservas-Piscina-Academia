@@ -19,6 +19,7 @@ import {
 } from "@/lib/supabase/admin";
 import {
   normalizeSlotStart,
+  receptionSlotStartsFor,
   type Facility,
   type ReservationRow,
 } from "@/lib/reservations";
@@ -158,7 +159,10 @@ export async function getReservationDaySummary(
 ): Promise<
   | {
       ok: true;
+      /** Horários que não aceitam reserva: reservados + bloqueados pela recepção. */
       occupiedSlots: string[];
+      /** Só os bloqueados pela recepção (a grade da recepção os distingue dos reservados). */
+      blockedSlots: string[];
       /** Apartamentos com reserva no dia. Só a recepção recebe a lista; o hóspede recebe `[]`. */
       apartmentsBooked: string[];
       /** O apartamento do próprio hóspede (da estadia validada no servidor) já tem reserva neste dia? Sempre `false` para a recepção. */
@@ -217,9 +221,13 @@ export async function getReservationDaySummary(
     if (error) throw error;
 
     const rows = data ?? [];
-    const occupiedSlots = rows.map((r) =>
-      normalizeSlotStart(String(r.slot_start))
-    );
+    const blockedSlots = await fetchBlockedSlots(supabase, f.data, parsed.data);
+    const occupiedSlots = [
+      ...new Set([
+        ...rows.map((r) => normalizeSlotStart(String(r.slot_start))),
+        ...blockedSlots,
+      ]),
+    ];
     const apartmentsBooked = [
       ...new Set(rows.map((r) => String(r.apartment_number).trim())),
     ];
@@ -235,6 +243,7 @@ export async function getReservationDaySummary(
     return {
       ok: true,
       occupiedSlots,
+      blockedSlots,
       ownSlot: own ? normalizeSlotStart(String(own.slot_start)) : null,
       // Privacidade: o hóspede não vê quais outros apartamentos reservaram.
       apartmentsBooked: isReception ? apartmentsBooked : [],
@@ -273,7 +282,7 @@ export async function getReservationsForDate(
   reservationDate: string,
   facility: Facility
 ): Promise<
-  | { ok: true; rows: ReservationRow[]; cancelled: ReservationRow[] }
+  | { ok: true; rows: ReservationRow[]; cancelled: ReservationRow[]; blocked: string[] }
   | { ok: false; error: string; unauthorized?: boolean }
 > {
   if (!(await readReceptionAuthed())) {
@@ -322,7 +331,9 @@ export async function getReservationsForDate(
       cancelled = (gone ?? []) as ReservationRow[];
     }
 
-    return { ok: true, rows: (data ?? []) as ReservationRow[], cancelled };
+    const blocked = await fetchBlockedSlots(supabase, f.data, parsed.data);
+
+    return { ok: true, rows: (data ?? []) as ReservationRow[], cancelled, blocked };
   } catch (e) {
     console.error(e);
     return {
@@ -332,6 +343,25 @@ export async function getReservationsForDate(
     };
   }
 }
+
+/** Horários (HH:MM:SS) bloqueados pela recepção (bloqueio vigente) neste dia e instalação. */
+async function fetchBlockedSlots(
+  supabase: NonNullable<ReturnType<typeof getAdminClient>>,
+  facility: Facility,
+  date: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("slot_blocks")
+    .select("slot_start")
+    .eq("facility", facility)
+    .eq("block_date", date)
+    .is("released_at", null);
+  if (error) throw error;
+  return (data ?? []).map((r) => normalizeSlotStart(String(r.slot_start)));
+}
+
+const SLOT_BLOCKED_MESSAGE =
+  "Este horário está indisponível (bloqueado pela recepção). Escolha outro.";
 
 /** Garante que horário e apartamento estão livres (antes do insert; a BD continua a validar em corrida). */
 async function assertSlotAndApartmentFree(
@@ -354,6 +384,15 @@ async function assertSlotAndApartmentFree(
     .eq("status", "active");
 
   if (error) throw error;
+
+  const blocked = await fetchBlockedSlots(
+    supabase,
+    params.facility,
+    params.reservationDate
+  );
+  if (blocked.includes(params.normSlot)) {
+    return { ok: false, error: SLOT_BLOCKED_MESSAGE, kind: "slot" };
+  }
 
   const apt = params.apartmentNumber.trim();
   for (const r of data ?? []) {
@@ -660,6 +699,10 @@ export async function changeGuestReservation(input: {
         error: "Esta reserva já passou e não pode ser alterada.",
         code: "validation",
       };
+    }
+
+    if ((await fetchBlockedSlots(supabase, facility, reservationDate)).includes(newSlot)) {
+      return { ok: false, error: SLOT_BLOCKED_MESSAGE, code: "conflict" };
     }
 
     const { data: updated, error } = await supabase
@@ -1048,6 +1091,85 @@ export async function markMessageAsSent(
 }
 
 /** Cancela a reserva mantendo a linha no banco (soft delete) e liberando horário/apartamento. */
+/**
+ * Bloqueia ou libera um horário (só a recepção). Horário bloqueado não aceita reserva e aparece como
+ * indisponível para o hóspede. Só bloqueia horário LIVRE (cancele a reserva antes). Nada é apagado:
+ * liberar preenche `released_at`.
+ */
+export async function setSlotBlocked(input: {
+  facility: Facility;
+  reservationDate: string;
+  slotStart: string;
+  blocked: boolean;
+}): Promise<ActionResult> {
+  if (!(await readReceptionAuthed())) {
+    return { ok: false, error: "Não autorizado.", code: "validation" };
+  }
+  const date = isoYmdDateSchema.safeParse(input.reservationDate);
+  const fac = facilitySchema.safeParse(input.facility);
+  if (!date.success || !fac.success) {
+    return { ok: false, error: "Dados inválidos.", code: "validation" };
+  }
+  const slot = normalizeSlotStart(String(input.slotStart));
+  if (!receptionSlotStartsFor(fac.data).includes(slot)) {
+    return { ok: false, error: "Horário inválido.", code: "validation" };
+  }
+
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return { ok: false, error: supabaseConfigErrorMessage(), code: "validation" };
+  }
+
+  try {
+    if (!input.blocked) {
+      const { error } = await supabase
+        .from("slot_blocks")
+        .update({ released_at: new Date().toISOString() })
+        .eq("facility", fac.data)
+        .eq("block_date", date.data)
+        .eq("slot_start", slot)
+        .is("released_at", null);
+      if (error) throw error;
+      return { ok: true };
+    }
+
+    const { data: taken, error: takenError } = await supabase
+      .from("reservations")
+      .select("id")
+      .eq("facility", fac.data)
+      .eq("reservation_date", date.data)
+      .eq("slot_start", slot)
+      .eq("status", "active")
+      .maybeSingle();
+    if (takenError) throw takenError;
+    if (taken) {
+      return {
+        ok: false,
+        error: "Este horário tem reserva. Cancele a reserva antes de bloquear.",
+        code: "conflict",
+      };
+    }
+
+    const { error } = await supabase.from("slot_blocks").insert({
+      facility: fac.data,
+      block_date: date.data,
+      slot_start: slot,
+    });
+    // Já bloqueado (duplo clique / outra aba): o resultado desejado já vale.
+    if (error && !isPostgresUniqueViolation(error)) throw error;
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return {
+      ok: false,
+      error: input.blocked
+        ? "Não foi possível bloquear o horário. Tente novamente."
+        : "Não foi possível liberar o horário. Tente novamente.",
+      code: "network",
+    };
+  }
+}
+
 export async function cancelReservation(id: string): Promise<ActionResult> {
   if (!(await readReceptionAuthed())) {
     return { ok: false, error: "Não autorizado.", code: "validation" };

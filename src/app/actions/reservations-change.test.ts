@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blocksAware } from "./test-blocks";
 
 const mocks = vi.hoisted(() => ({
   getAdminClient: vi.fn(),
@@ -43,6 +44,7 @@ function fakeDb(opts: {
 describe("changeGuestReservation", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    blocksAware(mocks.getAdminClient);
     mocks.getValidatedGuestStay.mockResolvedValue(STAY);
   });
 
