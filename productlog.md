@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-12 — Planilha sem caixas ao redor dos textos (estilo do anexo)
+
+- **Status:** Concluído (PR em rascunho)
+- **Área:** Recepção — planilha do dia
+- **Pedido:** Nomes e dados da planilha iguais ao anexo (tabela limpa), sem caixas ao redor dos textos.
+- **O que foi feito (telas largas, lg+):** os campos de Hóspede, Observações e WhatsApp viram texto puro (`PLAIN_CELL`: sem borda, fundo nem sombra); a caixa só aparece ao passar o mouse (fundo suave) e ao editar (foco). Hóspede em negrito; linhas livres com o texto de apoio claro e sem caixa; cabeçalho em maiúsculas pequenas com fundo suave (estilo do anexo, na paleta do site); linhas e cabeçalho com o mesmo recuo, então o texto fica alinhado com o título da coluna.
+- **Não mudou:** abaixo de lg (cartões no celular) os campos seguem com borda, para o toque; a edição continua gravando ao sair do campo; altura única das linhas (56 px).
+- **Verificação (Postgres real):** desktop 1280 px e 1024 px: campos sem caixa em repouso, hover e foco mostram a caixa, nome em negrito, texto alinhado ao cabeçalho (±2 px), linhas de mesma altura, editar nome e observações ainda grava (maiúsculas), sem rolagem horizontal; celular mantém as bordas. tsc, ESLint e 221 testes OK.
+
 ### 2026-11-11 — Retenção aplicada em produção (nada de dado passado é apagado; só o WhatsApp após 1 ano)
 
 - **Status:** Concluído e aplicado em produção, com autorização explícita do responsável.

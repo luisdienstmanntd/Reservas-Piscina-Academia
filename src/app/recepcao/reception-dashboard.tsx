@@ -94,6 +94,14 @@ function fromYmd(localYmd: string): Date {
 
 const formatWhatsappDisplay = formatPhoneDisplay;
 
+/**
+ * Células editáveis da planilha em telas largas: texto puro, sem caixa ao redor.
+ * A caixa só aparece ao passar o mouse (fundo suave) e ao editar (foco). Abaixo de lg (cartões
+ * no celular) os campos continuam com borda, para o toque.
+ */
+const PLAIN_CELL =
+  "lg:h-8 lg:w-auto lg:-mx-2 lg:border-transparent lg:bg-transparent lg:px-2 lg:shadow-none lg:hover:bg-muted/50 lg:focus-visible:bg-background";
+
 function ReceptionGuestWhatsappCell({
   row,
   onSaved,
@@ -154,7 +162,7 @@ function ReceptionGuestWhatsappCell({
       type="tel"
       inputMode="tel"
       autoComplete="tel"
-      className="h-9 w-full min-w-0 border-border bg-white font-mono text-xs lg:h-8"
+      className={cn("h-9 w-full min-w-0 border-border bg-white font-mono text-xs", PLAIN_CELL)}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
@@ -206,7 +214,7 @@ function ReceptionGuestNameCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
+      className={cn("h-9 w-full min-w-0 border-border bg-white text-sm", PLAIN_CELL, "lg:font-semibold")}
       value={value}
       onChange={(e) => setValue(toUpperText(e.target.value))}
       onBlur={() => void commit()}
@@ -261,7 +269,7 @@ function ReceptionNotesCell({
   return (
     <Input
       ref={inputRef}
-      className="h-9 w-full min-w-0 border-border bg-white text-sm lg:h-8"
+      className={cn("h-9 w-full min-w-0 border-border bg-white text-sm", PLAIN_CELL)}
       title={value || "Observações"}
       value={value}
       onChange={(e) => setValue(toUpperText(e.target.value))}
@@ -299,7 +307,7 @@ function GhostField({ placeholder }: { placeholder: string }) {
       tabIndex={-1}
       aria-hidden
       placeholder={placeholder}
-      className="hidden h-8 w-full min-w-0 border-border bg-white text-sm opacity-60 lg:block"
+      className="hidden h-8 w-auto -mx-2 min-w-0 border-transparent bg-transparent px-2 text-sm shadow-none opacity-50 lg:block"
     />
   );
 }
@@ -309,7 +317,7 @@ function EmptySlotRow({ slot, past }: { slot: string; past: boolean }) {
     <li
       className={cn(
         "flex items-center rounded-md border border-dashed px-3 py-1 text-sm tabular-nums",
-        "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-0 lg:py-2 lg:text-base",
+        "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-3 lg:py-2 lg:text-base",
         ROW_HEIGHT,
         GRID,
         past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
@@ -346,7 +354,7 @@ function ReservationSlotRow({
     <li
       className={cn(
         "space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm",
-        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-border/60 lg:bg-transparent lg:px-0 lg:py-2 lg:shadow-none",
+        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-border/60 lg:bg-transparent lg:px-3 lg:py-2 lg:shadow-none",
         ROW_HEIGHT,
         GRID
       )}
@@ -429,7 +437,7 @@ function CancelledSlotRow({ slot, row }: { slot: string; row: ReservationRow }) 
       data-testid="cancelled-row"
       className={cn(
         "space-y-1 rounded-lg border border-dashed border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground",
-        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:bg-transparent lg:px-0 lg:py-2",
+        "lg:space-y-0 lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:bg-transparent lg:px-3 lg:py-2",
         ROW_HEIGHT,
         GRID
       )}
@@ -999,7 +1007,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           >
             <div
               className={cn(
-                "hidden border-b pb-2 text-left text-sm font-medium",
+                "hidden rounded-md bg-muted/50 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                 "lg:grid lg:items-center lg:gap-x-2",
                 GRID_TEMPLATE
               )}
