@@ -2,7 +2,11 @@
 
 import { cookies } from "next/headers";
 
-import { isoYmdDateSchema, stayApartmentSchema } from "@/lib/booking-zod";
+import {
+  isoYmdDateSchema,
+  stayApartmentSchema,
+  stayContactSchema,
+} from "@/lib/booking-zod";
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 import {
   GUEST_TOKEN_COOKIE,
@@ -25,6 +29,10 @@ export type ValidatedGuestStay = {
   id: string;
   apartmentNumber: string;
   checkoutDate: string;
+  /** Nome informado pelo hóspede (gravado na estadia até o check-out); `null` se ainda não informou. */
+  guestName: string | null;
+  /** WhatsApp informado pelo hóspede (gravado na estadia até o check-out); `null` se ainda não informou. */
+  guestWhatsapp: string | null;
 };
 
 /**
@@ -45,7 +53,7 @@ export async function getValidatedGuestStay(): Promise<
 
   const { data, error } = await supabase
     .from("active_stays")
-    .select("id, apartment_number, checkout_date")
+    .select("id, apartment_number, checkout_date, guest_name, guest_whatsapp")
     .eq("token", token)
     .maybeSingle();
 
@@ -59,7 +67,61 @@ export async function getValidatedGuestStay(): Promise<
   const today = hotelTodayYmd();
   if (!isCheckoutStillValid(checkoutDate, today)) return null;
 
-  return { id: String(data.id), apartmentNumber, checkoutDate };
+  return {
+    id: String(data.id),
+    apartmentNumber,
+    checkoutDate,
+    guestName: data.guest_name ? String(data.guest_name) : null,
+    guestWhatsapp: data.guest_whatsapp ? String(data.guest_whatsapp) : null,
+  };
+}
+
+/**
+ * Grava nome e WhatsApp do hóspede NA ESTADIA do link dele (até o check-out), para não pedir de novo em outros
+ * dias nem em outro aparelho. Só mexe na estadia do próprio link (validada no servidor).
+ * `silent`: usado como reforço ao reservar; erro não deve atrapalhar quem chamou.
+ */
+export async function saveStayGuestContact(input: {
+  guestName?: string;
+  guestWhatsapp: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = stayContactSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+    };
+  }
+
+  let stay: ValidatedGuestStay | null;
+  try {
+    stay = await getValidatedGuestStay();
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Sistema temporariamente indisponível." };
+  }
+  if (!stay) {
+    return { ok: false, error: "Acesso indisponível. Peça um novo link na recepção." };
+  }
+
+  const supabase = getAdminClient();
+  if (!supabase) return { ok: false, error: supabaseConfigErrorMessage() };
+
+  try {
+    const { error } = await supabase
+      .from("active_stays")
+      .update({
+        guest_name: parsed.data.guestName,
+        guest_whatsapp: parsed.data.guestWhatsapp,
+        contact_saved_at: new Date().toISOString(),
+      })
+      .eq("id", stay.id);
+    if (error) throw error;
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, error: "Não foi possível salvar seus dados." };
+  }
 }
 
 /**

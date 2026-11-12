@@ -571,6 +571,23 @@ export async function createGuestReservation(input: {
 
     if (error) throw error;
 
+    // Reforço: se a estadia ainda não tem os dados do hóspede (a gravação na identificação falhou), grava agora.
+    // Nunca atrapalha a reserva já feita.
+    if (!stay.guestWhatsapp) {
+      try {
+        await supabaseGuest
+          .from("active_stays")
+          .update({
+            guest_name: guestName,
+            guest_whatsapp: guestWhatsapp,
+            contact_saved_at: new Date().toISOString(),
+          })
+          .eq("id", stay.id);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     return { ok: true, data: { id: data.id as string } };
   } catch (e) {
     if (isPostgresUniqueViolation(e)) {

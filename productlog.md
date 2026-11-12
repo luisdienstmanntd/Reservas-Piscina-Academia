@@ -49,6 +49,15 @@ Copie o bloco abaixo para o início da seção **Histórico**, mantendo as entra
 
 ## Histórico
 
+### 2026-11-12 — Nome e WhatsApp do hóspede ficam gravados na estadia até o check-out
+
+- **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112200000_stay_guest_contact.sql`) ainda NÃO aplicada em produção: precisa de autorização e deve ser aplicada ANTES de publicar o código.
+- **Área:** Link de reservas do hóspede (`/hospede/*`)
+- **Pedido:** Revisar a permanência de nome e telefone: o hóspede acessa o link em vários dias e momentos e não deve cadastrar de novo até o check-out.
+- **Diagnóstico (reproduzido em teste):** os dados só ficavam no navegador do aparelho (`localStorage`), por apartamento + data de check-out. Falhas: (1) outro aparelho ou navegador com o mesmo link (ex.: abrir do WhatsApp e depois no Safari, ou limpar os dados) pedia tudo de novo; (2) outra estadia do mesmo apartamento e mesmo check-out (novo link) herdava o nome e o WhatsApp do hóspede anterior, uma falha de privacidade.
+- **O que foi feito:** nome e WhatsApp são gravados na estadia (`active_stays`), amarrados ao token do link, e valem até o check-out em qualquer aparelho. Ao abrir o link, quem já informou vai direto ao calendário; "Voltar" mostra os dados gravados e corrigir o telefone atualiza a estadia. Ao reservar, a estadia sem contato (gravação falhou) é completada. Um job diário esvazia os dois campos depois do check-out; as reservas mantêm seus dados sob a política de retenção existente. A view do Power BI não expõe os campos. O navegador deixa de guardar o contato (os registros antigos são apagados).
+- **Verificação (Postgres real):** 6 checagens de permanência (1ª visita pede, mesmo aparelho e outro aparelho não pedem de novo, outra estadia não herda) e 8 de continuidade (Voltar mostra os dados, corrigir atualiza, a reserva usa os dados da estadia, o job esvazia após o check-out, o histórico fica, link vencido não abre). 233 testes, tsc e ESLint OK.
+
 ### 2026-11-12 — Ícones em todas as linhas, bloqueio de horário e data na linha de Piscina/Academia
 
 - **Status:** Concluído (PR em rascunho). **Depende de uma migration** (`20261112022527_slot_blocks.sql`), já aplicada em produção com autorização do responsável (tabela vazia, 33 reservas intactas, gatilho criado, RLS ativo, `service_role` com acesso e `anon` sem).

@@ -71,6 +71,12 @@ const guestNameOptionalSchema = z
     return t.length ? t : null;
   });
 
+/** Nome e WhatsApp que o hóspede informa uma vez e que ficam gravados na estadia até o check-out. */
+export const stayContactSchema = z.object({
+  guestName: guestNameOptionalSchema,
+  guestWhatsapp: guestWhatsappRequiredSchema,
+});
+
 export const createGuestSchema = z.object({
   facility: facilitySchema,
   reservationDate: isoYmdDateSchema,
