@@ -6,6 +6,8 @@ import { ptBR } from "date-fns/locale";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { experiences, type Experience } from "@/lib/experiences";
+import { ExperienceSheet } from "./experience-sheet";
 import {
   Bell,
   CalendarDays,
@@ -625,6 +627,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
   const todayStr = useMemo(() => hotelCalendarDate(), []);
   const [facility, setFacility] = useState<Facility>("pool");
+  const [experience, setExperience] = useState<Experience | null>(null);
   // A recepção vê (e pode reservar) também os horário de uso compartilhado da piscina (09h).
   const slotList = useMemo(
     () => [...receptionSlotStartsFor(facility)],
@@ -929,6 +932,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     },
   });
   function viewNewReservation(item: NewReservationItem) {
+    setExperience(null);
     setFacility(item.facility === "gym" ? "gym" : "pool");
     setDateStr(item.reservation_date);
   }
@@ -1135,14 +1139,14 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex shrink-0 gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
                 className="lg:h-10 lg:px-4 lg:text-sm"
-                variant={facility === "pool" ? "default" : "outline"}
-                onClick={() => setFacility("pool")}
+                variant={!experience && facility === "pool" ? "default" : "outline"}
+                onClick={() => { setExperience(null); setFacility("pool"); }}
               >
                 Piscina
               </Button>
@@ -1150,11 +1154,23 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 type="button"
                 size="sm"
                 className="lg:h-10 lg:px-4 lg:text-sm"
-                variant={facility === "gym" ? "default" : "outline"}
-                onClick={() => setFacility("gym")}
+                variant={!experience && facility === "gym" ? "default" : "outline"}
+                onClick={() => { setExperience(null); setFacility("gym"); }}
               >
                 Academia
               </Button>
+              {(Object.keys(experiences) as Experience[]).map((activity) => (
+                <Button
+                  key={activity}
+                  type="button"
+                  size="sm"
+                  className="lg:h-10 lg:px-4 lg:text-sm"
+                  variant={experience === activity ? "default" : "outline"}
+                  onClick={() => setExperience(activity)}
+                >
+                  {experiences[activity].label}
+                </Button>
+              ))}
             </div>
             {/* Data à esquerda; ações agrupadas junto ao calendário. */}
             <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
@@ -1187,7 +1203,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
               />
               </div>
-              <Button
+              {!experience && <Button
                 type="button"
                 size="sm"
                 className="h-9 lg:h-10"
@@ -1197,7 +1213,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 }}
               >
                 Adicionar reserva
-              </Button>
+              </Button>}
               <Button
                 type="button"
                 size="sm"
@@ -1220,6 +1236,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           onView={viewNewReservation}
         />
 
+        {experience ? (
+          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} />
+        ) : (
         <Card className="border-border/80 shadow-sm">
           <CardContent
             className="px-2 pb-2 pt-4 sm:px-6 sm:pb-6 sm:pt-6"
@@ -1289,6 +1308,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             </ul>
           </CardContent>
         </Card>
+        )}
 
       <Dialog
         open={activeFormModal !== null}
