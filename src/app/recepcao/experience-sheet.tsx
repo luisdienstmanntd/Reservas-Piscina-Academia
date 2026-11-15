@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 
 import { deleteExperienceBooking, loadExperience, saveExperienceBooking, setupExperience } from "@/app/actions/experiences";
@@ -19,7 +19,7 @@ import { experiences, type Experience, type ExperienceBooking } from "@/lib/expe
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
-export function ExperienceSheet({ experience, day }: { experience: Experience; day: string }) {
+export function ExperienceSheet({ experience, day, toolbar }: { experience: Experience; day: string; toolbar?: ReactNode }) {
   const definition = experiences[experience];
   const [sheet, setSheet] = useState<Sheet>();
   const [loadError, setLoadError] = useState("");
@@ -135,6 +135,7 @@ export function ExperienceSheet({ experience, day }: { experience: Experience; d
 
   return (
     <Card className="border-border/80 shadow-sm">
+      {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
         <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
         {heading && <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>}

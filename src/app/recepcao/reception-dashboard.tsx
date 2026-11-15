@@ -398,10 +398,12 @@ function InertWaIcons() {
 function EmptySlotRow({
   slot,
   past,
+  onReserve,
   onBlock,
 }: {
   slot: string;
   past: boolean;
+  onReserve: () => void;
   onBlock: () => void;
 }) {
   return (
@@ -411,12 +413,26 @@ function EmptySlotRow({
         "lg:rounded-none lg:border-0 lg:border-b lg:border-solid lg:border-border/60 lg:px-3 lg:py-2 lg:text-base",
         ROW_HEIGHT,
         GRID,
-        past ? "border-border/50 bg-muted/40 text-muted-foreground" : "border-border/70"
+        past ? "border-border/50 bg-muted/40 text-muted-foreground" : "cursor-pointer border-border/70 hover:bg-muted/30"
       )}
+      onClick={(event) => {
+        if (!past && !(event.target instanceof Element && event.target.closest("button"))) {
+          onReserve();
+        }
+      }}
     >
-      <span className="whitespace-nowrap font-medium lg:w-auto">
+      {past ? <span className="whitespace-nowrap font-medium lg:w-auto">
         {slotStartLabel(slot)}
-      </span>
+      </span> : (
+        <button
+          type="button"
+          className="whitespace-nowrap text-left font-medium"
+          aria-label={`Reservar às ${slotStartLabel(slot)}`}
+          onClick={onReserve}
+        >
+          {slotStartLabel(slot)}
+        </button>
+      )}
       <span className="hidden lg:block" aria-hidden />
       <GhostField placeholder="Hóspede" />
       <GhostField placeholder="Observações" />
@@ -722,11 +738,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     },
     [newReservationDate, facility]
   );
-
-  // Novo dia/instalação: nova escolha de horário (o usuário ainda não escolheu nada).
-  useEffect(() => {
-    slotPickedByUserRef.current = false;
-  }, [newReservationDate, facility]);
 
   // Ocupação do formulário: ao abrir, a cada 20 s e ao voltar para a aba (outro usuário pode ter reservado).
   useEffect(() => {
@@ -1042,8 +1053,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       setNewGuestName("");
       setNewWhatsapp("");
       setNewNotes("");
-      setNewReservationDate(hotelCalendarDate());
-      slotPickedByUserRef.current = false; // o horário escolhido acabou de ser ocupado: pré-seleciona o próximo livre
+      setActiveFormModal(null);
       await Promise.all([load(), refreshFormSummary({ silent: true })]);
     } catch {
       toast.error("Falha ao salvar. Verifique a conexão.");
@@ -1109,6 +1119,52 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
     );
   }
 
+  const sheetToolbar = (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="relative flex shrink-0 items-center gap-2">
+        <p
+          className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
+          data-testid="day-label"
+        >
+          {dayLabel}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="size-9 p-0 lg:size-10"
+          title="Escolher a data"
+          aria-label="Escolher a data"
+          onClick={openDayPicker}
+        >
+          <CalendarDays className="size-4" aria-hidden />
+        </Button>
+        <Input
+          ref={dayInputRef}
+          id="day"
+          type="date"
+          value={dateStr}
+          onChange={(e) => setDateStr(e.target.value)}
+          aria-label="Dia"
+          tabIndex={-1}
+          className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
+        />
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="ml-auto h-9 lg:h-10"
+        onClick={() => {
+          setGuestAccessUrl(null);
+          setActiveFormModal("access");
+        }}
+      >
+        Gerar acesso
+      </Button>
+    </div>
+  );
+
   return (
     <div className="min-h-dvh bg-background">
       <div className="mx-auto w-full max-w-5xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 md:pt-6 lg:max-w-6xl lg:space-y-8 lg:px-8 lg:pb-10 xl:max-w-7xl 2xl:max-w-[min(100%-4rem,96rem)]">
@@ -1172,61 +1228,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </Button>
               ))}
             </div>
-            {/* Data à esquerda; ações agrupadas junto ao calendário. */}
-            <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-              <div className="relative flex shrink-0 items-center gap-2">
-              <p
-                className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
-                data-testid="day-label"
-              >
-                {dayLabel}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="size-9 p-0 lg:size-10"
-                title="Escolher a data"
-                aria-label="Escolher a data"
-                onClick={openDayPicker}
-              >
-                <CalendarDays className="size-4" aria-hidden />
-              </Button>
-              <Input
-                ref={dayInputRef}
-                id="day"
-                type="date"
-                value={dateStr}
-                onChange={(e) => setDateStr(e.target.value)}
-                aria-label="Dia"
-                tabIndex={-1}
-                className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
-              />
-              </div>
-              {!experience && <Button
-                type="button"
-                size="sm"
-                className="h-9 lg:h-10"
-                onClick={() => {
-                  setNewReservationDate(dateStr);
-                  setActiveFormModal("reservation");
-                }}
-              >
-                Adicionar reserva
-              </Button>}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 lg:h-10"
-                onClick={() => {
-                  setGuestAccessUrl(null);
-                  setActiveFormModal("access");
-                }}
-              >
-                Gerar acesso
-              </Button>
-            </div>
           </div>
         </header>
 
@@ -1237,7 +1238,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         />
 
         {experience ? (
-          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} />
+          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} />
         ) : (
         <Card className="border-border/80 shadow-sm">
           <CardContent
@@ -1245,6 +1246,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             role="region"
             aria-label="Grade de reservas do dia"
           >
+            {sheetToolbar}
             <div
               className={cn(
                 "hidden rounded-md bg-muted/50 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
@@ -1300,7 +1302,13 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                       <EmptySlotRow
                         key={slot}
                         slot={slot}
-                        past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                        past={isHistoryDay || isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                        onReserve={() => {
+                          slotPickedByUserRef.current = true;
+                          setNewReservationDate(dateStr);
+                          setNewSlot(slot);
+                          setActiveFormModal("reservation");
+                        }}
                         onBlock={() => void toggleBlock(slot, true)}
                       />,
                     ];
@@ -1460,7 +1468,10 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   min={todayStr}
                   className="border-border bg-white"
                   value={newReservationDate}
-                  onChange={(e) => setNewReservationDate(e.target.value)}
+                  onChange={(e) => {
+                    slotPickedByUserRef.current = false;
+                    setNewReservationDate(e.target.value);
+                  }}
                 />
               </div>
               <div className="space-y-2 sm:col-span-1">

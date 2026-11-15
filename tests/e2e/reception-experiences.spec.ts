@@ -35,7 +35,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await selectDay(page, date);
       await page.getByRole("button", { name: "Academia", exact: true }).click();
       await expect(grid.getByRole("listitem")).toHaveCount(24);
-      await page.getByRole("button", { name: "Adicionar reserva" }).click();
+      await expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeVisible();
+      await grid.getByRole("button", { name: "Reservar às 15h00" }).click();
       await expect(page.getByRole("dialog").getByText("Nova reserva").first()).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);

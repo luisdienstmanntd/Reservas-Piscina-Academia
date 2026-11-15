@@ -54,37 +54,42 @@ function renderReception() {
 }
 
 describe("modais de ações da recepção", () => {
-  it("alinha data, calendário e botões à direita", () => {
+  it("mantém calendário e gerar acesso dentro da grade", () => {
     renderReception();
-
-    const dayLabel = screen.getByTestId("day-label");
-    const actionGroup = dayLabel.parentElement?.parentElement;
-    expect(actionGroup?.className).toContain("justify-end");
-    expect(actionGroup?.className).toContain("ml-auto");
+    const grid = within(screen.getByRole("region", { name: "Grade de reservas do dia" }));
+    expect(grid.getByTestId("day-label")).toBeTruthy();
+    expect(grid.getByRole("button", { name: "Escolher a data" })).toBeTruthy();
+    expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Adicionar reserva" })).toBeNull();
   });
 
-  it("abre o modal de reserva com todos os campos já existentes", async () => {
+  it("abre pela linha livre com a data, o horário e os campos de cadastro", async () => {
     renderReception();
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar reserva" }));
+    fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-11-20" } });
+    const slot = screen.getByRole("button", { name: "Reservar às 15h00" });
+    fireEvent.click(slot.closest("li")!);
 
     const dialog = await screen.findByRole("dialog", { name: "Nova reserva" });
     expect(within(dialog).getByLabelText("Apto")).toBeTruthy();
     expect(within(dialog).getByLabelText("Hóspede (opcional)")).toBeTruthy();
-    expect(within(dialog).getByLabelText("Data")).toBeTruthy();
-    expect(within(dialog).getByLabelText("Horário")).toBeTruthy();
+    expect((within(dialog).getByLabelText("Data") as HTMLInputElement).value).toBe("2099-11-20");
+    expect((within(dialog).getByLabelText("Horário") as HTMLSelectElement).value).toBe("15:00:00");
     expect(within(dialog).getByLabelText("WhatsApp (opcional)")).toBeTruthy();
     expect(within(dialog).getByLabelText("Observações")).toBeTruthy();
   });
 
-  it("usa no formulário a data selecionada no calendário", async () => {
+  it("não abre o cadastro ao clicar em uma linha passada ou no cadeado", async () => {
+    reservationActions.setSlotBlocked.mockResolvedValue({ ok: true });
     renderReception();
-    fireEvent.change(screen.getByLabelText("Dia"), {
-      target: { value: "2026-11-20" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar reserva" }));
+    fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2000-01-01" } });
+    fireEvent.click(screen.getByText("15h00").closest("li")!);
+    expect(screen.queryByRole("dialog")).toBeNull();
 
-    const dialog = await screen.findByRole("dialog", { name: "Nova reserva" });
-    expect((within(dialog).getByLabelText("Data") as HTMLInputElement).value).toBe("2026-11-20");
+    fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-11-20" } });
+    const slot = screen.getByRole("button", { name: "Reservar às 15h00" });
+    fireEvent.click(within(slot.closest("li")!).getByRole("button", { name: "Bloquear horário" }));
+    await waitFor(() => expect(reservationActions.setSlotBlocked).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("abre o modal de acesso com apartamento e check-out", async () => {
