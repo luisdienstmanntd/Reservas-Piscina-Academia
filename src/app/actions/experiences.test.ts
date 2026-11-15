@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-import { deleteExperienceBooking, loadExperience, saveExperienceBooking, setupExperience } from "./experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, setupExperience } from "./experiences";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), admin: vi.fn(), fetch: vi.fn() }));
 vi.mock("@/lib/reception-auth", () => ({ readReceptionAuthed: mocks.auth }));
@@ -36,6 +36,7 @@ describe("ações das experiências", () => {
       setupExperience(cinema, { title: "Filme", start_time: "21:00" }),
       saveExperienceBooking({ ...cinema, line: 1 }, guest),
       deleteExperienceBooking({ ...cinema, line: 1 }, revision),
+      editCinemaSession(cinema, { title: "Filme", start_time: "21:00" }, { title: "Anterior", start_time: "19:30" }),
     ]);
     expect(results.every((result) => !result.ok)).toBe(true);
     expect(mocks.admin).not.toHaveBeenCalled();
@@ -68,6 +69,22 @@ describe("ações das experiências", () => {
     const [url, options] = mocks.fetch.mock.calls[0];
     expect(new URL(url).searchParams.get("on_conflict")).toBe("experience,day");
     expect(new Headers(options.headers).get("Prefer")).toContain("resolution=ignore-duplicates");
+  });
+
+  it("edita somente a sessão de cinema que corresponde aos valores originais", async () => {
+    const previous = { title: "Anterior", start_time: "19:30" };
+    const next = { title: "Novo", start_time: "20:00" };
+    const saved = { ...next, start_time: "20:00:00" };
+    expect(await editCinemaSession(wine, next, previous)).toMatchObject({ ok: false });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+
+    mocks.fetch.mockResolvedValueOnce(response([saved])).mockResolvedValueOnce(response([]));
+    expect(await editCinemaSession(cinema, next, previous)).toEqual({ ok: true, session: saved });
+    const [url, options] = mocks.fetch.mock.calls[0];
+    expect(new URL(url).searchParams.get("title")).toBe("eq.Anterior");
+    expect(new URL(url).searchParams.get("start_time")).toBe("eq.19:30");
+    expect(options.method).toBe("PATCH");
+    expect(await editCinemaSession(cinema, next, previous)).toMatchObject({ ok: false, conflict: true });
   });
 
   it("exige configuração para cinema e vinho e propaga falhas de leitura", async () => {

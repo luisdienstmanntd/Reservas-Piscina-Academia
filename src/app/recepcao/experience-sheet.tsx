@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, loadExperience, saveExperienceBooking, setupExperience } from "@/app/actions/experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -68,10 +68,23 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
     setError("");
     try {
       if (line === undefined) {
-        const result = await setupExperience({ experience, day }, {
-          title: fields.get("title"),
-          start_time: fields.get("time"),
-        });
+        const key = { experience, day };
+        const details = { title: fields.get("title"), start_time: fields.get("time") };
+        if (experience === "cinema" && sheet?.session) {
+          const result = await editCinemaSession(key, details, {
+            title: sheet.session.title,
+            start_time: sheet.session.start_time.slice(0, 5),
+          });
+          if (!result.ok) {
+            setError(result.error);
+            setStale("conflict" in result && result.conflict);
+            return;
+          }
+          setSheet((previous) => previous && { ...previous, session: result.session });
+          setShowSetup(false);
+          return;
+        }
+        const result = await setupExperience(key, details);
         if (!result.ok) {
           setError(result.error);
           return;
@@ -138,7 +151,32 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
       {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
         <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
-        {heading && <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>}
+        {heading && experience !== "cinema" && (
+          <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>
+        )}
+        {heading && experience === "cinema" && (
+          <div className="flex flex-wrap items-center gap-x-2 text-sm">
+            <div className="flex min-w-0 items-center gap-1">
+              <p className="[overflow-wrap:anywhere]">{heading.title}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground"
+                aria-label="Editar filme e horário"
+                title="Editar filme e horário"
+                onClick={() => {
+                  setError("");
+                  setStale(false);
+                  setShowSetup(true);
+                }}
+              >
+                <Pencil className="size-4" aria-hidden />
+              </Button>
+            </div>
+            <span>· {heading.start_time.slice(0, 5)}</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {loadError && <p role="alert" className="mb-2 text-sm text-destructive">{loadError}</p>}
@@ -208,16 +246,16 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         }}>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader className="pr-8">
-              <DialogTitle>{showSetup ? definition.label : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
+              <DialogTitle>{showSetup ? (heading ? "Editar filme e horário" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
               <DialogDescription>
-                {showSetup ? "Preencha os dados para abrir a planilha." : `${definition.label} · Linha ${line}`}
+                {showSetup ? (heading ? "Altere o nome do filme ou o horário da sessão." : "Preencha os dados para abrir a planilha.") : `${definition.label} · Linha ${line}`}
               </DialogDescription>
             </DialogHeader>
             <form key={showSetup ? "setup" : line} className="grid gap-4" onSubmit={submit}>
               {showSetup ? (
                 <>
-                  <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} /></label>
-                  <label className="grid gap-1 text-sm">Horário<Input name="time" type="time" required /></label>
+                  <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>
+                  <label className="grid gap-1 text-sm">Horário<Input name="time" type="time" required defaultValue={heading?.start_time.slice(0, 5) ?? (experience === "cinema" ? "19:30" : undefined)} /></label>
                 </>
               ) : (
                 <>

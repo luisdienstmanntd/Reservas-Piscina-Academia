@@ -942,6 +942,17 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       toast.error("Sessão da recepção expirada. Entre de novo.");
     },
   });
+  function selectSheet(tab: Facility | Experience) {
+    if (tab === (experience ?? facility)) return;
+    setDateStr(hotelToday);
+    if (tab === "pool" || tab === "gym") {
+      setExperience(null);
+      setFacility(tab);
+    } else {
+      setExperience(tab);
+    }
+  }
+
   function viewNewReservation(item: NewReservationItem) {
     setExperience(null);
     setFacility(item.facility === "gym" ? "gym" : "pool");
@@ -1202,7 +1213,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 size="sm"
                 className="lg:h-10 lg:px-4 lg:text-sm"
                 variant={!experience && facility === "pool" ? "default" : "outline"}
-                onClick={() => { setExperience(null); setFacility("pool"); }}
+                onClick={() => selectSheet("pool")}
               >
                 Piscina
               </Button>
@@ -1211,7 +1222,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 size="sm"
                 className="lg:h-10 lg:px-4 lg:text-sm"
                 variant={!experience && facility === "gym" ? "default" : "outline"}
-                onClick={() => { setExperience(null); setFacility("gym"); }}
+                onClick={() => selectSheet("gym")}
               >
                 Academia
               </Button>
@@ -1222,7 +1233,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   size="sm"
                   className="lg:h-10 lg:px-4 lg:text-sm"
                   variant={experience === activity ? "default" : "outline"}
-                  onClick={() => setExperience(activity)}
+                  onClick={() => selectSheet(activity)}
                 >
                   {experiences[activity].label}
                 </Button>

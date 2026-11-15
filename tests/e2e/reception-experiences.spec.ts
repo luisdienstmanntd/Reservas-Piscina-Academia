@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const password = process.env.EXPERIENCE_E2E_PASSWORD;
 const target = process.env.PLAYWRIGHT_BASE_URL;
@@ -10,6 +10,17 @@ async function selectDay(page: Page, date: string) {
     await page.getByLabel("Dia", { exact: true }).fill(date);
     await expect(page.getByTestId("day-label")).toContainText(label, { timeout: 500 });
   }).toPass({ timeout: 8000 });
+}
+
+async function openExperienceOnDay(page: Page, tab: Locator, today: string, date: string) {
+  await tab.click();
+  const setup = page.getByRole("dialog");
+  await expect(setup.or(page.getByRole("table"))).toBeVisible();
+  if (await setup.isVisible()) {
+    await setup.getByRole("button", { name: "Fechar janela" }).click();
+  }
+  await expect(page.getByLabel("Dia", { exact: true })).toHaveValue(today);
+  await selectDay(page, date);
 }
 
 async function fitsViewport(page: Page) {
@@ -32,8 +43,11 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await fitsViewport(page);
       const date = new Date(Date.UTC(2030, 0, 1 + (Math.floor(Date.now() / 1000) % 20000) * 2 + (viewport.width === 320 ? 1 : 0)))
         .toISOString().slice(0, 10);
+      const today = await page.getByLabel("Dia", { exact: true }).inputValue();
       await selectDay(page, date);
       await page.getByRole("button", { name: "Academia", exact: true }).click();
+      await expect(page.getByLabel("Dia", { exact: true })).toHaveValue(today);
+      await selectDay(page, date);
       await expect(grid.getByRole("listitem")).toHaveCount(24);
       await expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeVisible();
       await grid.getByRole("button", { name: "Reservar às 15h00" }).click();
@@ -42,12 +56,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(page.getByRole("dialog")).toHaveCount(0);
 
       const cinema = page.getByRole("button", { name: "Cine in Toscana", exact: true });
-      await cinema.click();
+      await openExperienceOnDay(page, cinema, today, date);
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("Nome do filme").fill("Cinema Paradiso");
+      await expect(dialog.getByLabel("Horário")).toHaveValue("19:30");
       await dialog.getByLabel("Horário").fill("20:30");
       await dialog.getByRole("button", { name: "Salvar" }).click();
-      await expect(page.getByText("Cinema Paradiso · 20:30")).toBeVisible();
+      await expect(page.getByText("Cinema Paradiso", { exact: true })).toBeVisible();
       const sheet = page.getByRole("table");
       await expect(sheet.getByRole("row")).toHaveCount(6);
       await sheet.getByRole("button", { name: "Cadastrar na linha 5" }).click();
@@ -62,9 +77,18 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       );
       await page.getByRole("button", { name: "Piscina", exact: true }).click();
       await expect(grid).toBeVisible();
-      await cinema.click();
+      await openExperienceOnDay(page, cinema, today, date);
       await expect(sheet.getByText(longName)).toBeVisible();
       await expect(dialog).toHaveCount(0);
+      await page.getByRole("button", { name: "Editar filme e horário" }).click();
+      await expect(dialog.getByLabel("Nome do filme")).toHaveValue("Cinema Paradiso");
+      await expect(dialog.getByLabel("Horário")).toHaveValue("20:30");
+      await dialog.getByLabel("Nome do filme").fill("Novo filme");
+      await dialog.getByLabel("Horário").fill("21:00");
+      await dialog.getByRole("button", { name: "Salvar" }).click();
+      await expect(page.getByText("Novo filme", { exact: true })).toBeVisible();
+      await expect(page.getByText("· 21:00", { exact: true })).toBeVisible();
+      await expect(sheet.getByText(longName)).toBeVisible();
       await sheet.getByRole("button", { name: "Excluir reserva da linha 5" }).click();
       const confirm = page.getByRole("alertdialog");
       await confirm.getByRole("button", { name: "Voltar" }).click();
@@ -74,7 +98,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(sheet.getByRole("button", { name: "Cadastrar na linha 5" })).toBeVisible();
 
       const wine = page.getByRole("button", { name: "L'ora del vino", exact: true });
-      await wine.click();
+      await openExperienceOnDay(page, wine, today, date);
       await dialog.getByLabel("Vinícola").fill("Vinícola Valle");
       await dialog.getByLabel("Horário").fill("18:00");
       await dialog.getByRole("button", { name: "Salvar" }).click();
@@ -95,12 +119,11 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await dialog.getByRole("button", { name: "Salvar" }).click();
       await expect(sheet.getByText("João")).toBeVisible();
       await page.reload();
-      await selectDay(page, date);
-      await wine.click();
+      await openExperienceOnDay(page, wine, today, date);
       await expect(sheet.getByText("João")).toBeVisible();
       await expect(dialog).toHaveCount(0);
 
-      await page.getByRole("button", { name: "La vera pizza", exact: true }).click();
+      await openExperienceOnDay(page, page.getByRole("button", { name: "La vera pizza", exact: true }), today, date);
       await expect(sheet.getByRole("row")).toHaveCount(9);
       await expect(dialog).toHaveCount(0);
       await sheet.getByRole("button", { name: "Cadastrar na linha 1" }).click();

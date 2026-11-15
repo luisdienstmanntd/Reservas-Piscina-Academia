@@ -72,6 +72,26 @@ export async function setupExperience(input: unknown, details: unknown) {
   return loadExperience(key.data);
 }
 
+export async function editCinemaSession(input: unknown, details: unknown, previous: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const key = keySchema.safeParse(input);
+  const setup = setupSchema.safeParse(details);
+  const original = setupSchema.safeParse(previous);
+  if (!key.success || key.data.experience !== "cinema" || !setup.success || !original.success) {
+    return invalid;
+  }
+
+  const { data, error } = await db.from("experience_sessions")
+    .update(setup.data)
+    .match({ ...key.data, ...original.data })
+    .select("title,start_time")
+    .returns<ExperienceSession[]>();
+  if (error) return { ok: false, error: "Não foi possível editar a sessão de cinema." } as const;
+  const [session] = data;
+  return session ? { ok: true, session } as const : conflict;
+}
+
 export async function saveExperienceBooking(input: unknown, details: unknown) {
   const db = await receptionClient();
   if (!db) return { ok: false, error: accessError } as const;

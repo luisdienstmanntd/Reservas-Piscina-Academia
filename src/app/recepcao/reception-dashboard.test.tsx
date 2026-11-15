@@ -20,6 +20,11 @@ const reservationActions = vi.hoisted(() => ({
 }));
 
 vi.mock("@/app/actions/reservations", () => reservationActions);
+vi.mock("@/app/actions/experiences", () => ({
+  loadExperience: vi.fn().mockResolvedValue({
+    ok: true, session: { title: "Sessão", start_time: "19:30:00" }, bookings: [],
+  }),
+}));
 vi.mock("@/app/actions/stays", () => ({ generateStayToken: vi.fn() }));
 vi.mock("next/image", () => ({ default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={props.alt ?? ""} {...props} /> }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -61,6 +66,19 @@ describe("modais de ações da recepção", () => {
     expect(grid.getByRole("button", { name: "Escolher a data" })).toBeTruthy();
     expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Adicionar reserva" })).toBeNull();
+  });
+
+  it("volta para hoje ao trocar de planilha e mantém a data ao clicar na aba atual", async () => {
+    renderReception();
+    const today = (screen.getByLabelText("Dia") as HTMLInputElement).value;
+    for (const tab of ["Cine in Toscana", "L'ora del vino", "La vera pizza", "Academia", "Piscina"]) {
+      fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-12-10" } });
+      fireEvent.click(screen.getByRole("button", { name: tab }));
+      await waitFor(() => expect((screen.getByLabelText("Dia") as HTMLInputElement).value).toBe(today));
+    }
+    fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-12-10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Piscina" }));
+    expect((screen.getByLabelText("Dia") as HTMLInputElement).value).toBe("2099-12-10");
   });
 
   it("abre pela linha livre com a data, o horário e os campos de cadastro", async () => {

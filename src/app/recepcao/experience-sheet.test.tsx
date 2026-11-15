@@ -7,6 +7,7 @@ import { ExperienceSheet } from "./experience-sheet";
 
 const actions = vi.hoisted(() => ({
   loadExperience: vi.fn(),
+  editCinemaSession: vi.fn(),
   setupExperience: vi.fn(),
   saveExperienceBooking: vi.fn(),
   deleteExperienceBooking: vi.fn(),
@@ -28,9 +29,10 @@ describe("planilhas de experiências", () => {
     const view = render(<ExperienceSheet experience="cinema" day={day} />);
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Nome do filme"), { target: { value: session.title } });
+    expect((within(dialog).getByLabelText("Horário") as HTMLInputElement).value).toBe("19:30");
     fireEvent.change(within(dialog).getByLabelText("Horário"), { target: { value: "20:30" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Salvar" }));
-    expect(await screen.findByText("Cinema Paradiso · 20:30")).toBeTruthy();
+    expect(await screen.findByText("Cinema Paradiso", { exact: true })).toBeTruthy();
     expect(within(await screen.findByRole("table")).getAllByRole("row")).toHaveLength(6);
     expect(actions.setupExperience).toHaveBeenCalledWith({ experience: "cinema", day }, {
       title: session.title,
@@ -42,6 +44,34 @@ describe("planilhas de experiências", () => {
     render(<ExperienceSheet experience="cinema" day={day} />);
     await screen.findByRole("table");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("edita filme e horário pelo lápis e preserva as reservas", async () => {
+    const session = { title: "Filme anterior", start_time: "19:30:00" };
+    actions.loadExperience.mockResolvedValue({
+      ok: true, session, bookings: [{ line: 1, apartment: "101", name: "Ana" }],
+    });
+    actions.editCinemaSession.mockResolvedValue({
+      ok: true, session: { title: "Novo filme", start_time: "21:00:00" },
+    });
+    render(<ExperienceSheet experience="cinema" day={day} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Editar filme e horário" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const title = dialog.getByLabelText("Nome do filme") as HTMLInputElement;
+    const time = dialog.getByLabelText("Horário") as HTMLInputElement;
+    expect(title.value).toBe("Filme anterior");
+    expect(time.value).toBe("19:30");
+    fireEvent.change(title, { target: { value: "Novo filme" } });
+    fireEvent.change(time, { target: { value: "21:00" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Salvar" }));
+    expect(await screen.findByText("Novo filme")).toBeTruthy();
+    expect(screen.getByText("· 21:00")).toBeTruthy();
+    expect(screen.getByText("Ana")).toBeTruthy();
+    expect(actions.editCinemaSession).toHaveBeenCalledWith(
+      { experience: "cinema", day },
+      { title: "Novo filme", start_time: "21:00" },
+      { title: "Filme anterior", start_time: "19:30" }
+    );
   });
 
   it("cadastra cliente externo no vinho sem pedir apartamento", async () => {
