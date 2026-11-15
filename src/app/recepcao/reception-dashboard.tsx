@@ -47,6 +47,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { receptionSlotOrder, slotStartLabel } from "@/lib/reservation-grid";
 import {
@@ -663,6 +669,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [guestAccessCheckout, setGuestAccessCheckout] = useState(todayStr);
   const [guestAccessLoading, setGuestAccessLoading] = useState(false);
   const [guestAccessUrl, setGuestAccessUrl] = useState<string | null>(null);
+  const [activeFormModal, setActiveFormModal] = useState<"reservation" | "access" | null>(null);
 
   useEffect(() => {
     let intervalId: number | undefined;
@@ -1148,8 +1155,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 Academia
               </Button>
             </div>
-            {/* Dia em tela: "Quarta-feira | 11/11/2026" e o calendário, na mesma linha de Piscina/Academia. */}
-            <div className="relative ml-auto flex shrink-0 items-center gap-2">
+            {/* Data à esquerda; ações agrupadas junto ao calendário. */}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:ml-6">
+              <div className="relative flex shrink-0 items-center gap-2">
               <p
                 className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
                 data-testid="day-label"
@@ -1177,6 +1185,30 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 tabIndex={-1}
                 className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
               />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 lg:h-10"
+                onClick={() => {
+                  setNewReservationDate(dateStr);
+                  setActiveFormModal("reservation");
+                }}
+              >
+                Adicionar reserva
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 lg:h-10"
+                onClick={() => {
+                  setGuestAccessUrl(null);
+                  setActiveFormModal("access");
+                }}
+              >
+                Gerar acesso
+              </Button>
             </div>
           </div>
         </header>
@@ -1257,13 +1289,22 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="px-4 sm:px-6 lg:px-8">
-            <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
-              Gerar acesso hóspede
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
+      <Dialog
+        open={activeFormModal !== null}
+        labelledBy="reception-form-title"
+        onOpenChange={(open) => {
+          if (!open) setActiveFormModal(null);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="pr-8">
+            <DialogTitle id="reception-form-title" className="font-serif text-charcoal">
+              {activeFormModal === "reservation" ? "Nova reserva" : "Gerar acesso hóspede"}
+            </DialogTitle>
+          </DialogHeader>
+          {activeFormModal === "access" ? (
+            <Card className="border-border/80 shadow-sm">
+              <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
             <form
               onSubmit={(e) => void onGenerateGuestAccess(e)}
               className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl"
@@ -1328,16 +1369,18 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </Button>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ) : null}
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="px-4 sm:px-6 lg:px-8">
-            <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
-              Nova reserva
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6 lg:px-8">
+          {activeFormModal === "reservation" ? (
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader className="px-4 sm:px-6 lg:px-8">
+                <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
+                  Nova reserva
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6 lg:px-8">
             <form
               onSubmit={(e) => void onCreate(e)}
               className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:max-w-5xl"
@@ -1476,9 +1519,11 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
+              </CardContent>
+            </Card>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       </div>
 
       <AlertDialog
