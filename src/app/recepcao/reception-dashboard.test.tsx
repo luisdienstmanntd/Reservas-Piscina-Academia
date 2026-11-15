@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /* eslint-disable @next/next/no-img-element */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import * as React from "react";
 import { ReceptionDashboard } from "@/app/recepcao/reception-dashboard";
@@ -31,15 +31,6 @@ vi.mock("@/app/recepcao/new-reservation-alerts", () => ({
 vi.mock("@/app/recepcao/history-dialog", () => ({ HistoryButton: () => null }));
 vi.mock("@/components/reception-wa-actions", () => ({ ReceptionWaActions: () => null }));
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function showModal() {
-    this.setAttribute("open", "");
-  };
-  HTMLDialogElement.prototype.close = function close() {
-    this.removeAttribute("open");
-  };
-});
-
 beforeEach(() => {
   vi.clearAllMocks();
   reservationActions.getReservationDaySummary.mockResolvedValue({
@@ -63,6 +54,15 @@ function renderReception() {
 }
 
 describe("modais de ações da recepção", () => {
+  it("alinha data, calendário e botões à direita", () => {
+    renderReception();
+
+    const dayLabel = screen.getByTestId("day-label");
+    const actionGroup = dayLabel.parentElement?.parentElement;
+    expect(actionGroup?.className).toContain("justify-end");
+    expect(actionGroup?.className).toContain("ml-auto");
+  });
+
   it("abre o modal de reserva com todos os campos já existentes", async () => {
     renderReception();
     fireEvent.click(screen.getByRole("button", { name: "Adicionar reserva" }));
@@ -100,10 +100,20 @@ describe("modais de ações da recepção", () => {
   it("fecha o modal ao receber Escape", async () => {
     renderReception();
     fireEvent.click(screen.getByRole("button", { name: "Gerar acesso" }));
-    const dialog = await screen.findByRole("dialog", { name: "Gerar acesso hóspede" });
+    await screen.findByRole("dialog", { name: "Gerar acesso hóspede" });
 
-    fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
 
-    await waitFor(() => expect(dialog.hasAttribute("open")).toBe(false));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("fecha o modal pelo botão de fechar", async () => {
+    renderReception();
+    fireEvent.click(screen.getByRole("button", { name: "Gerar acesso" }));
+    await screen.findByRole("dialog", { name: "Gerar acesso hóspede" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fechar janela" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

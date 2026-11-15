@@ -50,6 +50,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -1156,7 +1157,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
               </Button>
             </div>
             {/* Data à esquerda; ações agrupadas junto ao calendário. */}
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:ml-6">
+            <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
               <div className="relative flex shrink-0 items-center gap-2">
               <p
                 className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
@@ -1291,16 +1292,20 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
 
       <Dialog
         open={activeFormModal !== null}
-        labelledBy="reception-form-title"
         onOpenChange={(open) => {
           if (!open) setActiveFormModal(null);
         }}
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader className="pr-8">
-            <DialogTitle id="reception-form-title" className="font-serif text-charcoal">
+            <DialogTitle className="font-serif text-charcoal">
               {activeFormModal === "reservation" ? "Nova reserva" : "Gerar acesso hóspede"}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {activeFormModal === "reservation"
+                ? "Preencha os dados para registrar uma reserva."
+                : "Informe o apartamento e a data de check-out para gerar o acesso."}
+            </DialogDescription>
           </DialogHeader>
           {activeFormModal === "access" ? (
             <Card className="border-border/80 shadow-sm">
