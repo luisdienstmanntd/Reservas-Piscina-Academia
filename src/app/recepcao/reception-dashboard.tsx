@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import {
   Bell,
   CalendarDays,
-  X,
   CircleCheck,
   ConciergeBell,
   Eye,
@@ -1156,7 +1155,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 Academia
               </Button>
             </div>
-            {/* Data à esquerda; ações agrupadas junto ao calendário para manter o cabeçalho compacto. */}
+            {/* Data à esquerda; ações agrupadas junto ao calendário. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:ml-6">
               <div className="relative flex shrink-0 items-center gap-2">
               <p
@@ -1220,314 +1219,312 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           onView={viewNewReservation}
         />
 
-
-
-      </div>
+        <Card className="border-border/80 shadow-sm">
+          <CardContent
+            className="px-2 pb-2 pt-4 sm:px-6 sm:pb-6 sm:pt-6"
+            role="region"
+            aria-label="Grade de reservas do dia"
+          >
+            <div
+              className={cn(
+                "hidden rounded-md bg-muted/50 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                "lg:grid lg:items-center lg:gap-x-2",
+                GRID_TEMPLATE
+              )}
+              aria-hidden
+            >
+              <span>Horário</span>
+              <span>Apto</span>
+              <span>Hóspede</span>
+              <span>Observações</span>
+              <span>WhatsApp</span>
+              <span className="text-right">Mensagens</span>
+              <span />
+              <span />
+            </div>
+            <ul className="space-y-2 lg:space-y-0">
+              {receptionSlotOrder(slotList).flatMap((slot) => {
+                const key = normalizeSlotStart(slot);
+                const row = bySlot.get(key);
+                const gone = isHistoryDay ? (cancelledBySlot.get(key) ?? []) : [];
+                const items = gone.map((g) => (
+                  <CancelledSlotRow key={g.id} slot={slot} row={g} />
+                ));
+                if (row) {
+                  return [
+                    <ReservationSlotRow
+                      key={slot}
+                      slot={slot}
+                      row={row}
+                      history={isHistoryDay}
+                      onChanged={() => void load()}
+                      onAskCancel={setPendingDelete}
+                    />,
+                    ...items,
+                  ];
+                }
+                if (blockedSlots.has(key)) {
+                  return [
+                    ...items,
+                    <BlockedSlotRow
+                      key={slot}
+                      slot={slot}
+                      onUnblock={() => void toggleBlock(slot, false)}
+                    />,
+                  ];
+                }
+                // Horário livre que já teve reserva cancelada: mostra o histórico no lugar da linha vazia.
+                return items.length > 0
+                  ? items
+                  : [
+                      <EmptySlotRow
+                        key={slot}
+                        slot={slot}
+                        past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
+                        onBlock={() => void toggleBlock(slot, true)}
+                      />,
+                    ];
+              })}
+            </ul>
+          </CardContent>
+        </Card>
 
       <Dialog
         open={activeFormModal !== null}
+        labelledBy="reception-form-title"
         onOpenChange={(open) => {
           if (!open) setActiveFormModal(null);
         }}
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader className="pr-8">
-            <DialogTitle className="font-serif text-charcoal">
+            <DialogTitle id="reception-form-title" className="font-serif text-charcoal">
               {activeFormModal === "reservation" ? "Nova reserva" : "Gerar acesso hóspede"}
             </DialogTitle>
           </DialogHeader>
+          {activeFormModal === "access" ? (
+            <Card className="border-border/80 shadow-sm">
+              <CardContent className="space-y-4 px-4 sm:px-6 lg:px-8">
+            <form
+              onSubmit={(e) => void onGenerateGuestAccess(e)}
+              className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="ga-apt">Apartamento</Label>
+                <select
+                  id="ga-apt"
+                  required
+                  className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  value={guestAccessApt}
+                  onChange={(e) => setGuestAccessApt(e.target.value)}
+                >
+                  <option value="">Selecione…</option>
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ga-co">Check-out</Label>
+                <Input
+                  id="ga-co"
+                  type="date"
+                  min={todayStr}
+                  className="border-border bg-white"
+                  value={guestAccessCheckout}
+                  onChange={(e) => setGuestAccessCheckout(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={guestAccessLoading}>
+                  {guestAccessLoading ? "A gerar…" : "Gerar link"}
+                </Button>
+              </div>
+            </form>
+            {guestAccessUrl ? (
+              <div className="space-y-3 rounded-md border border-border/80 bg-muted/30 p-3">
+                <p className="text-sm leading-relaxed text-charcoal">
+                  {GUEST_ACCESS_WELCOME_TEXT}
+                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-charcoal">link:</p>
+                  <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
+                    {guestAccessUrl}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(
+                      guestAccessClipText(guestAccessUrl)
+                    );
+                    toast.message("Mensagem e link copiados.");
+                  }}
+                >
+                  Copiar mensagem e link
+                </Button>
+              </div>
+            ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
           {activeFormModal === "reservation" ? (
-            <div className="px-4 sm:px-6 lg:px-8">
-                        <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
-                          Gerar acesso hóspede
-                        </CardTitle>
-                      </div>
-                      <div className="space-y-4 px-4 sm:px-6 lg:px-8">
-                        <form
-                          onSubmit={(e) => void onGenerateGuestAccess(e)}
-                          className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl"
-                        >
-                          <div className="space-y-2">
-                            <Label htmlFor="ga-apt">Apartamento</Label>
-                            <select
-                              id="ga-apt"
-                              required
-                              className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                              value={guestAccessApt}
-                              onChange={(e) => setGuestAccessApt(e.target.value)}
-                            >
-                              <option value="">Selecione…</option>
-                              {ALLOWED_APARTMENT_NUMBERS.map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="ga-co">Check-out</Label>
-                            <Input
-                              id="ga-co"
-                              type="date"
-                              min={todayStr}
-                              className="border-border bg-white"
-                              value={guestAccessCheckout}
-                              onChange={(e) => setGuestAccessCheckout(e.target.value)}
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <Button type="submit" disabled={guestAccessLoading}>
-                              {guestAccessLoading ? "A gerar…" : "Gerar link"}
-                            </Button>
-                          </div>
-                        </form>
-                        {guestAccessUrl ? (
-                          <div className="space-y-3 rounded-md border border-border/80 bg-muted/30 p-3">
-                            <p className="text-sm leading-relaxed text-charcoal">
-                              {GUEST_ACCESS_WELCOME_TEXT}
-                            </p>
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-charcoal">link:</p>
-                              <p className="break-all font-mono text-xs text-charcoal sm:text-sm">
-                                {guestAccessUrl}
-                              </p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                void navigator.clipboard.writeText(
-                                  guestAccessClipText(guestAccessUrl)
-                                );
-                                toast.message("Mensagem e link copiados.");
-                              }}
-                            >
-                              Copiar mensagem e link
-                            </Button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </section>
-            
-                    <Card className="border-border/80 shadow-sm">
-                      <div className="px-4 sm:px-6 lg:px-8">
-                        <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
-                          Nova reserva
-                        </CardTitle>
-                      </div>
-                      <div className="px-4 sm:px-6 lg:px-8">
-                        <form
-                          onSubmit={(e) => void onCreate(e)}
-                          className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:max-w-5xl"
-                        >
-                          <div className="space-y-2 sm:col-span-1">
-                            <Label htmlFor="na">Apto</Label>
-                            <select
-                              id="na"
-                              required
-                              className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                              value={newApt}
-                              onChange={(e) => setNewApt(e.target.value)}
-                            >
-                              <option value="">Selecione…</option>
-                              {ALLOWED_APARTMENT_NUMBERS.map((n) => {
-                                const booked = formBookedApts.has(n);
-                                // Apartamento que já tem reserva neste dia não aparece na lista
-                                // (só se for o que está selecionado, para o aviso continuar coerente).
-                                if (booked && n !== newApt) return null;
-                                return (
-                                  <option
-                                    key={n}
-                                    value={n}
-                                    disabled={booked}
-                                    className={booked ? "text-muted-foreground" : undefined}
-                                  >
-                                    {n}
-                                    {booked ? " — já tem reserva neste dia" : ""}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
-                          <div className="space-y-2 sm:col-span-1">
-                            <Label htmlFor="ngn">Hóspede (opcional)</Label>
-                            <Input
-                              id="ngn"
-                              type="text"
-                              autoComplete="name"
-                              placeholder="Nome do hóspede"
-                              maxLength={200}
-                              className="border-border bg-white"
-                              value={newGuestName}
-                              onChange={(e) => setNewGuestName(toUpperText(e.target.value))}
-                            />
-                          </div>
-                          <div className="space-y-2 sm:col-span-1">
-                            <Label htmlFor="nd">Data</Label>
-                            <Input
-                              id="nd"
-                              type="date"
-                              min={todayStr}
-                              className="border-border bg-white"
-                              value={newReservationDate}
-                              onChange={(e) => setNewReservationDate(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2 sm:col-span-1">
-                            <Label htmlFor="ns">Horário</Label>
-                            <select
-                              id="ns"
-                              className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                              value={newSlot}
-                              onChange={(e) => {
-                                slotPickedByUserRef.current = true;
-                                setNewSlot(e.target.value);
-                              }}
-                            >
-                              {slotList.map((s) => {
-                                const reason = reasonForSlot(s);
-                                // Só os horários disponíveis aparecem (passados e ocupados ficam de fora).
-                                // Exceção: o horário já escolhido, enquanto selecionado, para o aviso continuar coerente.
-                                if (reason !== null && s !== newSlot) return null;
-                                return (
-                                  <option
-                                    key={s}
-                                    value={s}
-                                    disabled={reason !== null}
-                                    className={reason ? "text-muted-foreground" : undefined}
-                                  >
-                                    {slotLabel(s)}
-                                    {reason ? ` — ${SLOT_BLOCK_LABEL[reason].toLowerCase()}` : ""}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
-                          <div className="space-y-2 sm:col-span-1">
-                            <Label htmlFor="nw">WhatsApp (opcional)</Label>
-                            <Input
-                              id="nw"
-                              type="tel"
-                              inputMode="tel"
-                              autoComplete="tel"
-                              placeholder="(54) 99999-9999 ou +44 7911 123456"
-                              className="border-border bg-white"
-                              value={newWhatsapp}
-                              onChange={(e) => setNewWhatsapp(e.target.value)}
-                            />
-                          </div>
-                          {(aptAlreadyBooked || slotReason || noFreeSlot) && (
-                            <p
-                              className="text-destructive text-sm sm:col-span-2"
-                              role="alert"
-                            >
-                              {aptAlreadyBooked
-                                ? "Este apartamento já possui reserva neste dia nesta instalação."
-                                : slotReason
-                                  ? noFreeSlot
-                                    ? "Não há horários disponíveis neste dia."
-                                    : SLOT_BLOCK_MESSAGE[slotReason]
-                                  : "Não há horários disponíveis neste dia."}
-                            </p>
-                          )}
-                          <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="nn">Observações</Label>
-                            <Textarea
-                              id="nn"
-                              maxLength={2000}
-                              value={newNotes}
-                              onChange={(e) => setNewNotes(toUpperText(e.target.value))}
-                              placeholder="Opcional: pedido especial, notas internas…"
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <Button
-                              type="submit"
-                              disabled={
-                                creating ||
-                                formSummaryLoading ||
-                                aptAlreadyBooked ||
-                                slotReason !== null
-                              }
-                            >
-                              {creating ? "Salvando…" : "Registrar reserva"}
-                            </Button>
-                          </div>
-                        </form>
-                      </div>
-                    </Card>
-          ) : (
-            <CardContent
-                        className="px-2 pb-2 pt-4 sm:px-6 sm:pb-6 sm:pt-6"
-                        role="region"
-                        aria-label="Grade de reservas do dia"
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader className="px-4 sm:px-6 lg:px-8">
+                <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
+                  Nova reserva
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6 lg:px-8">
+            <form
+              onSubmit={(e) => void onCreate(e)}
+              className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:max-w-5xl"
+            >
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="na">Apto</Label>
+                <select
+                  id="na"
+                  required
+                  className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  value={newApt}
+                  onChange={(e) => setNewApt(e.target.value)}
+                >
+                  <option value="">Selecione…</option>
+                  {ALLOWED_APARTMENT_NUMBERS.map((n) => {
+                    const booked = formBookedApts.has(n);
+                    // Apartamento que já tem reserva neste dia não aparece na lista
+                    // (só se for o que está selecionado, para o aviso continuar coerente).
+                    if (booked && n !== newApt) return null;
+                    return (
+                      <option
+                        key={n}
+                        value={n}
+                        disabled={booked}
+                        className={booked ? "text-muted-foreground" : undefined}
                       >
-                        <div
-                          className={cn(
-                            "hidden rounded-md bg-muted/50 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                            "lg:grid lg:items-center lg:gap-x-2",
-                            GRID_TEMPLATE
-                          )}
-                          aria-hidden
-                        >
-                          <span>Horário</span>
-                          <span>Apto</span>
-                          <span>Hóspede</span>
-                          <span>Observações</span>
-                          <span>WhatsApp</span>
-                          <span className="text-right">Mensagens</span>
-                          <span />
-                          <span />
-                        </div>
-                        <ul className="space-y-2 lg:space-y-0">
-                          {receptionSlotOrder(slotList).flatMap((slot) => {
-                            const key = normalizeSlotStart(slot);
-                            const row = bySlot.get(key);
-                            const gone = isHistoryDay ? (cancelledBySlot.get(key) ?? []) : [];
-                            const items = gone.map((g) => (
-                              <CancelledSlotRow key={g.id} slot={slot} row={g} />
-                            ));
-                            if (row) {
-                              return [
-                                <ReservationSlotRow
-                                  key={slot}
-                                  slot={slot}
-                                  row={row}
-                                  history={isHistoryDay}
-                                  onChanged={() => void load()}
-                                  onAskCancel={setPendingDelete}
-                                />,
-                                ...items,
-                              ];
-                            }
-                            if (blockedSlots.has(key)) {
-                              return [
-                                ...items,
-                                <BlockedSlotRow
-                                  key={slot}
-                                  slot={slot}
-                                  onUnblock={() => void toggleBlock(slot, false)}
-                                />,
-                              ];
-                            }
-                            // Horário livre que já teve reserva cancelada: mostra o histórico no lugar da linha vazia.
-                            return items.length > 0
-                              ? items
-                              : [
-                                  <EmptySlotRow
-                                    key={slot}
-                                    slot={slot}
-                                    past={isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
-                                    onBlock={() => void toggleBlock(slot, true)}
-                                  />,
-                                ];
-                          })}
-                        </ul>
-                      </div>
-          )}
+                        {n}
+                        {booked ? " — já tem reserva neste dia" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="ngn">Hóspede (opcional)</Label>
+                <Input
+                  id="ngn"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Nome do hóspede"
+                  maxLength={200}
+                  className="border-border bg-white"
+                  value={newGuestName}
+                  onChange={(e) => setNewGuestName(toUpperText(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="nd">Data</Label>
+                <Input
+                  id="nd"
+                  type="date"
+                  min={todayStr}
+                  className="border-border bg-white"
+                  value={newReservationDate}
+                  onChange={(e) => setNewReservationDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="ns">Horário</Label>
+                <select
+                  id="ns"
+                  className="border-input flex h-9 w-full rounded-md border border-border bg-white px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  value={newSlot}
+                  onChange={(e) => {
+                    slotPickedByUserRef.current = true;
+                    setNewSlot(e.target.value);
+                  }}
+                >
+                  {slotList.map((s) => {
+                    const reason = reasonForSlot(s);
+                    // Só os horários disponíveis aparecem (passados e ocupados ficam de fora).
+                    // Exceção: o horário já escolhido, enquanto selecionado, para o aviso continuar coerente.
+                    if (reason !== null && s !== newSlot) return null;
+                    return (
+                      <option
+                        key={s}
+                        value={s}
+                        disabled={reason !== null}
+                        className={reason ? "text-muted-foreground" : undefined}
+                      >
+                        {slotLabel(s)}
+                        {reason ? ` — ${SLOT_BLOCK_LABEL[reason].toLowerCase()}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor="nw">WhatsApp (opcional)</Label>
+                <Input
+                  id="nw"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(54) 99999-9999 ou +44 7911 123456"
+                  className="border-border bg-white"
+                  value={newWhatsapp}
+                  onChange={(e) => setNewWhatsapp(e.target.value)}
+                />
+              </div>
+              {(aptAlreadyBooked || slotReason || noFreeSlot) && (
+                <p
+                  className="text-destructive text-sm sm:col-span-2"
+                  role="alert"
+                >
+                  {aptAlreadyBooked
+                    ? "Este apartamento já possui reserva neste dia nesta instalação."
+                    : slotReason
+                      ? noFreeSlot
+                        ? "Não há horários disponíveis neste dia."
+                        : SLOT_BLOCK_MESSAGE[slotReason]
+                      : "Não há horários disponíveis neste dia."}
+                </p>
+              )}
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="nn">Observações</Label>
+                <Textarea
+                  id="nn"
+                  maxLength={2000}
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(toUpperText(e.target.value))}
+                  placeholder="Opcional: pedido especial, notas internas…"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button
+                  type="submit"
+                  disabled={
+                    creating ||
+                    formSummaryLoading ||
+                    aptAlreadyBooked ||
+                    slotReason !== null
+                  }
+                >
+                  {creating ? "Salvando…" : "Registrar reserva"}
+                </Button>
+              </div>
+            </form>
+              </CardContent>
+            </Card>
+          ) : null}
         </DialogContent>
       </Dialog>
+      </div>
 
       <AlertDialog
         open={!!pendingDelete}
