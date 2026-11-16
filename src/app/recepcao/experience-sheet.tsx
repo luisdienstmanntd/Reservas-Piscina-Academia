@@ -635,7 +635,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           <AlertDialogContent className="sm:max-w-sm">
             <AlertDialogHeader>
               <AlertDialogTitle>Apagar esta experiência?</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className="sr-only">
                 A planilha de {definition.label} de {dateLabel} e todas as suas reservas serão apagadas.
               </AlertDialogDescription>
             </AlertDialogHeader>
