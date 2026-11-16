@@ -15,6 +15,7 @@ const actions = vi.hoisted(() => ({
   savePizzaCapacity: vi.fn(),
   saveWineCapacity: vi.fn(),
   deleteExperienceBooking: vi.fn(),
+  deleteExperience: vi.fn(),
 }));
 vi.mock("@/app/actions/experiences", () => actions);
 
@@ -31,6 +32,22 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("planilhas de experiências", () => {
+  it.each(["cinema", "wine", "pizza"] as const)("confirma antes de apagar a planilha de %s", async (experience) => {
+    actions.loadExperience.mockResolvedValue({
+      ok: true, session: { title: "Sessão", start_time: "19:30" }, bookings: [],
+    });
+    actions.deleteExperience.mockResolvedValue({ ok: true });
+    const onDismissSetup = vi.fn();
+    render(<ExperienceSheet experience={experience} day={day} onDismissSetup={onDismissSetup} />);
+    const remove = await screen.findByRole("button", { name: "Apagar experiência" });
+    fireEvent.click(remove);
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Voltar" }));
+    expect(actions.deleteExperience).not.toHaveBeenCalled();
+    fireEvent.click(remove);
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Apagar experiência" }));
+    await waitFor(() => expect(onDismissSetup).toHaveBeenCalledOnce());
+    expect(actions.deleteExperience).toHaveBeenCalledWith({ experience, day });
+  });
   it("solicita o filme e o horário uma vez e abre as cinco linhas", async () => {
     const session = { title: "Cinema Paradiso", start_time: "20:30:00" };
     actions.setupExperience.mockResolvedValue({ ok: true, session, bookings: [] });

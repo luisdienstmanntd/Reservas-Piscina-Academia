@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { CalendarDays, Settings, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, editExperienceDetails, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "@/app/actions/experiences";
+import { deleteExperience, deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, editExperienceDetails, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -39,11 +39,13 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
   const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
   const [overCapacityLine, setOverCapacityLine] = useState<number>();
   const [removing, setRemoving] = useState<ExperienceBooking>();
+  const [deletingSheet, setDeletingSheet] = useState(false);
   const [customer, setCustomer] = useState<ExperienceBooking["customer"]>("guest");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
-  const hasDialogDescription = showSetup || experience === "wine";
+  const editingSession = showSetup && Boolean(sheet?.session);
+  const hasDialogDescription = showSetup && !editingSession;
   const current = sheet?.bookings.find((booking) => booking.line === line);
 
   useEffect(() => {
@@ -203,6 +205,26 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
     }
   }
 
+  async function removeSheet() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await deleteExperience({ experience, day });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setDeletingSheet(false);
+      if (onDismissSetup) onDismissSetup();
+      else reloadSheet();
+    } catch {
+      setError("Não foi possível apagar a experiência.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove() {
     if (busy || stale || !removing) return;
     setBusy(true);
@@ -283,6 +305,13 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               </Button>
             )}
           </div>
+          {heading && (
+            <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive"
+              aria-label="Apagar experiência" title="Apagar experiência"
+              onClick={() => { setError(""); setDeletingSheet(true); }}>
+              <Trash2 className="size-4" aria-hidden />
+            </Button>
+          )}
           {toolbar}
         </div>
         {heading && experience !== "cinema" && (
@@ -420,10 +449,10 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           }
         }}>
           <DialogContent
-            className="max-h-[90dvh] overflow-y-auto sm:max-w-sm"
+            className={`max-h-[90dvh] overflow-y-auto sm:max-w-sm ${editingSession ? "pt-12" : ""}`}
             {...(!hasDialogDescription ? { "aria-describedby": undefined } : {})}
           >
-            <DialogHeader className={isPizza && !showSetup && !current ? "sr-only" : "pr-8"}>
+            <DialogHeader className={editingSession || (isPizza && !showSetup && !current) ? "sr-only" : "pr-8"}>
               <DialogTitle>{showSetup ? (heading ? "Editar experiência" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
               {hasDialogDescription && (
                 <DialogDescription>
@@ -445,8 +474,6 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                         {new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))} {day.split("-").reverse().join("/")}
                       </time>
                     </span>
-                  ) : showSetup ? (
-                    "Altere o nome do filme ou o horário da sessão."
                   ) : null}
                 </DialogDescription>
               )}
@@ -600,6 +627,25 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
             <AlertDialogFooter className="flex-row justify-between sm:justify-between">
               <AlertDialogCancel>Não</AlertDialogCancel>
               <AlertDialogAction onClick={() => setLine(overCapacityLine)}>Sim</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={deletingSheet} onOpenChange={(open) => { if (!busy) setDeletingSheet(open); }}>
+          <AlertDialogContent className="sm:max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apagar esta experiência?</AlertDialogTitle>
+              <AlertDialogDescription>
+                A planilha de {definition.label} de {dateLabel} e todas as suas reservas serão apagadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
+              <AlertDialogAction disabled={busy} onClick={(event) => {
+                event.preventDefault();
+                void removeSheet();
+              }}>{busy ? "Apagando…" : "Apagar experiência"}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

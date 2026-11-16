@@ -238,3 +238,18 @@ export async function moveExperience(input: unknown, target: unknown) {
   if (!data) return { ok: false, error: "A data de destino já tem dados ou a sessão original mudou." } as const;
   return { ok: true } as const;
 }
+
+export async function deleteExperience(input: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const key = keySchema.safeParse(input);
+  if (!key.success) return invalid;
+
+  const { data, error } = await db.rpc("delete_experience", {
+    kind: key.data.experience,
+    session_day: key.data.day,
+  });
+  if (error) return { ok: false, error: "Não foi possível apagar a experiência." } as const;
+  if (!data) return { ok: false, error: "A experiência já foi removida ou mudou de data." } as const;
+  return { ok: true } as const;
+}
