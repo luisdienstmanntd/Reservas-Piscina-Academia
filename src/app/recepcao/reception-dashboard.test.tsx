@@ -22,7 +22,7 @@ const reservationActions = vi.hoisted(() => ({
 vi.mock("@/app/actions/reservations", () => reservationActions);
 vi.mock("@/app/actions/experiences", () => ({
   loadExperience: vi.fn().mockImplementation(async ({ experience }) => ({
-    ok: true, session: experience === "pizza" ? null : { title: "Sessão", start_time: "19:30:00" }, bookings: [],
+    ok: true, session: { title: experience, start_time: "19:30:00" }, bookings: [],
   })),
 }));
 vi.mock("@/app/actions/stays", () => ({ generateStayToken: vi.fn() }));
@@ -77,7 +77,6 @@ describe("modais de ações da recepção", () => {
       if (dateInput) fireEvent.change(dateInput, { target: { value: "2099-12-10" } });
       fireEvent.click(screen.getByRole("button", { name: tab }));
       await waitFor(() => expect(screen.getByTestId("day-label").textContent).toContain(today.split("-").reverse().join("/")));
-      if (tab === "La vera pizza") fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
       const access = screen.queryByRole("button", { name: "Gerar acesso" });
       if (tab === "Academia" || tab === "Piscina") expect(access).toBeTruthy();
       else expect(access).toBeNull();

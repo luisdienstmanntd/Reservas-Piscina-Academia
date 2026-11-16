@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { CalendarDays, Settings, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "@/app/actions/experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, editExperienceDetails, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -20,6 +20,7 @@ import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, WINE
 import { ReservationDateDialog } from "./reservation-date-dialog";
 
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
+const defaultStartTime = { cinema: "19:30", wine: "18:00", pizza: "20:00" };
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismissSetup }: { experience: Experience; day: string; toolbar?: ReactNode; onDayChange?: (day: string) => void; onDismissSetup?: () => void }) {
@@ -32,11 +33,9 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
-  const [pizzaOpened, setPizzaOpened] = useState(false);
   const [line, setLine] = useState<number>();
   const [dateOpen, setDateOpen] = useState(false);
   const [capacityOpen, setCapacityOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
   const [overCapacityLine, setOverCapacityLine] = useState<number>();
   const [removing, setRemoving] = useState<ExperienceBooking>();
@@ -56,7 +55,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         return;
       }
       setSheet(result);
-      setShowSetup(experience === "pizza" || !result.session);
+      setShowSetup(!result.session);
     }).catch(() => {
       if (active) setLoadError("Não foi possível carregar a planilha.");
     });
@@ -82,13 +81,11 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
     setError("");
     try {
       if (line === undefined) {
-        if (experience === "pizza") {
-          setPizzaOpened(true);
-          setShowSetup(false);
-          return;
-        }
         const key = { experience, day };
-        const details = { title: fields.get("title"), start_time: fields.get("time") };
+        const details = {
+          title: isPizza ? definition.label : fields.get("title"),
+          start_time: fields.get("time"),
+        };
         if (experience === "cinema" && sheet?.session) {
           const result = await editCinemaSession(key, details, {
             title: sheet.session.title,
@@ -170,7 +167,14 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
   async function submitCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    const value = Number(new FormData(event.currentTarget).get("capacity"));
+    const fields = new FormData(event.currentTarget);
+    const value = Number(fields.get("capacity"));
+    const winery = String(fields.get("winery") ?? "").trim();
+    const time = String(fields.get("wineTime") ?? "");
+    if (experience === "wine" && (!winery || !time)) {
+      setError("Informe a vinícola e o horário.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -182,6 +186,15 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         return;
       }
       setSheet((previous) => previous && { ...previous, capacity: result.capacity });
+      if ((experience === "wine" || experience === "pizza") &&
+          ((experience === "wine" && winery !== sheet?.session?.title) || time !== sheet?.session?.start_time.slice(0, 5))) {
+        const renamed = await editExperienceDetails(experience, day, { title: isPizza ? definition.label : winery, start_time: time });
+        if (!renamed.ok) {
+          setError(`Capacidade salva. ${renamed.error}`);
+          return;
+        }
+        setSheet((previous) => previous && { ...previous, session: renamed.session });
+      }
       setCapacityOpen(false);
     } catch {
       setError("Não foi possível salvar a capacidade.");
@@ -233,7 +246,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
     : 0;
 
   return (
-    <Card className="border-border/80 shadow-sm" hidden={!loadError && (!sheet || (experience === "pizza" ? !pizzaOpened : !heading))}>
+    <Card className="border-border/80 shadow-sm" hidden={!loadError && (!sheet || !heading)}>
       {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
         <div className="flex items-center gap-1">
@@ -258,7 +271,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           {experience === "wine" && heading && (
             <Button type="button" variant="ghost" size="icon" className="size-8"
               aria-label="Configurar experiência"
-              onClick={() => { setError(""); setSettingsOpen(true); }}>
+              onClick={() => { setError(""); setCapacityOpen(true); }}>
               <Settings className="size-4" aria-hidden />
             </Button>
           )}
@@ -286,10 +299,10 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         {loadError && <p role="alert" className="mb-2 text-sm text-destructive">{loadError}</p>}
         {loadError && <Button variant="outline" onClick={reloadSheet}>Tentar novamente</Button>}
         {!loadError && !sheet && <p role="status">Carregando planilha…</p>}
-        {sheet && ((definition.setupLabel && !heading) || (experience === "pizza" && !pizzaOpened)) && (
+        {sheet && !heading && (
           <Button variant="outline" onClick={() => { setError(""); setShowSetup(true); }}>Definir experiência</Button>
         )}
-        {sheet && (heading || (experience === "pizza" && pizzaOpened)) && (
+        {sheet && heading && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm" aria-label={definition.label}>
               <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -399,7 +412,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
 
         <Dialog open={showSetup || line !== undefined} onOpenChange={(open) => {
           if (!open && !busy) {
-            if (showSetup && !heading && !(experience === "pizza" && pizzaOpened)) onDismissSetup?.();
+            if (showSetup && !heading) onDismissSetup?.();
             setShowSetup(false);
             setLine(undefined);
           }
@@ -444,10 +457,10 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                   {dateLabel}
                 </Button>
               )}
-              {showSetup && experience === "pizza" ? null : showSetup ? (
+              {showSetup ? (
                 <>
-                  <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>
-                  <label className="grid gap-1 text-sm">Horário<Input name="time" type="time" required defaultValue={heading?.start_time.slice(0, 5) ?? (experience === "cinema" ? "19:30" : undefined)} /></label>
+                  {!isPizza && <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>}
+                  <label className="grid gap-1 text-sm">Horário<Input name="time" type="time" required defaultValue={heading?.start_time.slice(0, 5) ?? defaultStartTime[experience]} /></label>
                 </>
               ) : (
                 <>
@@ -545,24 +558,11 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           </DialogContent>
         </Dialog>
 
-        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Configurar experiência</DialogTitle>
-              <DialogDescription>Altere a data ou a capacidade da experiência.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-3">
-              <Button type="button" variant="outline" onClick={() => { setSettingsOpen(false); setDateOpen(true); }}>Alterar data</Button>
-              <Button type="button" variant="outline" onClick={() => { setSettingsOpen(false); setCapacityOpen(true); }}>Alterar capacidade</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         <Dialog open={capacityOpen} onOpenChange={(open) => { if (!busy) setCapacityOpen(open); }}>
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent className="sm:max-w-sm" {...(isPizza ? { "aria-describedby": undefined } : {})}>
             <DialogHeader className="pr-8">
               <DialogTitle>Alterar capacidade</DialogTitle>
-              <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>
+              {!isPizza && <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>}
             </DialogHeader>
             <form className="grid gap-4" onSubmit={submitCapacity}>
               {(
@@ -571,6 +571,16 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                   <CalendarDays className="size-4" aria-hidden />
                   {dateLabel}
                 </Button>
+              )}
+              {isWine && (
+                <label className="grid gap-1 text-sm">Vinícola
+                  <Input name="winery" required maxLength={200} defaultValue={heading?.title} />
+                </label>
+              )}
+              {(isWine || isPizza) && (
+                <label className="grid gap-1 text-sm">Horário
+                  <Input name="wineTime" type="time" required defaultValue={heading?.start_time.slice(0, 5)} />
+                </label>
               )}
               <label className="grid gap-1 text-sm">Capacidade (pax)
                 <Input name="capacity" type="number" min={1} max={PIZZA_MAX_ROWS} required defaultValue={capacity} />

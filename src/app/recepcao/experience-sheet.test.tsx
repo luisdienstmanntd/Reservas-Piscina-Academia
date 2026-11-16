@@ -9,6 +9,7 @@ const actions = vi.hoisted(() => ({
   loadExperience: vi.fn(),
   moveExperience: vi.fn(),
   editCinemaSession: vi.fn(),
+  editExperienceDetails: vi.fn(),
   setupExperience: vi.fn(),
   saveExperienceBooking: vi.fn(),
   savePizzaCapacity: vi.fn(),
@@ -22,6 +23,10 @@ const day = "2026-11-15";
 beforeEach(() => {
   vi.resetAllMocks();
   actions.loadExperience.mockResolvedValue({ ok: true, session: null, bookings: [] });
+  actions.setupExperience.mockImplementation(async (key, details) => ({
+    ...await actions.loadExperience(key),
+    session: details,
+  }));
 });
 afterEach(cleanup);
 
@@ -85,7 +90,7 @@ describe("planilhas de experiências", () => {
     const onDayChange = vi.fn();
     render(<ExperienceSheet experience="wine" day={day} onDayChange={onDayChange} />);
     fireEvent.click(await screen.findByRole("button", { name: "Configurar experiência" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Alterar data" }));
+    fireEvent.click(await screen.findByRole("button", { name: /15\/11\/2026/ }));
     const dialog = within(await screen.findByRole("dialog", { name: "Alterar data da experiência" }));
     fireEvent.change(dialog.getByLabelText("Nova data"), { target: { value: "2026-11-22" } });
     expect(onDayChange).not.toHaveBeenCalled();
@@ -114,7 +119,6 @@ describe("planilhas de experiências", () => {
     expect(within(table).getByText("Pax: 5")).toBeTruthy();
 
     fireEvent.click(await screen.findByRole("button", { name: "Configurar experiência" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Alterar capacidade" }));
     const dialog = within(await screen.findByRole("dialog", { name: "Alterar capacidade" }));
     expect((dialog.getByLabelText("Capacidade (pax)") as HTMLInputElement).value).toBe("12");
     fireEvent.change(dialog.getByLabelText("Capacidade (pax)"), { target: { value: "15" } });
@@ -260,9 +264,10 @@ describe("planilhas de experiências", () => {
 
   it("recarrega a planilha ao detectar que outro atendente ocupou a linha", async () => {
     actions.saveExperienceBooking.mockResolvedValue({ ok: false, conflict: true, error: "Linha alterada" });
+    actions.setupExperience.mockResolvedValueOnce({ ok: true, session: { title: "La vera pizza", start_time: "20:00" }, bookings: [] });
     actions.loadExperience.mockResolvedValueOnce({ ok: true, session: null, bookings: [] })
       .mockResolvedValueOnce({
-        ok: true, session: null,
+        ok: true, session: { title: "La vera pizza", start_time: "20:00" },
         bookings: [{ line: 1, customer: "external", name: "Reserva de outro atendente" }],
       });
     render(<ExperienceSheet experience="pizza" day={day} />);

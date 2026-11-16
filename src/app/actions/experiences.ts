@@ -52,9 +52,7 @@ export async function loadExperience(input: unknown) {
   if (!key.success) return invalid;
 
   const [session, bookings, capacity] = await Promise.all([
-    key.data.experience === "pizza"
-      ? { data: null, error: null }
-      : db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
+    db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
     db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
       .match(key.data).returns<ExperienceBooking[]>(),
     key.data.experience === "pizza" || key.data.experience === "wine"
@@ -82,6 +80,23 @@ export async function saveWineCapacity(day: unknown, value: unknown) {
   return saveDailyCapacity("wine", day, value);
 }
 
+export async function editExperienceDetails(experience: "wine" | "pizza", day: unknown, details: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const date = z.string().date().safeParse(day);
+  const setup = setupSchema.safeParse(details);
+  if ((experience !== "wine" && experience !== "pizza") || !date.success || !setup.success) return invalid;
+
+  const { data, error } = await db.from("experience_sessions")
+    .update(setup.data)
+    .match({ experience, day: date.data })
+    .select("title,start_time")
+    .maybeSingle<ExperienceSession>();
+  return error || !data
+    ? { ok: false, error: "Não foi possível salvar os dados da experiência." } as const
+    : { ok: true, session: data } as const;
+}
+
 async function saveDailyCapacity(experience: "wine" | "pizza", day: unknown, value: unknown) {
   const db = await receptionClient();
   if (!db) return { ok: false, error: accessError } as const;
@@ -101,7 +116,7 @@ export async function setupExperience(input: unknown, details: unknown) {
   if (!db) return { ok: false, error: accessError } as const;
   const key = keySchema.safeParse(input);
   const setup = setupSchema.safeParse(details);
-  if (!key.success || !setup.success || key.data.experience === "pizza") return invalid;
+  if (!key.success || !setup.success) return invalid;
 
   const { error } = await db.from("experience_sessions").upsert(
     { ...key.data, ...setup.data },

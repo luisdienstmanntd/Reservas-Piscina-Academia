@@ -46,7 +46,7 @@ describe("ações das experiências", () => {
     const results = await Promise.all([
       loadExperience({ ...cinema, day: "2026-02-30" }),
       setupExperience(cinema, { title: "Filme", start_time: "24:01" }),
-      setupExperience(pizza, { title: "Pizza", start_time: "20:00" }),
+      setupExperience(pizza, { title: "Pizza", start_time: "24:00" }),
       saveExperienceBooking({ ...cinema, line: 6 }, guest),
       saveExperienceBooking({ ...pizza, line: 1000 }, { ...guest, adults: 1, children: 0 }),
       saveExperienceBooking({ ...cinema, line: 1 }, external),
