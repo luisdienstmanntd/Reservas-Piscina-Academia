@@ -197,3 +197,17 @@ export async function deleteExperienceBooking(input: unknown, revision: unknown)
   if (!data.length) return conflict;
   return { ok: true } as const;
 }
+
+export async function moveExperience(input: unknown, target: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const key = keySchema.safeParse(input);
+  const date = z.string().date().safeParse(target);
+  if (!key.success || !date.success || key.data.day === date.data) return invalid;
+  const { data, error } = await db.rpc("move_experience", {
+    kind: key.data.experience, source_day: key.data.day, target_day: date.data,
+  });
+  if (error) return { ok: false, error: "Não foi possível alterar a data." } as const;
+  if (!data) return { ok: false, error: "A data de destino já tem dados ou a sessão original mudou." } as const;
+  return { ok: true } as const;
+}

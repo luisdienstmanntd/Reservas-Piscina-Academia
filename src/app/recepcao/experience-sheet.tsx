@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { CalendarDays, Pencil, Settings, Trash2 } from "lucide-react";
+import { CalendarDays, Settings, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "@/app/actions/experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -22,7 +22,7 @@ import { ReservationDateDialog } from "./reservation-date-dialog";
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
-export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { experience: Experience; day: string; toolbar?: ReactNode; onDayChange?: (day: string) => void }) {
+export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismissSetup }: { experience: Experience; day: string; toolbar?: ReactNode; onDayChange?: (day: string) => void; onDismissSetup?: () => void }) {
   const definition = experiences[experience];
   const isPizza = experience === "pizza";
   const [sheet, setSheet] = useState<Sheet>();
@@ -31,6 +31,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
   const [showSetup, setShowSetup] = useState(false);
   const [pizzaOpened, setPizzaOpened] = useState(false);
   const [line, setLine] = useState<number>();
+  const [dateOpen, setDateOpen] = useState(false);
   const [capacityOpen, setCapacityOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
   const [overCapacityLine, setOverCapacityLine] = useState<number>();
@@ -141,6 +142,27 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
     }
   }
 
+  async function submitDate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const target = String(new FormData(event.currentTarget).get("targetDay"));
+    setBusy(true);
+    setError("");
+    try {
+      const result = await moveExperience({ experience, day }, target);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setDateOpen(false);
+      onDayChange?.(target);
+    } catch {
+      setError("Não foi possível alterar a data.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -200,11 +222,35 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
     : 0;
 
   return (
-    <Card className="border-border/80 shadow-sm">
+    <Card className="border-border/80 shadow-sm" hidden={!loadError && (!sheet || (experience === "pizza" ? !pizzaOpened : !heading))}>
       {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
         <div className="flex items-center gap-1">
           <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
+          {experience === "cinema" && heading && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground"
+                aria-label="Editar filme e horário"
+                title="Editar filme e horário"
+                onClick={() => {
+                  setError("");
+                  setStale(false);
+                  setShowSetup(true);
+                }}
+              >
+                <Settings className="size-4" aria-hidden />
+              </Button>
+          )}
+          {experience === "wine" && heading && (
+            <Button type="button" variant="ghost" size="icon" className="size-8"
+              aria-label="Configurar experiência"
+              onClick={() => { setError(""); setDateOpen(true); }}>
+              <Settings className="size-4" aria-hidden />
+            </Button>
+          )}
           {isPizza && sheet && (
             <Button type="button" variant="ghost" size="icon" className="size-8"
               aria-label="Alterar capacidade" title="Alterar capacidade"
@@ -220,21 +266,6 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
           <div className="flex flex-wrap items-center gap-x-2 text-sm">
             <div className="flex min-w-0 items-center gap-1">
               <p className="[overflow-wrap:anywhere]">{heading.title}</p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground"
-                aria-label="Editar filme e horário"
-                title="Editar filme e horário"
-                onClick={() => {
-                  setError("");
-                  setStale(false);
-                  setShowSetup(true);
-                }}
-              >
-                <Pencil className="size-4" aria-hidden />
-              </Button>
             </div>
             <span>· {heading.start_time.slice(0, 5)}</span>
           </div>
@@ -347,6 +378,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
 
         <Dialog open={showSetup || line !== undefined} onOpenChange={(open) => {
           if (!open && !busy) {
+            if (showSetup && !heading && !(experience === "pizza" && pizzaOpened)) onDismissSetup?.();
             setShowSetup(false);
             setLine(undefined);
           }
@@ -386,6 +418,12 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
               )}
             </DialogHeader>
             <form key={showSetup ? "setup" : line} className="grid gap-4" onSubmit={submit}>
+              {showSetup && heading && (
+                <Button type="button" variant="outline" disabled={busy}
+                  onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
+                  Alterar data
+                </Button>
+              )}
               {showSetup && experience === "pizza" ? null : showSetup ? (
                 <>
                   <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>
@@ -471,6 +509,22 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
           </DialogContent>
         </Dialog>
 
+        <Dialog open={dateOpen} onOpenChange={(open) => { if (!busy) setDateOpen(open); }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Alterar data da experiência</DialogTitle>
+              <DialogDescription>As reservas acompanham a experiência para a nova data.</DialogDescription>
+            </DialogHeader>
+            <form className="grid gap-4" onSubmit={submitDate}>
+              <label className="grid gap-1 text-sm">Nova data
+                <Input type="date" name="targetDay" defaultValue={day} required />
+              </label>
+              {error && <p role="alert">{error}</p>}
+              <Button type="submit" disabled={busy}>Alterar data</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={capacityOpen} onOpenChange={(open) => { if (!busy) setCapacityOpen(open); }}>
           <DialogContent className="sm:max-w-sm">
             <DialogHeader className="pr-8">
@@ -478,6 +532,12 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { exp
               <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>
             </DialogHeader>
             <form className="grid gap-4" onSubmit={submitCapacity}>
+              {(
+                <Button type="button" variant="outline" disabled={busy}
+                  onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
+                  Alterar data
+                </Button>
+              )}
               <label className="grid gap-1 text-sm">Capacidade (pax)
                 <Input name="capacity" type="number" min={1} max={PIZZA_MAX_ROWS} required defaultValue={capacity} />
               </label>

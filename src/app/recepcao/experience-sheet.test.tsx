@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExperienceSheet } from "./experience-sheet";
 
 const actions = vi.hoisted(() => ({
   loadExperience: vi.fn(),
+  moveExperience: vi.fn(),
   editCinemaSession: vi.fn(),
   setupExperience: vi.fn(),
   saveExperienceBooking: vi.fn(),
@@ -73,6 +74,23 @@ describe("planilhas de experiências", () => {
       { title: "Novo filme", start_time: "21:00" },
       { title: "Filme anterior", start_time: "19:30" }
     );
+  });
+
+  it("muda a data do vinho pela engrenagem somente após salvar", async () => {
+    actions.loadExperience.mockResolvedValue({
+      ok: true, session: { title: "Vinícola", start_time: "18:00" }, bookings: [],
+    });
+    actions.moveExperience.mockResolvedValue({ ok: true });
+    const onDayChange = vi.fn();
+    render(<ExperienceSheet experience="wine" day={day} onDayChange={onDayChange} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Configurar experiência" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText("Nova data"), { target: { value: "2026-11-22" } });
+    expect(onDayChange).not.toHaveBeenCalled();
+    fireEvent.click(dialog.getByRole("button", { name: "Alterar data" }));
+    await waitFor(() => expect(onDayChange).toHaveBeenCalledWith("2026-11-22"));
+    expect(actions.moveExperience).toHaveBeenCalledWith({ experience: "wine", day }, "2026-11-22");
+    expect(onDayChange).toHaveBeenCalledWith("2026-11-22");
   });
 
   it("cadastra cliente externo no vinho sem pedir apartamento", async () => {

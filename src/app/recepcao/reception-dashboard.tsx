@@ -1135,6 +1135,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const sheetToolbar = (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div className="relative flex shrink-0 items-center gap-2">
+        {experience ? <CalendarDays className="size-4" aria-hidden /> : (
         <Button
           type="button"
           variant="outline"
@@ -1146,12 +1147,14 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         >
           <CalendarDays className="size-4" aria-hidden />
         </Button>
+        )}
         <p
           className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
           data-testid="day-label"
         >
           {dayLabel}
         </p>
+        {!experience && (
         <Input
           ref={dayInputRef}
           id="day"
@@ -1162,6 +1165,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           tabIndex={-1}
           className="pointer-events-none absolute left-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
         />
+        )}
       </div>
       {!experience && (
         <Button
@@ -1253,7 +1257,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         />
 
         {experience ? (
-          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={setDateStr} />
+          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={setDateStr} onDismissSetup={() => selectSheet("pool")} />
         ) : (
         <Card className="border-border/80 shadow-sm">
           <CardContent

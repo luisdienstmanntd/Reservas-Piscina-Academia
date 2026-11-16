@@ -21,9 +21,9 @@ const reservationActions = vi.hoisted(() => ({
 
 vi.mock("@/app/actions/reservations", () => reservationActions);
 vi.mock("@/app/actions/experiences", () => ({
-  loadExperience: vi.fn().mockResolvedValue({
-    ok: true, session: { title: "Sessão", start_time: "19:30:00" }, bookings: [],
-  }),
+  loadExperience: vi.fn().mockImplementation(async ({ experience }) => ({
+    ok: true, session: experience === "pizza" ? null : { title: "Sessão", start_time: "19:30:00" }, bookings: [],
+  })),
 }));
 vi.mock("@/app/actions/stays", () => ({ generateStayToken: vi.fn() }));
 vi.mock("next/image", () => ({ default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={props.alt ?? ""} {...props} /> }));
@@ -73,9 +73,11 @@ describe("modais de ações da recepção", () => {
     renderReception();
     const today = (screen.getByLabelText("Dia") as HTMLInputElement).value;
     for (const tab of ["Cine in Toscana", "L'ora del vino", "La vera pizza", "Academia", "Piscina"]) {
-      fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-12-10" } });
+      const dateInput = screen.queryByLabelText("Dia");
+      if (dateInput) fireEvent.change(dateInput, { target: { value: "2099-12-10" } });
       fireEvent.click(screen.getByRole("button", { name: tab }));
-      await waitFor(() => expect((screen.getByLabelText("Dia") as HTMLInputElement).value).toBe(today));
+      await waitFor(() => expect(screen.getByTestId("day-label").textContent).toContain(today.split("-").reverse().join("/")));
+      if (tab === "La vera pizza") fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
       const access = screen.queryByRole("button", { name: "Gerar acesso" });
       if (tab === "Academia" || tab === "Piscina") expect(access).toBeTruthy();
       else expect(access).toBeNull();
