@@ -23,6 +23,9 @@ type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismissSetup }: { experience: Experience; day: string; toolbar?: ReactNode; onDayChange?: (day: string) => void; onDismissSetup?: () => void }) {
+  const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" })
+    .format(new Date(`${day}T12:00:00Z`));
+  const dateLabel = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} | ${day.split("-").reverse().join("/")}`;
   const definition = experiences[experience];
   const isPizza = experience === "pizza";
   const [sheet, setSheet] = useState<Sheet>();
@@ -233,8 +236,8 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                 variant="ghost"
                 size="icon"
                 className="size-8 text-muted-foreground"
-                aria-label="Editar filme e horário"
-                title="Editar filme e horário"
+                aria-label="Editar experiência"
+                title="Editar experiência"
                 onClick={() => {
                   setError("");
                   setStale(false);
@@ -388,7 +391,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
             {...(!hasDialogDescription ? { "aria-describedby": undefined } : {})}
           >
             <DialogHeader className="pr-8">
-              <DialogTitle>{showSetup ? (heading ? "Editar filme e horário" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
+              <DialogTitle>{showSetup ? (heading ? "Editar experiência" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
               {hasDialogDescription && (
                 <DialogDescription>
                   {showSetup && !heading ? (
@@ -421,7 +424,8 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               {showSetup && heading && (
                 <Button type="button" variant="outline" disabled={busy}
                   onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
-                  Alterar data
+                  <CalendarDays className="size-4" aria-hidden />
+                  {dateLabel}
                 </Button>
               )}
               {showSetup && experience === "pizza" ? null : showSetup ? (
@@ -535,7 +539,8 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               {(
                 <Button type="button" variant="outline" disabled={busy}
                   onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
-                  Alterar data
+                  <CalendarDays className="size-4" aria-hidden />
+                  {dateLabel}
                 </Button>
               )}
               <label className="grid gap-1 text-sm">Capacidade (pax)

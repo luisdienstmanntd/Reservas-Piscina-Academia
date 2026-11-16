@@ -57,7 +57,7 @@ describe("planilhas de experiências", () => {
       ok: true, session: { title: "Novo filme", start_time: "21:00:00" },
     });
     render(<ExperienceSheet experience="cinema" day={day} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Editar filme e horário" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Editar experiência" }));
     const dialog = within(await screen.findByRole("dialog"));
     const title = dialog.getByLabelText("Nome do filme") as HTMLInputElement;
     const time = dialog.getByLabelText("Horário") as HTMLInputElement;

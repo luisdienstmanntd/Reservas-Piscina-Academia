@@ -85,7 +85,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await openExperienceOnDay(page, cinema, today, date);
       await expect(sheet.getByText(longName)).toBeVisible();
       await expect(dialog).toHaveCount(0);
-      await page.getByRole("button", { name: "Editar filme e horário" }).click();
+      await page.getByRole("button", { name: "Editar experiência" }).click();
       await expect(dialog.getByLabel("Nome do filme")).toHaveValue("Cinema Paradiso");
       await expect(dialog.getByLabel("Horário")).toHaveValue("20:30");
       await dialog.getByLabel("Nome do filme").fill("Novo filme");
