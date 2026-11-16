@@ -90,11 +90,16 @@ describe("modais de ações da recepção", () => {
     fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-11-20" } });
     const slot = screen.getByRole("button", { name: "Reservar às 15h00" });
     fireEvent.click(slot.closest("li")!);
+    expect(screen.queryByRole("dialog", { name: "Nova reserva" })).toBeNull();
+    const confirmation = await screen.findByRole("dialog", { name: "Confirmar data da reserva" });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "sexta-feira 20/11/2099" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Nova reserva" });
     expect(within(dialog).getByLabelText("Apto")).toBeTruthy();
     expect(within(dialog).getByLabelText("Hóspede (opcional)")).toBeTruthy();
-    expect((within(dialog).getByLabelText("Data") as HTMLInputElement).value).toBe("2099-11-20");
+    const confirmedDate = within(dialog).getByLabelText("Data") as HTMLInputElement;
+    expect(confirmedDate.value).toBe("2099-11-20");
+    expect(confirmedDate.readOnly).toBe(true);
     expect((within(dialog).getByLabelText("Horário") as HTMLSelectElement).value).toBe("15:00:00");
     expect(within(dialog).getByLabelText("WhatsApp (opcional)")).toBeTruthy();
     expect(within(dialog).getByLabelText("Observações")).toBeTruthy();

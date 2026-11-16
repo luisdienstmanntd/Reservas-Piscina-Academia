@@ -52,6 +52,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(grid.getByRole("listitem")).toHaveCount(24);
       await expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeVisible();
       await grid.getByRole("button", { name: "Reservar às 15h00" }).click();
+      await page.getByRole("dialog", { name: "Confirmar data da reserva" })
+        .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
       await expect(page.getByRole("dialog").getByText("Nova reserva").first()).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -67,6 +69,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       const sheet = page.getByRole("table");
       await expect(sheet.getByRole("row")).toHaveCount(6);
       await sheet.getByRole("button", { name: "Cadastrar na linha 5" }).click();
+      await page.getByRole("dialog", { name: "Confirmar data da reserva" })
+        .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
       await dialog.getByLabel("Apto").fill("101");
       const longName = "Hóspede" + "x".repeat(160);
       await dialog.getByLabel("Nome dos hóspedes").fill(longName);
@@ -106,6 +110,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(page.getByText("Vinícola Valle · 18:00")).toBeVisible();
       await expect(sheet.getByRole("row")).toHaveCount(9);
       await sheet.getByRole("button", { name: "Cadastrar na linha 8" }).click();
+      await page.getByRole("dialog", { name: "Confirmar data da reserva" })
+        .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
       await dialog.getByLabel("Cliente").selectOption("external");
       await expect(dialog.getByLabel("Apto")).toHaveCount(0);
       await dialog.getByLabel("Nome", { exact: true }).fill("Maria");
@@ -114,6 +120,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await dialog.getByRole("button", { name: "Salvar" }).click();
       await expect(sheet.getByText("Maria")).toBeVisible();
       await sheet.getByRole("button", { name: "Cadastrar na linha 7" }).click();
+      await page.getByRole("dialog", { name: "Confirmar data da reserva" })
+        .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
       await dialog.getByLabel("Apto").fill("103");
       await dialog.getByLabel("Nome dos hóspedes").fill("João");
       await dialog.getByLabel("Pax").fill("4");
@@ -128,6 +136,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(sheet.getByRole("row")).toHaveCount(10);
       await expect(dialog).toHaveCount(0);
       await sheet.getByRole("button", { name: "Cadastrar na linha 1" }).click();
+      await page.getByRole("dialog", { name: "Confirmar data da reserva" })
+        .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
       await expect(dialog.getByText("La vera pizza · Linha 1")).toHaveCount(0);
       for (const labels of [["Cliente", "Apto"], ["Adultos", "CHD", "Avulsa"], ["Contato", "Valor"]]) {
         const boxes = await Promise.all(labels.map((label) => dialog.getByLabel(label, { exact: true }).boundingBox()));
@@ -169,7 +179,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await dialog.getByRole("button", { name: "Salvar" }).click();
       await expect(sheet.getByText("Externo")).toBeVisible();
       await expect(pizzaRow.getByRole("cell").nth(4)).toHaveText("Cortesia");
-      await expect(sheet.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Total" }) }).getByRole("cell").first()).toHaveText(/0,00/);
+      await expect(sheet.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Total" }) }).getByRole("cell").nth(1)).toHaveText(/0,00/);
       await selectDay(page, "2199-01-03");
       await expect(sheet.getByRole("button", { name: "Cadastrar na linha 1" })).toBeVisible();
       await fitsViewport(page);

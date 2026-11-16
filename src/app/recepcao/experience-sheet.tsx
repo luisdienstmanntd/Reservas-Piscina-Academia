@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Settings, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, setupExperience } from "@/app/actions/experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ALLOWED_APARTMENT_NUMBERS } from "@/lib/apartment-codes";
 import { PHONE_HINT, formatPhoneDisplay } from "@/lib/phone";
-import { PIZZA_DEFAULT_PRICE_CENTS, formatPizzaPrice, experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
+import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, formatPizzaPrice, experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
+
+import { ReservationDateDialog } from "./reservation-date-dialog";
 
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
@@ -28,6 +30,9 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
   const [reload, setReload] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
   const [line, setLine] = useState<number>();
+  const [capacityOpen, setCapacityOpen] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
+  const [overCapacityLine, setOverCapacityLine] = useState<number>();
   const [removing, setRemoving] = useState<ExperienceBooking>();
   const [customer, setCustomer] = useState<ExperienceBooking["customer"]>("guest");
   const [busy, setBusy] = useState(false);
@@ -130,6 +135,27 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
     }
   }
 
+  async function submitCapacity(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const value = Number(new FormData(event.currentTarget).get("capacity"));
+    setBusy(true);
+    setError("");
+    try {
+      const result = await savePizzaCapacity(day, value);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setSheet((previous) => previous && { ...previous, capacity: result.capacity });
+      setCapacityOpen(false);
+    } catch {
+      setError("Não foi possível salvar a capacidade.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove() {
     if (busy || stale || !removing) return;
     setBusy(true);
@@ -154,6 +180,14 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
   }
 
   const heading = sheet?.session;
+  const pizzaBookings = isPizza ? sheet?.bookings ?? [] : [];
+  const capacity = sheet?.capacity ?? PIZZA_DEFAULT_CAPACITY;
+  const adults = pizzaBookings.reduce((total, booking) => total + (booking.adults ?? 0), 0);
+  const children = pizzaBookings.reduce((total, booking) => total + (booking.children ?? 0), 0);
+  const apartments = new Set(pizzaBookings.flatMap((booking) => booking.customer === "guest" && booking.apartment ? [booking.apartment] : [])).size;
+  const externals = pizzaBookings.filter((booking) => booking.customer === "external").length;
+  const lastOccupiedLine = pizzaBookings.reduce((last, booking) => Math.max(last, booking.line), 0);
+  const rowCount = Math.max(definition.rows, Math.min(PIZZA_MAX_ROWS, lastOccupiedLine + 1));
   const pizzaTotal = isPizza
     ? sheet?.bookings.reduce((total, booking) =>
         total + (booking.complimentary ? 0 : booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS), 0) ?? 0
@@ -163,7 +197,16 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
     <Card className="border-border/80 shadow-sm">
       {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
-        <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
+        <div className="flex items-center gap-1">
+          <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
+          {isPizza && sheet && (
+            <Button type="button" variant="ghost" size="icon" className="size-8"
+              aria-label="Alterar capacidade" title="Alterar capacidade"
+              onClick={() => { setError(""); setCapacityOpen(true); }}>
+              <Settings className="size-4" aria-hidden />
+            </Button>
+          )}
+        </div>
         {heading && experience !== "cinema" && (
           <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>
         )}
@@ -215,14 +258,15 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: definition.rows }, (_, index) => {
+                {Array.from({ length: rowCount }, (_, index) => {
                   const row = index + 1;
                   const booking = sheet.bookings.find((item) => item.line === row);
                   function openBooking() {
                     setError("");
                     setStale(false);
                     setCustomer(booking?.customer ?? "guest");
-                    setLine(row);
+                    if (booking) setLine(row);
+                    else setPendingBooking({ day, line: row });
                   }
                   return (
                     <tr key={row} className="cursor-pointer border-b border-border/60 hover:bg-muted/30" onClick={openBooking}>
@@ -264,7 +308,16 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
               {isPizza && (
                 <tfoot className="border-t border-border bg-muted/50 font-semibold">
                   <tr>
-                    <th scope="row" colSpan={4} className="px-3 py-2 text-right">Total</th>
+                    <td colSpan={3} className="px-3 py-2">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        <span>{adults + children}/{capacity} lugares</span>
+                        <span>Aptos: {apartments}</span>
+                        <span>Externos: {externals}</span>
+                        <span>Adultos: {adults}</span>
+                        <span>Crianças: {children}</span>
+                      </div>
+                    </td>
+                    <th scope="row" className="px-3 py-2 text-right">Total</th>
                     <td className="whitespace-nowrap px-3 py-2">{formatPizzaPrice(pizzaTotal)}</td>
                     <td colSpan={2} />
                   </tr>
@@ -273,6 +326,18 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
             </table>
           </div>
         )}
+
+        <ReservationDateDialog
+          day={pendingBooking?.day}
+          onCancel={() => setPendingBooking(undefined)}
+          onConfirm={() => {
+            const pending = pendingBooking;
+            setPendingBooking(undefined);
+            if (!pending || pending.day !== day) return;
+            if (isPizza && adults + children >= capacity) setOverCapacityLine(pending.line);
+            else setLine(pending.line);
+          }}
+        />
 
         <Dialog open={showSetup || line !== undefined} onOpenChange={(open) => {
           if (!open && !busy) {
@@ -377,6 +442,36 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={capacityOpen} onOpenChange={(open) => { if (!busy) setCapacityOpen(open); }}>
+          <DialogContent>
+            <DialogHeader className="pr-8">
+              <DialogTitle>Alterar capacidade</DialogTitle>
+              <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>
+            </DialogHeader>
+            <form className="grid gap-4" onSubmit={submitCapacity}>
+              <label className="grid gap-1 text-sm">Capacidade (pax)
+                <Input name="capacity" type="number" min={1} max={PIZZA_MAX_ROWS} required defaultValue={capacity} />
+              </label>
+              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar"}</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={overCapacityLine !== undefined}
+          onOpenChange={(open) => { if (!open) setOverCapacityLine(undefined); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Capacidade máxima atingida</AlertDialogTitle>
+              <AlertDialogDescription>Deseja acrescentar mais uma reserva?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Não</AlertDialogCancel>
+              <AlertDialogAction onClick={() => setLine(overCapacityLine)}>Sim</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={Boolean(removing)} onOpenChange={(open) => {
           if (!open && !busy) setRemoving(undefined);

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { experiences, type Experience } from "@/lib/experiences";
 import { ExperienceSheet } from "./experience-sheet";
+import { ReservationDateDialog } from "./reservation-date-dialog";
 import {
   Bell,
   CalendarDays,
@@ -689,6 +690,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const [guestAccessCheckout, setGuestAccessCheckout] = useState(todayStr);
   const [guestAccessLoading, setGuestAccessLoading] = useState(false);
   const [guestAccessUrl, setGuestAccessUrl] = useState<string | null>(null);
+  const [pendingReservation, setPendingReservation] = useState<{ day: string; slot: string; facility: Facility }>();
   const [activeFormModal, setActiveFormModal] = useState<"reservation" | "access" | null>(null);
 
   useEffect(() => {
@@ -1317,10 +1319,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                         slot={slot}
                         past={isHistoryDay || isSlotEnded(facility, dateStr, slot, hotelToday, nowMs)}
                         onReserve={() => {
-                          slotPickedByUserRef.current = true;
-                          setNewReservationDate(dateStr);
-                          setNewSlot(slot);
-                          setActiveFormModal("reservation");
+                          setPendingReservation({ day: dateStr, slot, facility });
                         }}
                         onBlock={() => void toggleBlock(slot, true)}
                       />,
@@ -1330,6 +1329,21 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           </CardContent>
         </Card>
         )}
+
+      <ReservationDateDialog
+        day={pendingReservation?.day}
+        onCancel={() => setPendingReservation(undefined)}
+        onConfirm={() => {
+          const pending = pendingReservation;
+          setPendingReservation(undefined);
+          if (!pending || pending.day !== dateStr || pending.facility !== facility || experience ||
+              isSlotEnded(facility, pending.day, pending.slot, hotelToday, Date.now())) return;
+          slotPickedByUserRef.current = true;
+          setNewReservationDate(pending.day);
+          setNewSlot(pending.slot);
+          setActiveFormModal("reservation");
+        }}
+      />
 
       <Dialog
         open={activeFormModal !== null}
@@ -1481,10 +1495,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   min={todayStr}
                   className="border-border bg-white"
                   value={newReservationDate}
-                  onChange={(e) => {
-                    slotPickedByUserRef.current = false;
-                    setNewReservationDate(e.target.value);
-                  }}
+                  readOnly
                 />
               </div>
               <div className="space-y-2 sm:col-span-1">

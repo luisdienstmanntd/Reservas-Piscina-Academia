@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 import { normalizePhone } from "@/lib/phone";
-import { PIZZA_DEFAULT_PRICE_CENTS, experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
+import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
 import { readReceptionAuthed } from "@/lib/reception-auth";
 import { getAdminClient } from "@/lib/supabase/admin";
 
@@ -14,7 +14,7 @@ const keySchema = z.object({
   day: z.string().date(),
 });
 const lineSchema = keySchema.extend({ line: z.number().int().positive() }).refine(
-  ({ experience, line }) => line <= experiences[experience].rows
+  ({ experience, line }) => line <= (experience === "pizza" ? PIZZA_MAX_ROWS : experiences[experience].rows)
 );
 const setupSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -51,17 +51,37 @@ export async function loadExperience(input: unknown) {
   const key = keySchema.safeParse(input);
   if (!key.success) return invalid;
 
-  const [session, bookings] = await Promise.all([
+  const [session, bookings, capacity] = await Promise.all([
     key.data.experience === "pizza"
       ? { data: null, error: null }
       : db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
     db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
       .match(key.data).returns<ExperienceBooking[]>(),
+    key.data.experience === "pizza"
+      ? db.from("pizza_daily_capacity").select("capacity").eq("day", key.data.day).maybeSingle<{ capacity: number }>()
+      : { data: null, error: null },
   ]);
-  if (session.error || bookings.error) {
+  if (session.error || bookings.error || capacity.error) {
     return { ok: false, error: "Não foi possível carregar a planilha." } as const;
   }
-  return { ok: true, session: session.data, bookings: bookings.data } as const;
+  return {
+    ok: true, session: session.data, bookings: bookings.data,
+    ...(key.data.experience === "pizza" && { capacity: capacity.data?.capacity ?? PIZZA_DEFAULT_CAPACITY }),
+  } as const;
+}
+
+export async function savePizzaCapacity(day: unknown, value: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const date = z.string().date().safeParse(day);
+  const capacity = z.number().int().min(1).max(PIZZA_MAX_ROWS).safeParse(value);
+  if (!date.success || !capacity.success) return invalid;
+
+  const { error } = await db.from("pizza_daily_capacity")
+    .upsert({ day: date.data, capacity: capacity.data }, { onConflict: "day" });
+  return error
+    ? { ok: false, error: "Não foi possível salvar a capacidade." } as const
+    : { ok: true, capacity: capacity.data } as const;
 }
 
 export async function setupExperience(input: unknown, details: unknown) {

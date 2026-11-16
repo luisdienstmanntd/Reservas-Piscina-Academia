@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, setupExperience } from "./experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "./experiences";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), admin: vi.fn(), fetch: vi.fn() }));
 vi.mock("@/lib/reception-auth", () => ({ readReceptionAuthed: mocks.auth }));
@@ -48,7 +48,7 @@ describe("ações das experiências", () => {
       setupExperience(cinema, { title: "Filme", start_time: "24:01" }),
       setupExperience(pizza, { title: "Pizza", start_time: "20:00" }),
       saveExperienceBooking({ ...cinema, line: 6 }, guest),
-      saveExperienceBooking({ ...pizza, line: 9 }, { ...guest, adults: 1, children: 0 }),
+      saveExperienceBooking({ ...pizza, line: 1000 }, { ...guest, adults: 1, children: 0 }),
       saveExperienceBooking({ ...cinema, line: 1 }, external),
       saveExperienceBooking({ ...cinema, line: 1 }, { ...guest, apartment: "999" }),
       saveExperienceBooking({ ...wine, line: 8 }, { ...guest, pax: 0 }),
@@ -57,6 +57,18 @@ describe("ações das experiências", () => {
     ]);
     expect(results.every((result) => !result.ok)).toBe(true);
     expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("carrega a capacidade padrão e salva a capacidade por dia", async () => {
+    mocks.fetch.mockImplementation(async () => response([]));
+    expect(await loadExperience(pizza)).toMatchObject({ ok: true, capacity: 12 });
+    mocks.fetch.mockClear();
+    expect(await savePizzaCapacity(day, 0)).toMatchObject({ ok: false });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(await savePizzaCapacity(day, 18)).toEqual({ ok: true, capacity: 18 });
+    const [url, options] = mocks.fetch.mock.calls[0];
+    expect(new URL(url).searchParams.get("on_conflict")).toBe("day");
+    expect(JSON.parse(options.body)).toEqual({ day, capacity: 18 });
   });
 
   it("ignora uma segunda configuração e retorna a sessão já gravada", async () => {

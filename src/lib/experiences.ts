@@ -4,6 +4,8 @@ export const experiences = {
   pizza: { label: "La vera pizza", rows: 8, setupLabel: null },
 } as const;
 
+export const PIZZA_DEFAULT_CAPACITY = 12;
+export const PIZZA_MAX_ROWS = 999;
 export const PIZZA_DEFAULT_PRICE_CENTS = 18900;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 

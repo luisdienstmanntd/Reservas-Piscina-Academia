@@ -10,6 +10,7 @@ const actions = vi.hoisted(() => ({
   editCinemaSession: vi.fn(),
   setupExperience: vi.fn(),
   saveExperienceBooking: vi.fn(),
+  savePizzaCapacity: vi.fn(),
   deleteExperienceBooking: vi.fn(),
 }));
 vi.mock("@/app/actions/experiences", () => actions);
@@ -88,6 +89,7 @@ describe("planilhas de experiências", () => {
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(9);
     fireEvent.click(within(table).getByRole("button", { name: "Cadastrar na linha 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
     const dialog = within(await screen.findByRole("dialog"));
     fireEvent.change(dialog.getByLabelText("Cliente"), { target: { value: "external" } });
     expect(dialog.queryByLabelText("Apto")).toBeNull();
@@ -134,10 +136,11 @@ describe("planilhas de experiências", () => {
     expect(within(rows[1]).getAllByRole("cell")[4].textContent).toBe("Cortesia");
     expect(rows[2].textContent).toContain("189,00");
     expect(within(rows.at(-1)!).getByRole("rowheader", { name: "Total" })).toBeTruthy();
-    expect(within(rows.at(-1)!).getAllByRole("cell")[0].textContent).toMatch(/239,50/);
+    expect(within(rows.at(-1)!).getAllByRole("cell")[1].textContent).toMatch(/239,50/);
     expect(within(rows[0]).getAllByRole("columnheader")[2].textContent).toBe("Observações");
     expect(within(rows[2]).getAllByRole("cell")[2].textContent).toBe("Sem queijo");
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 3" }));
+    fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
     const modal = await screen.findByRole("dialog", { name: "Cadastrar reserva" });
     expect(modal.textContent).not.toContain("Linha 3");
     const avulsa = within(modal).getByLabelText("Avulsa") as HTMLInputElement;
@@ -146,6 +149,47 @@ describe("planilhas de experiências", () => {
     expect((within(modal).getByLabelText("Valor") as HTMLInputElement).value).toMatch(/R\$\s189,00/);
     fireEvent.change(within(modal).getByLabelText("Cliente"), { target: { value: "external" } });
     expect(within(modal).getByRole("checkbox", { name: "Cortesia" })).toBeTruthy();
+  });
+
+  it("configura capacidade e permite confirmar uma reserva acima do limite", async () => {
+    actions.loadExperience.mockResolvedValue({
+      ok: true, session: null, bookings: [
+        { line: 8, customer: "guest", apartment: "101", name: "Ana", adults: 10, children: 1 },
+        { line: 1, customer: "external", name: "Bia", adults: 1, children: 0 },
+      ],
+    });
+    actions.savePizzaCapacity.mockResolvedValue({ ok: true, capacity: 13 });
+    actions.saveExperienceBooking.mockResolvedValue({
+      ok: true, booking: { line: 9, customer: "guest", apartment: "102", name: "Carla", adults: 2, children: 0 },
+    });
+    render(<ExperienceSheet experience="pizza" day={day} />);
+    expect(await screen.findByText("12/12 lugares")).toBeTruthy();
+    for (const label of ["Aptos: 1", "Externos: 1", "Adultos: 11", "Crianças: 1"]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+
+    const newBooking = screen.getByRole("button", { name: "Cadastrar na linha 9" });
+    fireEvent.click(newBooking);
+    fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
+    const warning = await screen.findByRole("alertdialog", { name: "Capacidade máxima atingida" });
+    fireEvent.click(within(warning).getByRole("button", { name: "Não" }));
+    expect(screen.queryByRole("dialog", { name: "Cadastrar reserva" })).toBeNull();
+    fireEvent.click(newBooking);
+    fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Sim" }));
+    const booking = within(await screen.findByRole("dialog", { name: "Cadastrar reserva" }));
+    fireEvent.change(booking.getByLabelText("Apto"), { target: { value: "102" } });
+    fireEvent.change(booking.getByLabelText("Nome dos hóspedes"), { target: { value: "Carla" } });
+    fireEvent.change(booking.getByLabelText("Adultos"), { target: { value: "2" } });
+    fireEvent.click(booking.getByRole("button", { name: "Salvar" }));
+    expect(await screen.findByText("14/12 lugares")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Alterar capacidade" }));
+    const settings = within(await screen.findByRole("dialog", { name: "Alterar capacidade" }));
+    fireEvent.change(settings.getByLabelText("Capacidade (pax)"), { target: { value: "13" } });
+    fireEvent.click(settings.getByRole("button", { name: "Salvar" }));
+    expect(await screen.findByText("14/13 lugares")).toBeTruthy();
+    expect(actions.savePizzaCapacity).toHaveBeenCalledWith(day, 13);
   });
 
   it("permite tentar novamente após falha de carregamento", async () => {
@@ -167,6 +211,7 @@ describe("planilhas de experiências", () => {
     render(<ExperienceSheet experience="pizza" day={day} />);
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
     const dialog = within(await screen.findByRole("dialog"));
     fireEvent.change(dialog.getByLabelText("Apto"), { target: { value: "101" } });
     fireEvent.change(dialog.getByLabelText("Nome dos hóspedes"), { target: { value: "Ana" } });
