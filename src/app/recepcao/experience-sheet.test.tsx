@@ -110,7 +110,7 @@ describe("planilhas de experiências", () => {
     actions.deleteExperienceBooking.mockResolvedValue({ ok: true });
     render(<ExperienceSheet experience="pizza" day={day} />);
     const table = await screen.findByRole("table");
-    expect(within(table).getAllByRole("row")).toHaveLength(9);
+    expect(within(table).getAllByRole("row")).toHaveLength(10);
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(within(table).getByRole("button", { name: "Excluir reserva da linha 2" }));
     fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Excluir" }));
@@ -118,20 +118,29 @@ describe("planilhas de experiências", () => {
     expect(actions.deleteExperienceBooking).toHaveBeenCalledWith({ experience: "pizza", day, line: 2 }, "revision");
   });
 
-  it("mostra o preço padrão no modal de pizza e omite o preço de uma cortesia na planilha", async () => {
+  it("mostra o preço padrão no modal de pizza e identifica a cortesia na planilha", async () => {
     actions.loadExperience.mockResolvedValue({
       ok: true, session: null, bookings: [
         { line: 1, name: "Ana", customer: "guest", apartment: "101", complimentary: true, price_cents: 18900 },
-        { line: 2, name: "Bruno", customer: "external", price_cents: 18900 },
+        { line: 2, name: "Bruno", customer: "external", price_cents: 18900, notes: "Sem queijo" },
+        { line: 4, name: "Carla", customer: "external", price_cents: 5050 },
       ],
     });
     render(<ExperienceSheet experience="pizza" day={day} />);
     const rows = within(await screen.findByRole("table")).getAllByRole("row");
-    expect(rows[1].textContent).not.toContain("189,00");
+    expect(within(rows[0]).getByRole("columnheader", { name: "Avulsa" })).toBeTruthy();
+    expect(within(rows[1]).getAllByRole("cell")[4].textContent).toBe("Cortesia");
     expect(rows[2].textContent).toContain("189,00");
+    expect(within(rows.at(-1)!).getByRole("rowheader", { name: "Total" })).toBeTruthy();
+    expect(within(rows.at(-1)!).getAllByRole("cell")[0].textContent).toMatch(/239,50/);
+    expect(within(rows[0]).getAllByRole("columnheader")[5].textContent).toBe("Observações");
+    expect(within(rows[2]).getAllByRole("cell")[5].textContent).toBe("Sem queijo");
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 3" }));
     const modal = await screen.findByRole("dialog", { name: "Cadastrar reserva" });
     expect(modal.textContent).not.toContain("Linha 3");
+    const avulsa = within(modal).getByLabelText("Avulsa") as HTMLInputElement;
+    fireEvent.change(avulsa, { target: { value: "a007x" } });
+    expect(avulsa.value).toBe("007");
     expect((within(modal).getByLabelText("Valor") as HTMLInputElement).value).toMatch(/R\$\s189,00/);
     fireEvent.change(within(modal).getByLabelText("Cliente"), { target: { value: "external" } });
     expect(within(modal).getByRole("checkbox", { name: "Cortesia" })).toBeTruthy();

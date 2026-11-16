@@ -14,6 +14,7 @@ async function selectDay(page: Page, date: string) {
 
 async function openExperienceOnDay(page: Page, tab: Locator, today: string, date: string) {
   await tab.click();
+  await expect(page.getByRole("button", { name: "Gerar acesso" })).toHaveCount(0);
   const setup = page.getByRole("dialog");
   await expect(setup.or(page.getByRole("table"))).toBeVisible();
   if (await setup.isVisible()) {
@@ -124,10 +125,22 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(dialog).toHaveCount(0);
 
       await openExperienceOnDay(page, page.getByRole("button", { name: "La vera pizza", exact: true }), today, date);
-      await expect(sheet.getByRole("row")).toHaveCount(9);
+      await expect(sheet.getByRole("row")).toHaveCount(10);
       await expect(dialog).toHaveCount(0);
       await sheet.getByRole("button", { name: "Cadastrar na linha 1" }).click();
+      await expect(dialog.getByText("La vera pizza · Linha 1")).toHaveCount(0);
+      for (const labels of [["Cliente", "Apto"], ["Adultos", "CHD", "Avulsa"], ["Celular", "Valor"]]) {
+        const boxes = await Promise.all(labels.map((label) => dialog.getByLabel(label, { exact: true }).boundingBox()));
+        for (let i = 1; i < boxes.length; i++) {
+          expect(boxes[i]!.y).toBeCloseTo(boxes[0]!.y);
+          expect(boxes[i]!.x).toBeGreaterThan(boxes[i - 1]!.x);
+        }
+      }
+      await expect(dialog.getByLabel("Valor")).toHaveValue(/R\$\s189,00/);
       await dialog.getByLabel("Apto").fill("102");
+      await dialog.getByLabel("Avulsa").fill("a007x");
+      await expect(dialog.getByLabel("Avulsa")).toHaveValue("007");
+      await dialog.getByLabel("Celular").fill("+44 7911 123456");
       await dialog.getByLabel("Nome dos hóspedes").fill("Ana");
       await dialog.getByLabel("Adultos").fill("2");
       await dialog.getByLabel("CHD").fill("1");
@@ -137,14 +150,26 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       expect(dialogBox?.y).toBeGreaterThanOrEqual(0);
       expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height);
       await dialog.getByRole("button", { name: "Salvar" }).click();
-      await expect(sheet.getByText("Ana")).toBeVisible();
+      const pizzaRow = sheet.getByRole("row").filter({ hasText: "Ana" });
+      await expect(pizzaRow.getByText(/R\$\s189,00/)).toBeVisible();
+      await expect(pizzaRow.getByText("007", { exact: true })).toBeVisible();
+      await expect(pizzaRow.getByRole("cell").nth(5)).toHaveText("Sem queijo");
+      await expect(pizzaRow.getByText("+44 7911 123456", { exact: true })).toBeVisible();
+      await fitsViewport(page);
+      const columnWidth = await pizzaRow.getByRole("cell").nth(1).evaluate((cell) => cell.getBoundingClientRect().width);
+      expect(columnWidth).toBeGreaterThanOrEqual(128);
       await sheet.getByRole("button", { name: "Editar linha 1, Ana" }).click();
+      await expect(dialog.getByLabel("Celular")).toHaveValue("+447911123456");
+      await expect(dialog.getByLabel("Avulsa")).toHaveValue("007");
+      await dialog.getByLabel("Cortesia").check();
       await expect(dialog.getByLabel("CHD")).toHaveValue("1");
       await expect(dialog.getByLabel("Observações")).toHaveValue("Sem queijo");
       await dialog.getByLabel("Cliente").selectOption("external");
       await expect(dialog.getByLabel("Apto")).toHaveCount(0);
       await dialog.getByRole("button", { name: "Salvar" }).click();
       await expect(sheet.getByText("Externo")).toBeVisible();
+      await expect(pizzaRow.getByRole("cell").nth(4)).toHaveText("Cortesia");
+      await expect(sheet.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Total" }) }).getByRole("cell").first()).toHaveText(/0,00/);
       await selectDay(page, "2199-01-03");
       await expect(sheet.getByRole("button", { name: "Cadastrar na linha 1" })).toBeVisible();
       await fitsViewport(page);

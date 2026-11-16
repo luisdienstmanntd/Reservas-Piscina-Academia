@@ -154,6 +154,10 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
   }
 
   const heading = sheet?.session;
+  const pizzaTotal = isPizza
+    ? sheet?.bookings.reduce((total, booking) =>
+        total + (booking.complimentary ? 0 : booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS), 0) ?? 0
+    : 0;
 
   return (
     <Card className="border-border/80 shadow-sm">
@@ -200,11 +204,12 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
               <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th scope="col" className="rounded-l-md px-3 py-3">Apto</th>
-                  <th scope="col" className="w-full px-3 py-3">Nome</th>
+                  <th scope="col" className={isPizza ? "w-full min-w-32 px-3 py-3" : "w-full px-3 py-3"}>Nome</th>
                   {isPizza && <>
-                    <th scope="col" className="px-3 py-3">Números</th>
+                    <th scope="col" className="px-3 py-3">Avulsa</th>
                     <th scope="col" className="px-3 py-3">Celular</th>
                     <th scope="col" className="px-3 py-3">Valor</th>
+                    <th scope="col" className="px-3 py-3">Observações</th>
                   </>}
                   <th scope="col" className="rounded-r-md px-3 py-3"><span className="sr-only">Ações</span></th>
                 </tr>
@@ -234,8 +239,9 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                         <td className="whitespace-nowrap px-3 py-2">{booking?.numbers}</td>
                         <td className="whitespace-nowrap px-3 py-2">{booking?.phone && formatPhoneDisplay(booking.phone)}</td>
                         <td className="whitespace-nowrap px-3 py-2">
-                          {booking && !booking.complimentary && formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS)}
+                          {booking && (booking.complimentary ? "Cortesia" : formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS))}
                         </td>
+                        <td className="min-w-32 whitespace-pre-wrap px-3 py-2 [overflow-wrap:anywhere]">{booking?.notes}</td>
                       </>}
                       <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                         <Button
@@ -255,6 +261,15 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                   );
                 })}
               </tbody>
+              {isPizza && (
+                <tfoot className="border-t border-border bg-muted/50 font-semibold">
+                  <tr>
+                    <th scope="row" colSpan={4} className="px-3 py-2 text-right">Total</th>
+                    <td className="whitespace-nowrap px-3 py-2">{formatPizzaPrice(pizzaTotal)}</td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
@@ -285,24 +300,26 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                 </>
               ) : (
                 <>
-                  {experience !== "cinema" && (
-                    <label className="grid gap-1 text-sm">Cliente
-                      <select className={selectClass} value={customer} onChange={(event) => {
-                        setCustomer(event.target.value === "external" ? "external" : "guest");
-                      }}>
-                        <option value="guest">Hóspede</option>
-                        <option value="external">Externo</option>
-                      </select>
-                    </label>
-                  )}
-                  {customer === "guest" && (
-                    <label className="grid gap-1 text-sm">Apto
-                      <Input name="apartment" list="experience-apartments" inputMode="numeric" required defaultValue={current?.apartment ?? ""} />
-                      <datalist id="experience-apartments">
-                        {ALLOWED_APARTMENT_NUMBERS.map((apartment) => <option key={apartment} value={apartment} />)}
-                      </datalist>
-                    </label>
-                  )}
+                  <div className={isPizza ? "grid grid-cols-2 gap-2 sm:gap-4" : "contents"}>
+                    {experience !== "cinema" && (
+                      <label className={isPizza && customer === "external" ? "col-span-2 grid gap-1 text-sm" : "grid gap-1 text-sm"}>Cliente
+                        <select className={selectClass} value={customer} onChange={(event) => {
+                          setCustomer(event.target.value === "external" ? "external" : "guest");
+                        }}>
+                          <option value="guest">Hóspede</option>
+                          <option value="external">Externo</option>
+                        </select>
+                      </label>
+                    )}
+                    {customer === "guest" && (
+                      <label className="grid gap-1 text-sm">Apto
+                        <Input name="apartment" list="experience-apartments" inputMode="numeric" required defaultValue={current?.apartment ?? ""} />
+                        <datalist id="experience-apartments">
+                          {ALLOWED_APARTMENT_NUMBERS.map((apartment) => <option key={apartment} value={apartment} />)}
+                        </datalist>
+                      </label>
+                    )}
+                  </div>
                   <label className="grid gap-1 text-sm">{customer === "guest" ? "Nome dos hóspedes" : "Nome"}
                     <Input name="name" required maxLength={200} defaultValue={current?.name ?? ""} />
                   </label>
@@ -311,34 +328,34 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                       <Input name="pax" type="number" min={1} max={999} required defaultValue={current?.pax ?? 1} />
                     </label>
                   )}
-                  {experience === "pizza" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="grid gap-1 text-sm">Adultos
-                        <Input name="adults" type="number" min={0} max={999} required defaultValue={current?.adults ?? 1} />
-                      </label>
-                      <label className="grid gap-1 text-sm">CHD
-                        <Input name="children" type="number" min={0} max={999} required defaultValue={current?.children ?? 0} />
-                      </label>
-                    </div>
-                  )}
                   {isPizza && (
                     <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <label className="grid gap-1 text-sm">Valor
-                          <Input name="price" inputMode="decimal" maxLength={24} required
-                            defaultValue={formatPizzaPrice(current?.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS)} />
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                        <label className="grid min-w-0 gap-1 text-sm">Adultos
+                          <Input name="adults" type="number" min={0} max={999} required defaultValue={current?.adults ?? 1} />
                         </label>
-                        <label className="grid gap-1 text-sm">Números
+                        <label className="grid min-w-0 gap-1 text-sm">CHD
+                          <Input name="children" type="number" min={0} max={999} required defaultValue={current?.children ?? 0} />
+                        </label>
+                        <label className="grid min-w-0 gap-1 text-sm">Avulsa
                           <Input name="numbers" inputMode="numeric" pattern="[0-9]*" maxLength={30}
-                            defaultValue={current?.numbers ?? ""} />
+                            defaultValue={current?.numbers ?? ""}
+                            onChange={(event) => {
+                              const input = event.currentTarget;
+                              input.value = input.value.replace(/[^0-9]/g, "");
+                            }} />
                         </label>
                       </div>
-                      <div className="grid gap-1">
-                        <label className="grid gap-1 text-sm">Celular
+                      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-2 gap-y-1 sm:gap-x-4">
+                        <label className="grid min-w-0 gap-1 text-sm">Celular
                           <Input name="phone" type="tel" autoComplete="tel" maxLength={40}
                             aria-describedby="pizza-phone-hint" defaultValue={current?.phone ?? ""} />
                         </label>
-                        <p id="pizza-phone-hint" className="text-xs text-muted-foreground">{PHONE_HINT}</p>
+                        <label className="grid min-w-0 gap-1 text-sm">Valor
+                          <Input name="price" inputMode="decimal" maxLength={24} required
+                            defaultValue={formatPizzaPrice(current?.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS)} />
+                        </label>
+                        <p id="pizza-phone-hint" className="col-span-2 text-xs text-muted-foreground">{PHONE_HINT}</p>
                       </div>
                       <label className="flex items-center gap-2 text-sm">
                         <input name="complimentary" type="checkbox" defaultChecked={current?.complimentary} />

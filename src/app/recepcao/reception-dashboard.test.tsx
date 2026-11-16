@@ -62,8 +62,9 @@ describe("modais de ações da recepção", () => {
   it("mantém calendário e gerar acesso dentro da grade", () => {
     renderReception();
     const grid = within(screen.getByRole("region", { name: "Grade de reservas do dia" }));
-    expect(grid.getByTestId("day-label")).toBeTruthy();
-    expect(grid.getByRole("button", { name: "Escolher a data" })).toBeTruthy();
+    const date = grid.getByTestId("day-label");
+    const calendar = grid.getByRole("button", { name: "Escolher a data" });
+    expect(calendar.nextElementSibling).toBe(date);
     expect(grid.getByRole("button", { name: "Gerar acesso" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Adicionar reserva" })).toBeNull();
   });
@@ -75,6 +76,9 @@ describe("modais de ações da recepção", () => {
       fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-12-10" } });
       fireEvent.click(screen.getByRole("button", { name: tab }));
       await waitFor(() => expect((screen.getByLabelText("Dia") as HTMLInputElement).value).toBe(today));
+      const access = screen.queryByRole("button", { name: "Gerar acesso" });
+      if (tab === "Academia" || tab === "Piscina") expect(access).toBeTruthy();
+      else expect(access).toBeNull();
     }
     fireEvent.change(screen.getByLabelText("Dia"), { target: { value: "2099-12-10" } });
     fireEvent.click(screen.getByRole("button", { name: "Piscina" }));
