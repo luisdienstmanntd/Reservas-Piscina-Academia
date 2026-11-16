@@ -324,7 +324,10 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           {toolbar}
         </div>
         {heading && experience !== "cinema" && (
-          <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>
+          <p className="text-sm [overflow-wrap:anywhere]">
+            {!isPizza && `${heading.title} · `}
+            {heading.start_time.slice(0, 5)}
+          </p>
         )}
         {heading && experience === "cinema" && (
           <div className="flex flex-wrap items-center gap-x-2 text-sm">
