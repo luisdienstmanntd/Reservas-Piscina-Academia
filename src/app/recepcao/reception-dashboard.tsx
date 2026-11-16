@@ -1253,7 +1253,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         />
 
         {experience ? (
-          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} />
+          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={setDateStr} />
         ) : (
         <Card className="border-border/80 shadow-sm">
           <CardContent
@@ -1351,7 +1351,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           if (!open) setActiveFormModal(null);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-sm">
           <DialogHeader className="pr-8">
             <DialogTitle className="font-serif text-charcoal">
               {activeFormModal === "reservation" ? "Nova reserva" : "Gerar acesso hóspede"}
@@ -1590,7 +1590,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         open={!!pendingDelete}
         onOpenChange={(o) => !o && !deleting && setPendingDelete(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar esta reserva?</AlertDialogTitle>
             <AlertDialogDescription>

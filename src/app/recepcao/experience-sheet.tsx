@@ -22,7 +22,7 @@ import { ReservationDateDialog } from "./reservation-date-dialog";
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
-export function ExperienceSheet({ experience, day, toolbar }: { experience: Experience; day: string; toolbar?: ReactNode }) {
+export function ExperienceSheet({ experience, day, toolbar, onDayChange }: { experience: Experience; day: string; toolbar?: ReactNode; onDayChange?: (day: string) => void }) {
   const definition = experiences[experience];
   const isPizza = experience === "pizza";
   const [sheet, setSheet] = useState<Sheet>();
@@ -352,7 +352,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
           }
         }}>
           <DialogContent
-            className="max-h-[90dvh] overflow-y-auto"
+            className="max-h-[90dvh] overflow-y-auto sm:max-w-sm"
             {...(!hasDialogDescription ? { "aria-describedby": undefined } : {})}
           >
             <DialogHeader className="pr-8">
@@ -361,8 +361,21 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                 <DialogDescription>
                   {showSetup && !heading ? (
                     <span className="inline-flex items-center gap-2">
-                      <CalendarDays className="size-4" aria-hidden />
-                      <time dateTime={day}>{day.split("-").reverse().join("/")}</time>
+                      <span className="relative inline-flex">
+                        <input
+                          type="date"
+                          aria-label="Alterar data da experiência"
+                          value={day}
+                          onChange={(event) => {
+                            if (event.target.value) onDayChange?.(event.target.value);
+                          }}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                        <CalendarDays className="size-4" aria-hidden />
+                      </span>
+                      <time dateTime={day}>
+                        {new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))} {day.split("-").reverse().join("/")}
+                      </time>
                     </span>
                   ) : showSetup ? (
                     "Altere o nome do filme ou o horário da sessão."
@@ -453,7 +466,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
               {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
               {stale
                 ? <Button type="button" onClick={reloadSheet}>Recarregar planilha</Button>
-                : <Button type="submit" disabled={busy}>{busy ? "Salvando…" : experience === "pizza" && showSetup ? "Abrir planilha" : "Salvar"}</Button>}
+                : <Button type="submit" disabled={busy}>{busy ? "Salvando…" : showSetup && !heading ? "Definir experiência" : "Salvar"}</Button>}
             </form>
           </DialogContent>
         </Dialog>
@@ -491,7 +504,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         <AlertDialog open={Boolean(removing)} onOpenChange={(open) => {
           if (!open && !busy) setRemoving(undefined);
         }}>
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-sm">
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir esta reserva?</AlertDialogTitle>
               <AlertDialogDescription className="[overflow-wrap:anywhere]">A linha de {removing?.name} ficará disponível para outro cadastro.</AlertDialogDescription>

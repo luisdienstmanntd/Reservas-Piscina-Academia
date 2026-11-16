@@ -32,7 +32,7 @@ describe("planilhas de experiências", () => {
     fireEvent.change(within(dialog).getByLabelText("Nome do filme"), { target: { value: session.title } });
     expect((within(dialog).getByLabelText("Horário") as HTMLInputElement).value).toBe("19:30");
     fireEvent.change(within(dialog).getByLabelText("Horário"), { target: { value: "20:30" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Salvar" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Definir experiência" }));
     expect(await screen.findByText("Cinema Paradiso", { exact: true })).toBeTruthy();
     expect(within(await screen.findByRole("table")).getAllByRole("row")).toHaveLength(6);
     expect(actions.setupExperience).toHaveBeenCalledWith({ experience: "cinema", day }, {
@@ -112,8 +112,8 @@ describe("planilhas de experiências", () => {
     actions.deleteExperienceBooking.mockResolvedValue({ ok: true });
     render(<ExperienceSheet experience="pizza" day={day} />);
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByText("15/11/2026")).toBeTruthy();
-    fireEvent.click(dialog.getByRole("button", { name: "Abrir planilha" }));
+    expect(dialog.getByText("domingo 15/11/2026")).toBeTruthy();
+    fireEvent.click(dialog.getByRole("button", { name: "Definir experiência" }));
     const table = await screen.findByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(10);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -132,7 +132,7 @@ describe("planilhas de experiências", () => {
       ],
     });
     render(<ExperienceSheet experience="pizza" day={day} />);
-    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Abrir planilha" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
     const rows = within(await screen.findByRole("table")).getAllByRole("row");
     expect(within(rows[0]).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
       "Apto", "Nome", "Observações", "Contato", "Valor", "Avulsa", "Ações",
@@ -167,7 +167,7 @@ describe("planilhas de experiências", () => {
       ok: true, booking: { line: 9, customer: "guest", apartment: "102", name: "Carla", adults: 2, children: 0 },
     });
     render(<ExperienceSheet experience="pizza" day={day} />);
-    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Abrir planilha" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
     expect(await screen.findByText("12/12 lugares")).toBeTruthy();
     for (const label of ["Aptos: 1", "Externos: 1", "Adultos: 11", "Crianças: 1"]) {
       expect(screen.getByText(label)).toBeTruthy();
@@ -202,7 +202,7 @@ describe("planilhas de experiências", () => {
     render(<ExperienceSheet experience="pizza" day={day} />);
     expect((await screen.findByRole("alert")).textContent).toBe("Banco indisponível");
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
-    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Abrir planilha" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
     await screen.findByRole("table");
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -215,7 +215,7 @@ describe("planilhas de experiências", () => {
         bookings: [{ line: 1, customer: "external", name: "Reserva de outro atendente" }],
       });
     render(<ExperienceSheet experience="pizza" day={day} />);
-    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Abrir planilha" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Definir experiência" }));
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));

@@ -64,7 +64,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await dialog.getByLabel("Nome do filme").fill("Cinema Paradiso");
       await expect(dialog.getByLabel("Horário")).toHaveValue("19:30");
       await dialog.getByLabel("Horário").fill("20:30");
-      await dialog.getByRole("button", { name: "Salvar" }).click();
+      await dialog.getByRole("button", { name: "Definir experiência" }).click();
       await expect(page.getByText("Cinema Paradiso", { exact: true })).toBeVisible();
       const sheet = page.getByRole("table");
       await expect(sheet.getByRole("row")).toHaveCount(6);
@@ -106,7 +106,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await openExperienceOnDay(page, wine, today, date);
       await dialog.getByLabel("Vinícola").fill("Vinícola Valle");
       await dialog.getByLabel("Horário").fill("18:00");
-      await dialog.getByRole("button", { name: "Salvar" }).click();
+      await dialog.getByRole("button", { name: "Definir experiência" }).click();
       await expect(page.getByText("Vinícola Valle · 18:00")).toBeVisible();
       await expect(sheet.getByRole("row")).toHaveCount(9);
       await sheet.getByRole("button", { name: "Cadastrar na linha 8" }).click();
