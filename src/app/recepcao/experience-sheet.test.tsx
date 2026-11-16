@@ -39,7 +39,14 @@ describe("planilhas de experiências", () => {
     actions.deleteExperience.mockResolvedValue({ ok: true });
     const onDismissSetup = vi.fn();
     render(<ExperienceSheet experience={experience} day={day} onDismissSetup={onDismissSetup} />);
-    const remove = await screen.findByRole("button", { name: "Apagar experiência" });
+    const settingsName = {
+      cinema: "Editar experiência", wine: "Configurar experiência", pizza: "Alterar capacidade",
+    }[experience];
+    const settings = await screen.findByRole("button", { name: settingsName });
+    expect(screen.queryByRole("button", { name: "Apagar experiência" })).toBeNull();
+    fireEvent.click(settings);
+    const modal = await screen.findByRole("dialog");
+    const remove = within(modal).getByRole("button", { name: "Apagar experiência" });
     fireEvent.click(remove);
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Voltar" }));
     expect(actions.deleteExperience).not.toHaveBeenCalled();

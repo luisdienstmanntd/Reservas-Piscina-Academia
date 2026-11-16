@@ -267,6 +267,22 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         total + (booking.complimentary ? 0 : booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS), 0) ?? 0
     : 0;
 
+  const sessionDateControls = (
+    <div className="flex items-center gap-2">
+      <Button type="button" variant="outline" disabled={busy} className="min-w-0 flex-1 whitespace-normal"
+        onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
+        <CalendarDays className="size-4" aria-hidden />
+        {dateLabel}
+      </Button>
+      <Button type="button" variant="ghost" size="icon" disabled={busy}
+        className="text-muted-foreground hover:text-destructive"
+        aria-label="Apagar experiência" title="Apagar experiência"
+        onClick={() => { setError(""); setDeletingSheet(true); }}>
+        <Trash2 className="size-4" aria-hidden />
+      </Button>
+    </div>
+  );
+
   return (
     <Card className="border-border/80 shadow-sm" hidden={!loadError && (!sheet || !heading)}>
       <CardHeader>
@@ -305,13 +321,6 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               </Button>
             )}
           </div>
-          {heading && (
-            <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive"
-              aria-label="Apagar experiência" title="Apagar experiência"
-              onClick={() => { setError(""); setDeletingSheet(true); }}>
-              <Trash2 className="size-4" aria-hidden />
-            </Button>
-          )}
           {toolbar}
         </div>
         {heading && experience !== "cinema" && (
@@ -479,13 +488,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               )}
             </DialogHeader>
             <form key={showSetup ? "setup" : line} className="grid gap-4" onSubmit={submit}>
-              {showSetup && heading && (
-                <Button type="button" variant="outline" disabled={busy}
-                  onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
-                  <CalendarDays className="size-4" aria-hidden />
-                  {dateLabel}
-                </Button>
-              )}
+              {showSetup && heading && sessionDateControls}
               {showSetup ? (
                 <>
                   {!isPizza && <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>}
@@ -591,13 +594,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           <DialogContent className="pt-12 sm:max-w-sm" aria-describedby={undefined}>
             <DialogTitle className="sr-only">Alterar capacidade</DialogTitle>
             <form className="grid gap-4" onSubmit={submitCapacity}>
-              {(
-                <Button type="button" variant="outline" disabled={busy}
-                  onClick={() => { setError(""); setShowSetup(false); setCapacityOpen(false); setDateOpen(true); }}>
-                  <CalendarDays className="size-4" aria-hidden />
-                  {dateLabel}
-                </Button>
-              )}
+              {sessionDateControls}
               {isWine && (
                 <label className="grid gap-1 text-sm">Vinícola
                   <Input name="winery" required maxLength={200} defaultValue={heading?.title} />
