@@ -1355,10 +1355,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           if (!open) setActiveFormModal(null);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-sm">
+        <DialogContent className={activeFormModal === "reservation"
+          ? "w-[calc(100%-1rem)] p-4 sm:max-w-lg sm:p-6"
+          : "max-h-[90dvh] overflow-y-auto sm:max-w-sm"}>
           <DialogHeader className="pr-8">
             <DialogTitle className="font-serif text-charcoal">
-              {activeFormModal === "reservation" ? "Nova reserva" : "Gerar acesso hóspede"}
+              {activeFormModal === "reservation" ? <span className="sr-only">Cadastrar reserva</span> : "Gerar acesso hóspede"}
             </DialogTitle>
             <DialogDescription className="sr-only">
               {activeFormModal === "reservation"
@@ -1438,16 +1440,9 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           ) : null}
 
           {activeFormModal === "reservation" ? (
-            <Card className="border-border/80 shadow-sm">
-              <CardHeader className="px-4 sm:px-6 lg:px-8">
-                <CardTitle className="font-serif text-lg text-charcoal lg:text-xl">
-                  Nova reserva
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 sm:px-6 lg:px-8">
             <form
               onSubmit={(e) => void onCreate(e)}
-              className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:max-w-5xl"
+              className="grid gap-3 sm:grid-cols-2 sm:gap-4"
             >
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="na">Apto</Label>
@@ -1479,7 +1474,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-1">
-                <Label htmlFor="ngn">Hóspede (opcional)</Label>
+                <Label htmlFor="ngn">Hóspede</Label>
                 <Input
                   id="ngn"
                   type="text"
@@ -1533,7 +1528,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-1">
-                <Label htmlFor="nw">WhatsApp (opcional)</Label>
+                <Label htmlFor="nw">WhatsApp</Label>
                 <Input
                   id="nw"
                   type="tel"
@@ -1566,7 +1561,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                   maxLength={2000}
                   value={newNotes}
                   onChange={(e) => setNewNotes(toUpperText(e.target.value))}
-                  placeholder="Opcional: pedido especial, notas internas…"
+                  placeholder="Pedido especial, notas internas…"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -1583,8 +1578,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
                 </Button>
               </div>
             </form>
-              </CardContent>
-            </Card>
           ) : null}
         </DialogContent>
       </Dialog>

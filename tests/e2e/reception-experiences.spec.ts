@@ -54,7 +54,14 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await grid.getByRole("button", { name: "Reservar às 15h00" }).click();
       await page.getByRole("dialog", { name: "Confirmar data da reserva" })
         .getByRole("button", { name: date.split("-").reverse().join("/") }).click();
-      await expect(page.getByRole("dialog").getByText("Nova reserva").first()).toBeVisible();
+      const reservationDialog = page.getByRole("dialog", { name: "Cadastrar reserva" });
+      await expect(reservationDialog).toBeVisible();
+      await expect(reservationDialog.getByText("Nova reserva")).toHaveCount(0);
+      await expect(reservationDialog.getByText(/opcional/i)).toHaveCount(0);
+      await expect.poll(() => reservationDialog.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top >= 0 && rect.bottom <= window.innerHeight && element.scrollHeight <= element.clientHeight + 1;
+      })).toBe(true);
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
 

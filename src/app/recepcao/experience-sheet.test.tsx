@@ -12,6 +12,7 @@ const actions = vi.hoisted(() => ({
   setupExperience: vi.fn(),
   saveExperienceBooking: vi.fn(),
   savePizzaCapacity: vi.fn(),
+  saveWineCapacity: vi.fn(),
   deleteExperienceBooking: vi.fn(),
 }));
 vi.mock("@/app/actions/experiences", () => actions);
@@ -84,13 +85,42 @@ describe("planilhas de experiências", () => {
     const onDayChange = vi.fn();
     render(<ExperienceSheet experience="wine" day={day} onDayChange={onDayChange} />);
     fireEvent.click(await screen.findByRole("button", { name: "Configurar experiência" }));
-    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar data" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Alterar data da experiência" }));
     fireEvent.change(dialog.getByLabelText("Nova data"), { target: { value: "2026-11-22" } });
     expect(onDayChange).not.toHaveBeenCalled();
     fireEvent.click(dialog.getByRole("button", { name: "Alterar data" }));
     await waitFor(() => expect(onDayChange).toHaveBeenCalledWith("2026-11-22"));
     expect(actions.moveExperience).toHaveBeenCalledWith({ experience: "wine", day }, "2026-11-22");
     expect(onDayChange).toHaveBeenCalledWith("2026-11-22");
+  });
+
+  it("configura capacidade do vinho em 12 por padrão e exibe a contagem de pax", async () => {
+    actions.loadExperience.mockResolvedValue({
+      ok: true,
+      session: { title: "Vinícola Valle", start_time: "18:00:00" },
+      bookings: [
+        { line: 1, customer: "guest", apartment: "101", name: "Ana", pax: 3 },
+        { line: 2, customer: "external", apartment: null, name: "Maria", pax: 2 },
+      ],
+      capacity: 12,
+    });
+    actions.saveWineCapacity.mockResolvedValue({ ok: true, capacity: 15 });
+    render(<ExperienceSheet experience="wine" day={day} />);
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("5/12 lugares")).toBeTruthy();
+    expect(within(table).getByText("Aptos: 1")).toBeTruthy();
+    expect(within(table).getByText("Externos: 1")).toBeTruthy();
+    expect(within(table).getByText("Pax: 5")).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Configurar experiência" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Alterar capacidade" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Alterar capacidade" }));
+    expect((dialog.getByLabelText("Capacidade (pax)") as HTMLInputElement).value).toBe("12");
+    fireEvent.change(dialog.getByLabelText("Capacidade (pax)"), { target: { value: "15" } });
+    fireEvent.click(dialog.getByRole("button", { name: "Salvar" }));
+    await waitFor(() => expect(actions.saveWineCapacity).toHaveBeenCalledWith(day, 15));
+    expect(await within(table).findByText("5/15 lugares")).toBeTruthy();
   });
 
   it("cadastra cliente externo no vinho sem pedir apartamento", async () => {
@@ -105,10 +135,13 @@ describe("planilhas de experiências", () => {
     });
     render(<ExperienceSheet experience="wine" day={day} />);
     const table = await screen.findByRole("table");
-    expect(within(table).getAllByRole("row")).toHaveLength(9);
+    expect(within(table).getAllByRole("row")).toHaveLength(10);
     fireEvent.click(within(table).getByRole("button", { name: "Cadastrar na linha 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "domingo 15/11/2026" }));
     const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.queryByText("L'ora del vino · Linha 1")).toBeNull();
+    expect(dialog.getByLabelText("Cliente").parentElement?.parentElement)
+      .toBe(dialog.getByLabelText("Apto").parentElement?.parentElement);
     fireEvent.change(dialog.getByLabelText("Cliente"), { target: { value: "external" } });
     expect(dialog.queryByLabelText("Apto")).toBeNull();
     fireEvent.change(dialog.getByLabelText("Nome"), { target: { value: "Maria" } });

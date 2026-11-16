@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
 import { normalizePhone } from "@/lib/phone";
-import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
+import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, WINE_DEFAULT_CAPACITY, experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
 import { readReceptionAuthed } from "@/lib/reception-auth";
 import { getAdminClient } from "@/lib/supabase/admin";
 
@@ -57,27 +57,39 @@ export async function loadExperience(input: unknown) {
       : db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
     db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
       .match(key.data).returns<ExperienceBooking[]>(),
-    key.data.experience === "pizza"
-      ? db.from("pizza_daily_capacity").select("capacity").eq("day", key.data.day).maybeSingle<{ capacity: number }>()
+    key.data.experience === "pizza" || key.data.experience === "wine"
+      ? db.from(key.data.experience === "pizza" ? "pizza_daily_capacity" : "wine_daily_capacity").select("capacity").eq("day", key.data.day).maybeSingle<{ capacity: number }>()
       : { data: null, error: null },
   ]);
-  if (session.error || bookings.error || capacity.error) {
+  const wineCapacityUnavailable = key.data.experience === "wine" && capacity.error;
+  if (session.error || bookings.error || (capacity.error && !wineCapacityUnavailable)) {
     return { ok: false, error: "Não foi possível carregar a planilha." } as const;
   }
   return {
     ok: true, session: session.data, bookings: bookings.data,
-    ...(key.data.experience === "pizza" && { capacity: capacity.data?.capacity ?? PIZZA_DEFAULT_CAPACITY }),
+    ...((key.data.experience === "pizza" || key.data.experience === "wine") && {
+      capacity: (wineCapacityUnavailable ? null : capacity.data)?.capacity ??
+        (key.data.experience === "wine" ? WINE_DEFAULT_CAPACITY : PIZZA_DEFAULT_CAPACITY),
+    }),
   } as const;
 }
 
 export async function savePizzaCapacity(day: unknown, value: unknown) {
+  return saveDailyCapacity("pizza", day, value);
+}
+
+export async function saveWineCapacity(day: unknown, value: unknown) {
+  return saveDailyCapacity("wine", day, value);
+}
+
+async function saveDailyCapacity(experience: "wine" | "pizza", day: unknown, value: unknown) {
   const db = await receptionClient();
   if (!db) return { ok: false, error: accessError } as const;
   const date = z.string().date().safeParse(day);
   const capacity = z.number().int().min(1).max(PIZZA_MAX_ROWS).safeParse(value);
   if (!date.success || !capacity.success) return invalid;
 
-  const { error } = await db.from("pizza_daily_capacity")
+  const { error } = await db.from(experience === "pizza" ? "pizza_daily_capacity" : "wine_daily_capacity")
     .upsert({ day: date.data, capacity: capacity.data }, { onConflict: "day" });
   return error
     ? { ok: false, error: "Não foi possível salvar a capacidade." } as const

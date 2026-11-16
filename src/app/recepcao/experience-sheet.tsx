@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { CalendarDays, Settings, Trash2 } from "lucide-react";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "@/app/actions/experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, moveExperience, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "@/app/actions/experiences";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ALLOWED_APARTMENT_NUMBERS } from "@/lib/apartment-codes";
 import { PHONE_HINT, formatPhoneDisplay } from "@/lib/phone";
-import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, formatPizzaPrice, experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
+import { PIZZA_DEFAULT_CAPACITY, PIZZA_MAX_ROWS, PIZZA_DEFAULT_PRICE_CENTS, WINE_DEFAULT_CAPACITY, formatPizzaPrice, experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
 
 import { ReservationDateDialog } from "./reservation-date-dialog";
 
@@ -36,6 +36,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
   const [line, setLine] = useState<number>();
   const [dateOpen, setDateOpen] = useState(false);
   const [capacityOpen, setCapacityOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
   const [overCapacityLine, setOverCapacityLine] = useState<number>();
   const [removing, setRemoving] = useState<ExperienceBooking>();
@@ -173,7 +174,9 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
     setBusy(true);
     setError("");
     try {
-      const result = await savePizzaCapacity(day, value);
+      const result = experience === "wine"
+        ? await saveWineCapacity(day, value)
+        : await savePizzaCapacity(day, value);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -211,8 +214,13 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
   }
 
   const heading = sheet?.session;
+  const isWine = experience === "wine";
   const pizzaBookings = isPizza ? sheet?.bookings ?? [] : [];
-  const capacity = sheet?.capacity ?? PIZZA_DEFAULT_CAPACITY;
+  const wineBookings = isWine ? sheet?.bookings ?? [] : [];
+  const capacity = sheet?.capacity ?? (isWine ? WINE_DEFAULT_CAPACITY : PIZZA_DEFAULT_CAPACITY);
+  const winePax = wineBookings.reduce((total, booking) => total + (booking.pax ?? 0), 0);
+  const wineApartments = new Set(wineBookings.flatMap((booking) => booking.customer === "guest" && booking.apartment ? [booking.apartment] : [])).size;
+  const wineExternals = wineBookings.filter((booking) => booking.customer === "external").length;
   const adults = pizzaBookings.reduce((total, booking) => total + (booking.adults ?? 0), 0);
   const children = pizzaBookings.reduce((total, booking) => total + (booking.children ?? 0), 0);
   const apartments = new Set(pizzaBookings.flatMap((booking) => booking.customer === "guest" && booking.apartment ? [booking.apartment] : [])).size;
@@ -250,7 +258,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
           {experience === "wine" && heading && (
             <Button type="button" variant="ghost" size="icon" className="size-8"
               aria-label="Configurar experiência"
-              onClick={() => { setError(""); setDateOpen(true); }}>
+              onClick={() => { setError(""); setSettingsOpen(true); }}>
               <Settings className="size-4" aria-hidden />
             </Button>
           )}
@@ -345,21 +353,31 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                   );
                 })}
               </tbody>
-              {isPizza && (
+              {(isPizza || isWine) && (
                 <tfoot className="border-t border-border bg-muted/50 font-semibold">
                   <tr>
-                    <td colSpan={3} className="px-3 py-2">
+                    <td colSpan={isPizza ? 3 : 2} className="px-3 py-2">
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
-                        <span>{adults + children}/{capacity} lugares</span>
-                        <span>Aptos: {apartments}</span>
-                        <span>Externos: {externals}</span>
-                        <span>Adultos: {adults}</span>
-                        <span>Crianças: {children}</span>
+                        {isPizza ? <>
+                          <span>{adults + children}/{capacity} lugares</span>
+                          <span>Aptos: {apartments}</span>
+                          <span>Externos: {externals}</span>
+                          <span>Adultos: {adults}</span>
+                          <span>Crianças: {children}</span>
+                        </> : <>
+                          <span>{winePax}/{capacity} lugares</span>
+                          <span>Aptos: {wineApartments}</span>
+                          <span>Externos: {wineExternals}</span>
+                          <span>Pax: {winePax}</span>
+                        </>}
                       </div>
                     </td>
-                    <th scope="row" className="px-3 py-2 text-right">Total</th>
-                    <td className="whitespace-nowrap px-3 py-2">{formatPizzaPrice(pizzaTotal)}</td>
-                    <td colSpan={2} />
+                    {isPizza && <>
+                      <th scope="row" className="px-3 py-2 text-right">Total</th>
+                      <td className="whitespace-nowrap px-3 py-2">{formatPizzaPrice(pizzaTotal)}</td>
+                      <td colSpan={2} />
+                    </>}
+                    {isWine && <td />}
                   </tr>
                 </tfoot>
               )}
@@ -374,7 +392,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
             const pending = pendingBooking;
             setPendingBooking(undefined);
             if (!pending || pending.day !== day) return;
-            if (isPizza && adults + children >= capacity) setOverCapacityLine(pending.line);
+            if ((isPizza && adults + children >= capacity) || (isWine && winePax >= capacity)) setOverCapacityLine(pending.line);
             else setLine(pending.line);
           }}
         />
@@ -414,9 +432,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                     </span>
                   ) : showSetup ? (
                     "Altere o nome do filme ou o horário da sessão."
-                  ) : (
-                    `${definition.label} · Linha ${line}`
-                  )}
+                  ) : null}
                 </DialogDescription>
               )}
             </DialogHeader>
@@ -435,9 +451,9 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                 </>
               ) : (
                 <>
-                  <div className={isPizza ? "grid grid-cols-2 gap-2 sm:gap-4" : "contents"}>
+                  <div className={experience === "wine" ? "grid grid-cols-2 gap-2 sm:gap-4" : isPizza ? "grid grid-cols-2 gap-2 sm:gap-4" : "contents"}>
                     {experience !== "cinema" && (
-                      <label className={isPizza && customer === "external" ? "col-span-2 grid gap-1 text-sm" : "grid gap-1 text-sm"}>Cliente
+                      <label className={(isPizza || experience === "wine") && customer === "external" ? "col-span-2 grid gap-1 text-sm" : "grid gap-1 text-sm"}>Cliente
                         <select className={selectClass} value={customer} onChange={(event) => {
                           setCustomer(event.target.value === "external" ? "external" : "guest");
                         }}>
@@ -526,6 +542,19 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               {error && <p role="alert">{error}</p>}
               <Button type="submit" disabled={busy}>Alterar data</Button>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Configurar experiência</DialogTitle>
+              <DialogDescription>Altere a data ou a capacidade da experiência.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3">
+              <Button type="button" variant="outline" onClick={() => { setSettingsOpen(false); setDateOpen(true); }}>Alterar data</Button>
+              <Button type="button" variant="outline" onClick={() => { setSettingsOpen(false); setCapacityOpen(true); }}>Alterar capacidade</Button>
+            </div>
           </DialogContent>
         </Dialog>
 

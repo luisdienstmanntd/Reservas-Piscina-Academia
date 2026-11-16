@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "./experiences";
+import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, saveWineCapacity, setupExperience } from "./experiences";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), admin: vi.fn(), fetch: vi.fn() }));
 vi.mock("@/lib/reception-auth", () => ({ readReceptionAuthed: mocks.auth }));
@@ -69,6 +69,30 @@ describe("ações das experiências", () => {
     const [url, options] = mocks.fetch.mock.calls[0];
     expect(new URL(url).searchParams.get("on_conflict")).toBe("day");
     expect(JSON.parse(options.body)).toEqual({ day, capacity: 18 });
+  });
+
+  it("carrega e salva capacidade do vinho separada por dia", async () => {
+    mocks.fetch.mockImplementation(async () => response([]));
+    expect(await loadExperience(wine)).toMatchObject({ ok: true, capacity: 12 });
+    expect(mocks.fetch.mock.calls.some(([url]) => String(url).includes("wine_daily_capacity"))).toBe(true);
+    mocks.fetch.mockClear();
+
+    expect(await saveWineCapacity(day, 0)).toMatchObject({ ok: false });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(await saveWineCapacity(day, 16)).toEqual({ ok: true, capacity: 16 });
+    const [url, options] = mocks.fetch.mock.calls[0];
+    expect(String(url)).toContain("wine_daily_capacity");
+    expect(new URL(url).searchParams.get("on_conflict")).toBe("day");
+    expect(JSON.parse(options.body)).toEqual({ day, capacity: 16 });
+  });
+
+  it("mantém a planilha do vinho acessível se a tabela de capacidade ainda não existir", async () => {
+    mocks.fetch.mockImplementation(async (url: string) =>
+      url.includes("wine_daily_capacity")
+        ? response({ code: "PGRST205", message: "table not found" }, 404)
+        : response([])
+    );
+    expect(await loadExperience(wine)).toMatchObject({ ok: true, capacity: 12, bookings: [] });
   });
 
   it("ignora uma segunda configuração e retorna a sessão já gravada", async () => {
