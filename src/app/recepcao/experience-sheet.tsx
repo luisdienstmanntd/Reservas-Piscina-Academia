@@ -247,41 +247,43 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
 
   return (
     <Card className="border-border/80 shadow-sm" hidden={!loadError && (!sheet || !heading)}>
-      {toolbar && <div className="px-6">{toolbar}</div>}
       <CardHeader>
-        <div className="flex items-center gap-1">
-          <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
-          {experience === "cinema" && heading && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground"
-                aria-label="Editar experiência"
-                title="Editar experiência"
-                onClick={() => {
-                  setError("");
-                  setStale(false);
-                  setShowSetup(true);
-                }}
-              >
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <div className="flex items-center gap-1">
+            <CardTitle className="font-serif text-lg text-charcoal">{definition.label}</CardTitle>
+            {experience === "cinema" && heading && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground"
+                  aria-label="Editar experiência"
+                  title="Editar experiência"
+                  onClick={() => {
+                    setError("");
+                    setStale(false);
+                    setShowSetup(true);
+                  }}
+                >
+                  <Settings className="size-4" aria-hidden />
+                </Button>
+            )}
+            {experience === "wine" && heading && (
+              <Button type="button" variant="ghost" size="icon" className="size-8"
+                aria-label="Configurar experiência"
+                onClick={() => { setError(""); setCapacityOpen(true); }}>
                 <Settings className="size-4" aria-hidden />
               </Button>
-          )}
-          {experience === "wine" && heading && (
-            <Button type="button" variant="ghost" size="icon" className="size-8"
-              aria-label="Configurar experiência"
-              onClick={() => { setError(""); setCapacityOpen(true); }}>
-              <Settings className="size-4" aria-hidden />
-            </Button>
-          )}
-          {isPizza && sheet && (
-            <Button type="button" variant="ghost" size="icon" className="size-8"
-              aria-label="Alterar capacidade" title="Alterar capacidade"
-              onClick={() => { setError(""); setCapacityOpen(true); }}>
-              <Settings className="size-4" aria-hidden />
-            </Button>
-          )}
+            )}
+            {isPizza && sheet && (
+              <Button type="button" variant="ghost" size="icon" className="size-8"
+                aria-label="Alterar capacidade" title="Alterar capacidade"
+                onClick={() => { setError(""); setCapacityOpen(true); }}>
+                <Settings className="size-4" aria-hidden />
+              </Button>
+            )}
+          </div>
+          {toolbar}
         </div>
         {heading && experience !== "cinema" && (
           <p className="text-sm [overflow-wrap:anywhere]">{heading.title} · {heading.start_time.slice(0, 5)}</p>
@@ -421,7 +423,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
             className="max-h-[90dvh] overflow-y-auto sm:max-w-sm"
             {...(!hasDialogDescription ? { "aria-describedby": undefined } : {})}
           >
-            <DialogHeader className="pr-8">
+            <DialogHeader className={isPizza && !showSetup && !current ? "sr-only" : "pr-8"}>
               <DialogTitle>{showSetup ? (heading ? "Editar experiência" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
               {hasDialogDescription && (
                 <DialogDescription>
@@ -559,11 +561,8 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         </Dialog>
 
         <Dialog open={capacityOpen} onOpenChange={(open) => { if (!busy) setCapacityOpen(open); }}>
-          <DialogContent className="sm:max-w-sm" {...(isPizza ? { "aria-describedby": undefined } : {})}>
-            <DialogHeader className="pr-8">
-              <DialogTitle>Alterar capacidade</DialogTitle>
-              {!isPizza && <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>}
-            </DialogHeader>
+          <DialogContent className="pt-12 sm:max-w-sm" aria-describedby={undefined}>
+            <DialogTitle className="sr-only">Alterar capacidade</DialogTitle>
             <form className="grid gap-4" onSubmit={submitCapacity}>
               {(
                 <Button type="button" variant="outline" disabled={busy}

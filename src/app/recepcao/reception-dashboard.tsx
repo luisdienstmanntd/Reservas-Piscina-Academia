@@ -1133,7 +1133,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   }
 
   const sheetToolbar = (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className={experience ? "flex items-center" : "mb-3 flex flex-wrap items-center justify-between gap-2"}>
       <div className="relative flex shrink-0 items-center gap-2">
         {experience ? <CalendarDays className="size-4" aria-hidden /> : (
         <Button
