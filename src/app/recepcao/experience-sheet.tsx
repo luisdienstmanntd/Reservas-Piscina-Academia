@@ -14,13 +14,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ALLOWED_APARTMENT_NUMBERS } from "@/lib/apartment-codes";
-import { experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
+import { PHONE_HINT, formatPhoneDisplay } from "@/lib/phone";
+import { PIZZA_DEFAULT_PRICE_CENTS, formatPizzaPrice, experiences, type Experience, type ExperienceBooking } from "@/lib/experiences";
 
 type Sheet = Extract<Awaited<ReturnType<typeof loadExperience>>, { ok: true }>;
 const selectClass = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function ExperienceSheet({ experience, day, toolbar }: { experience: Experience; day: string; toolbar?: ReactNode }) {
   const definition = experiences[experience];
+  const isPizza = experience === "pizza";
   const [sheet, setSheet] = useState<Sheet>();
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
@@ -31,6 +33,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
+  const hasDialogDescription = showSetup || experience === "wine";
   const current = sheet?.bookings.find((booking) => booking.line === line);
 
   useEffect(() => {
@@ -102,6 +105,12 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         adults: experience === "pizza" ? Number(fields.get("adults")) : undefined,
         children: experience === "pizza" ? Number(fields.get("children")) : undefined,
         notes: fields.get("notes") ?? undefined,
+        ...(isPizza && {
+          price: fields.get("price"),
+          numbers: fields.get("numbers"),
+          phone: fields.get("phone"),
+          complimentary: fields.has("complimentary"),
+        }),
         revision: current?.revision ?? null,
       });
       if (!result.ok) {
@@ -192,6 +201,11 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                 <tr>
                   <th scope="col" className="rounded-l-md px-3 py-3">Apto</th>
                   <th scope="col" className="w-full px-3 py-3">Nome</th>
+                  {isPizza && <>
+                    <th scope="col" className="px-3 py-3">Números</th>
+                    <th scope="col" className="px-3 py-3">Celular</th>
+                    <th scope="col" className="px-3 py-3">Valor</th>
+                  </>}
                   <th scope="col" className="rounded-r-md px-3 py-3"><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
@@ -216,6 +230,13 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                           {booking?.name ?? "—"}
                         </button>
                       </td>
+                      {isPizza && <>
+                        <td className="whitespace-nowrap px-3 py-2">{booking?.numbers}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{booking?.phone && formatPhoneDisplay(booking.phone)}</td>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          {booking && !booking.complimentary && formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS)}
+                        </td>
+                      </>}
                       <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                         <Button
                           type="button"
@@ -244,12 +265,17 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
             setLine(undefined);
           }
         }}>
-          <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          <DialogContent
+            className="max-h-[90dvh] overflow-y-auto"
+            {...(!hasDialogDescription ? { "aria-describedby": undefined } : {})}
+          >
             <DialogHeader className="pr-8">
               <DialogTitle>{showSetup ? (heading ? "Editar filme e horário" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
-              <DialogDescription>
-                {showSetup ? (heading ? "Altere o nome do filme ou o horário da sessão." : "Preencha os dados para abrir a planilha.") : `${definition.label} · Linha ${line}`}
-              </DialogDescription>
+              {(hasDialogDescription) && (
+                <DialogDescription>
+                  {showSetup ? (heading ? "Altere o nome do filme ou o horário da sessão." : "Preencha os dados para abrir a planilha.") : `${definition.label} · Linha ${line}`}
+                </DialogDescription>
+              )}
             </DialogHeader>
             <form key={showSetup ? "setup" : line} className="grid gap-4" onSubmit={submit}>
               {showSetup ? (
@@ -294,6 +320,31 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                         <Input name="children" type="number" min={0} max={999} required defaultValue={current?.children ?? 0} />
                       </label>
                     </div>
+                  )}
+                  {isPizza && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <label className="grid gap-1 text-sm">Valor
+                          <Input name="price" inputMode="decimal" maxLength={24} required
+                            defaultValue={formatPizzaPrice(current?.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS)} />
+                        </label>
+                        <label className="grid gap-1 text-sm">Números
+                          <Input name="numbers" inputMode="numeric" pattern="[0-9]*" maxLength={30}
+                            defaultValue={current?.numbers ?? ""} />
+                        </label>
+                      </div>
+                      <div className="grid gap-1">
+                        <label className="grid gap-1 text-sm">Celular
+                          <Input name="phone" type="tel" autoComplete="tel" maxLength={40}
+                            aria-describedby="pizza-phone-hint" defaultValue={current?.phone ?? ""} />
+                        </label>
+                        <p id="pizza-phone-hint" className="text-xs text-muted-foreground">{PHONE_HINT}</p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input name="complimentary" type="checkbox" defaultChecked={current?.complimentary} />
+                        Cortesia
+                      </label>
+                    </>
                   )}
                   {experience !== "cinema" && (
                     <label className="grid gap-1 text-sm">Observações

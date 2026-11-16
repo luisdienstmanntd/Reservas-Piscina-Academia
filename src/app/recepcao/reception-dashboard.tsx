@@ -1133,12 +1133,6 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   const sheetToolbar = (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div className="relative flex shrink-0 items-center gap-2">
-        <p
-          className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
-          data-testid="day-label"
-        >
-          {dayLabel}
-        </p>
         <Button
           type="button"
           variant="outline"
@@ -1150,6 +1144,12 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         >
           <CalendarDays className="size-4" aria-hidden />
         </Button>
+        <p
+          className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm lg:text-base"
+          data-testid="day-label"
+        >
+          {dayLabel}
+        </p>
         <Input
           ref={dayInputRef}
           id="day"
@@ -1158,21 +1158,23 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
           onChange={(e) => setDateStr(e.target.value)}
           aria-label="Dia"
           tabIndex={-1}
-          className="pointer-events-none absolute right-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
+          className="pointer-events-none absolute left-0 top-0 !h-px !w-px !min-w-0 !border-0 !p-0 opacity-0"
         />
       </div>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="ml-auto h-9 lg:h-10"
-        onClick={() => {
-          setGuestAccessUrl(null);
-          setActiveFormModal("access");
-        }}
-      >
-        Gerar acesso
-      </Button>
+      {!experience && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="ml-auto h-9 lg:h-10"
+          onClick={() => {
+            setGuestAccessUrl(null);
+            setActiveFormModal("access");
+          }}
+        >
+          Gerar acesso
+        </Button>
+      )}
     </div>
   );
 

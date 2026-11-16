@@ -118,6 +118,25 @@ describe("planilhas de experiências", () => {
     expect(actions.deleteExperienceBooking).toHaveBeenCalledWith({ experience: "pizza", day, line: 2 }, "revision");
   });
 
+  it("mostra o preço padrão no modal de pizza e omite o preço de uma cortesia na planilha", async () => {
+    actions.loadExperience.mockResolvedValue({
+      ok: true, session: null, bookings: [
+        { line: 1, name: "Ana", customer: "guest", apartment: "101", complimentary: true, price_cents: 18900 },
+        { line: 2, name: "Bruno", customer: "external", price_cents: 18900 },
+      ],
+    });
+    render(<ExperienceSheet experience="pizza" day={day} />);
+    const rows = within(await screen.findByRole("table")).getAllByRole("row");
+    expect(rows[1].textContent).not.toContain("189,00");
+    expect(rows[2].textContent).toContain("189,00");
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 3" }));
+    const modal = await screen.findByRole("dialog", { name: "Cadastrar reserva" });
+    expect(modal.textContent).not.toContain("Linha 3");
+    expect((within(modal).getByLabelText("Valor") as HTMLInputElement).value).toMatch(/R\$\s189,00/);
+    fireEvent.change(within(modal).getByLabelText("Cliente"), { target: { value: "external" } });
+    expect(within(modal).getByRole("checkbox", { name: "Cortesia" })).toBeTruthy();
+  });
+
   it("permite tentar novamente após falha de carregamento", async () => {
     actions.loadExperience.mockResolvedValueOnce({ ok: false, error: "Banco indisponível" });
     render(<ExperienceSheet experience="pizza" day={day} />);

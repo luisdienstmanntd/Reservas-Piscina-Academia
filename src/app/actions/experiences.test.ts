@@ -108,6 +108,22 @@ describe("ações das experiências", () => {
     expect(JSON.parse(options.body)).toMatchObject({ apartment: null, adults: 1, children: 0, pax: null });
   });
 
+  it("valida o celular e salva os detalhes da pizza em formato normalizado", async () => {
+    const line = { ...pizza, line: 1 };
+    const fields = { ...external, adults: 1, children: 0, price: "R$ 189,50", numbers: "007", complimentary: true };
+    expect(await saveExperienceBooking(line, { ...fields, phone: "+1 123" })).toMatchObject({ ok: false });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+
+    for (const [phone, expected] of [["(54) 99999-9999", "+5554999999999"], ["+44 7911 123456", "+447911123456"]]) {
+      mocks.fetch.mockResolvedValueOnce(response([{ line: 1 }]));
+      expect(await saveExperienceBooking(line, { ...fields, phone })).toMatchObject({ ok: true });
+      const [, options] = mocks.fetch.mock.calls.at(-1)!;
+      expect(JSON.parse(options.body)).toMatchObject({
+        price_cents: 18950, numbers: "007", phone: expected, complimentary: true,
+      });
+    }
+  });
+
   it("exclui apenas a revisão confirmada e informa quando ela já mudou", async () => {
     mocks.fetch.mockResolvedValueOnce(response([]))
       .mockResolvedValueOnce(response([{ line: 3 }]));

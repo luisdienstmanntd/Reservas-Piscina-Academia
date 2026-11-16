@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { isAllowedApartmentNumber } from "@/lib/apartment-codes";
-import { experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
+import { normalizePhone } from "@/lib/phone";
+import { PIZZA_DEFAULT_PRICE_CENTS, experiences, type ExperienceBooking, type ExperienceSession } from "@/lib/experiences";
 import { readReceptionAuthed } from "@/lib/reception-auth";
 import { getAdminClient } from "@/lib/supabase/admin";
 
@@ -20,6 +21,8 @@ const setupSchema = z.object({
   start_time: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/),
 });
 const count = z.number().int().min(0).max(999);
+const bookingColumns = "line,revision,customer,apartment,name,pax,adults,children,notes";
+const pizzaColumns = `${bookingColumns},price_cents,numbers,phone,complimentary`;
 const bookingSchema = z.object({
   customer: z.enum(["guest", "external"]),
   apartment: z.string().trim().optional(),
@@ -28,6 +31,10 @@ const bookingSchema = z.object({
   adults: count.optional(),
   children: count.optional(),
   notes: z.string().trim().max(2000).optional(),
+  price: z.string().trim().max(24).optional(),
+  numbers: z.string().trim().regex(/^\d{0,30}$/).optional(),
+  phone: z.string().trim().max(40).optional(),
+  complimentary: z.boolean().optional(),
   revision: z.string().uuid().nullable(),
 });
 const accessError = "Sessão da recepção expirada ou banco indisponível.";
@@ -48,7 +55,7 @@ export async function loadExperience(input: unknown) {
     key.data.experience === "pizza"
       ? { data: null, error: null }
       : db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
-    db.from("experience_bookings").select("line,revision,customer,apartment,name,pax,adults,children,notes")
+    db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
       .match(key.data).returns<ExperienceBooking[]>(),
   ]);
   if (session.error || bookings.error) {
@@ -108,6 +115,22 @@ export async function saveExperienceBooking(input: unknown, details: unknown) {
   if (experience === "pizza" && (adults === undefined || children === undefined || adults + children === 0)) {
     return { ok: false, error: "Informe ao menos um adulto ou uma criança." } as const;
   }
+  const phone = booking.data.phone ? normalizePhone(booking.data.phone) : null;
+  if (experience === "pizza" && booking.data.phone && !phone) {
+    return { ok: false, error: "Celular inválido. Informe o DDD brasileiro ou use + e o código do país." } as const;
+  }
+
+  const price = booking.data.price?.replace(/^R\$\s*/, "");
+  if (experience === "pizza" && price !== undefined && !/^\d{1,7}(?:,\d{1,2})?$/.test(price) &&
+      !/^\d{1,3}(?:\.\d{3}){1,2},\d{2}$/.test(price)) {
+    return { ok: false, error: "Informe um valor válido, como R$ 189,00." } as const;
+  }
+  const priceCents = price === undefined
+    ? PIZZA_DEFAULT_PRICE_CENTS
+    : Math.round(Number(price.replace(/\./g, "").replace(",", ".")) * 100);
+
+  if (experience === "pizza" && priceCents > 999999999) return invalid;
+
   if (experience !== "pizza") {
     const { data, error } = await db.from("experience_sessions").select("day").match({ experience, day }).maybeSingle();
     if (error || !data) return { ok: false, error: "Defina a experiência antes de cadastrar uma reserva." } as const;
@@ -121,13 +144,19 @@ export async function saveExperienceBooking(input: unknown, details: unknown) {
     adults: experience === "pizza" ? adults : null,
     children: experience === "pizza" ? children : null,
     notes: experience !== "cinema" ? notes || null : null,
+    ...(experience === "pizza" && {
+      price_cents: priceCents,
+      numbers: booking.data.numbers || null,
+      phone,
+      complimentary: booking.data.complimentary ?? false,
+    }),
     revision: randomUUID(),
   };
   const table = db.from("experience_bookings");
   const mutation = revision
     ? table.update(values).match({ ...key.data, revision })
     : table.insert({ ...key.data, ...values });
-  const { data, error } = await mutation.select("line,revision,customer,apartment,name,pax,adults,children,notes")
+  const { data, error } = await mutation.select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
     .returns<ExperienceBooking[]>();
   if (error?.code === "23505") return conflict;
   if (error) return { ok: false, error: "Não foi possível salvar a reserva." } as const;

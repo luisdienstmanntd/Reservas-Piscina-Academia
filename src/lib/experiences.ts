@@ -4,6 +4,13 @@ export const experiences = {
   pizza: { label: "La vera pizza", rows: 8, setupLabel: null },
 } as const;
 
+export const PIZZA_DEFAULT_PRICE_CENTS = 18900;
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+export function formatPizzaPrice(cents: number) {
+  return brl.format(cents / 100);
+}
+
 export type Experience = keyof typeof experiences;
 export type ExperienceSession = { title: string; start_time: string };
 export type ExperienceBooking = {
@@ -16,4 +23,8 @@ export type ExperienceBooking = {
   adults: number | null;
   children: number | null;
   notes: string | null;
+  price_cents?: number | null;
+  numbers?: string | null;
+  phone?: string | null;
+  complimentary?: boolean;
 };
