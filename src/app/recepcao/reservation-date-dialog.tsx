@@ -3,7 +3,7 @@
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function ReservationDateDialog({ day, onCancel, onConfirm }: {
   day: string | undefined;
@@ -12,10 +12,9 @@ export function ReservationDateDialog({ day, onCancel, onConfirm }: {
 }) {
   return (
     <Dialog open={Boolean(day)} onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent>
-        <DialogHeader className="pr-8">
+      <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
+        <DialogHeader className="px-8 text-center">
           <DialogTitle>Confirmar data da reserva</DialogTitle>
-          <DialogDescription>Confira a data e clique nela para continuar.</DialogDescription>
         </DialogHeader>
         {day && (
           <Button type="button" onClick={onConfirm}>

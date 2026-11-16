@@ -270,7 +270,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                   }
                   return (
                     <tr key={row} className="cursor-pointer border-b border-border/60 hover:bg-muted/30" onClick={openBooking}>
-                      <td className="whitespace-nowrap px-3 py-2">{booking?.apartment ?? (booking ? "Externo" : "—")}</td>
+                      <td className="whitespace-nowrap px-3 py-2">{booking?.apartment ?? (booking ? <span className="italic">Externo</span> : "—")}</td>
                       <td className="px-3 py-2">
                         <button type="button" className="block w-full text-left [overflow-wrap:anywhere]" onClick={(event) => {
                           event.stopPropagation();
@@ -283,9 +283,9 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                         <td className="min-w-32 whitespace-pre-wrap px-3 py-2 [overflow-wrap:anywhere]">{booking?.notes}</td>
                         <td className="whitespace-nowrap px-3 py-2">{booking?.phone && formatPhoneDisplay(booking.phone)}</td>
                         <td className="whitespace-nowrap px-3 py-2">
-                          {booking && (booking.complimentary ? "Cortesia" : formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS))}
+                          {booking && (booking.complimentary ? <span className="italic">Cortesia</span> : formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS))}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2">{booking?.numbers}</td>
+                        <td className="whitespace-nowrap px-3 py-2 italic">{booking?.numbers}</td>
                       </>}
                       <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                         <Button
@@ -444,7 +444,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         </Dialog>
 
         <Dialog open={capacityOpen} onOpenChange={(open) => { if (!busy) setCapacityOpen(open); }}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-sm">
             <DialogHeader className="pr-8">
               <DialogTitle>Alterar capacidade</DialogTitle>
               <DialogDescription>Defina a quantidade de lugares para o dia selecionado.</DialogDescription>
@@ -461,12 +461,12 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
 
         <AlertDialog open={overCapacityLine !== undefined}
           onOpenChange={(open) => { if (!open) setOverCapacityLine(undefined); }}>
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-sm">
             <AlertDialogHeader>
               <AlertDialogTitle>Capacidade máxima atingida</AlertDialogTitle>
               <AlertDialogDescription>Deseja acrescentar mais uma reserva?</AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-row justify-between sm:justify-between">
               <AlertDialogCancel>Não</AlertDialogCancel>
               <AlertDialogAction onClick={() => setLine(overCapacityLine)}>Sim</AlertDialogAction>
             </AlertDialogFooter>
