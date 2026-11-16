@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Pencil, Settings, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Settings, Trash2 } from "lucide-react";
 
 import { deleteExperienceBooking, editCinemaSession, loadExperience, saveExperienceBooking, savePizzaCapacity, setupExperience } from "@/app/actions/experiences";
 import {
@@ -29,6 +29,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
+  const [pizzaOpened, setPizzaOpened] = useState(false);
   const [line, setLine] = useState<number>();
   const [capacityOpen, setCapacityOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<{ day: string; line: number }>();
@@ -50,7 +51,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         return;
       }
       setSheet(result);
-      setShowSetup(experience !== "pizza" && !result.session);
+      setShowSetup(experience === "pizza" || !result.session);
     }).catch(() => {
       if (active) setLoadError("Não foi possível carregar a planilha.");
     });
@@ -76,6 +77,11 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
     setError("");
     try {
       if (line === undefined) {
+        if (experience === "pizza") {
+          setPizzaOpened(true);
+          setShowSetup(false);
+          return;
+        }
         const key = { experience, day };
         const details = { title: fields.get("title"), start_time: fields.get("time") };
         if (experience === "cinema" && sheet?.session) {
@@ -238,10 +244,10 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
         {loadError && <p role="alert" className="mb-2 text-sm text-destructive">{loadError}</p>}
         {loadError && <Button variant="outline" onClick={reloadSheet}>Tentar novamente</Button>}
         {!loadError && !sheet && <p role="status">Carregando planilha…</p>}
-        {sheet && definition.setupLabel && !heading && (
+        {sheet && ((definition.setupLabel && !heading) || (experience === "pizza" && !pizzaOpened)) && (
           <Button variant="outline" onClick={() => { setError(""); setShowSetup(true); }}>Definir experiência</Button>
         )}
-        {sheet && (!definition.setupLabel || heading) && (
+        {sheet && (heading || (experience === "pizza" && pizzaOpened)) && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm" aria-label={definition.label}>
               <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -351,14 +357,23 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
           >
             <DialogHeader className="pr-8">
               <DialogTitle>{showSetup ? (heading ? "Editar filme e horário" : definition.label) : current ? "Editar reserva" : "Cadastrar reserva"}</DialogTitle>
-              {(hasDialogDescription) && (
+              {hasDialogDescription && (
                 <DialogDescription>
-                  {showSetup ? (heading ? "Altere o nome do filme ou o horário da sessão." : "Preencha os dados para abrir a planilha.") : `${definition.label} · Linha ${line}`}
+                  {showSetup && !heading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <CalendarDays className="size-4" aria-hidden />
+                      <time dateTime={day}>{day.split("-").reverse().join("/")}</time>
+                    </span>
+                  ) : showSetup ? (
+                    "Altere o nome do filme ou o horário da sessão."
+                  ) : (
+                    `${definition.label} · Linha ${line}`
+                  )}
                 </DialogDescription>
               )}
             </DialogHeader>
             <form key={showSetup ? "setup" : line} className="grid gap-4" onSubmit={submit}>
-              {showSetup ? (
+              {showSetup && experience === "pizza" ? null : showSetup ? (
                 <>
                   <label className="grid gap-1 text-sm">{definition.setupLabel}<Input name="title" required maxLength={200} defaultValue={heading?.title} /></label>
                   <label className="grid gap-1 text-sm">Horário<Input name="time" type="time" required defaultValue={heading?.start_time.slice(0, 5) ?? (experience === "cinema" ? "19:30" : undefined)} /></label>
@@ -438,7 +453,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
               {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
               {stale
                 ? <Button type="button" onClick={reloadSheet}>Recarregar planilha</Button>
-                : <Button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar"}</Button>}
+                : <Button type="submit" disabled={busy}>{busy ? "Salvando…" : experience === "pizza" && showSetup ? "Abrir planilha" : "Salvar"}</Button>}
             </form>
           </DialogContent>
         </Dialog>
