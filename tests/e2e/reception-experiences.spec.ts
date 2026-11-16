@@ -129,7 +129,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await expect(dialog).toHaveCount(0);
       await sheet.getByRole("button", { name: "Cadastrar na linha 1" }).click();
       await expect(dialog.getByText("La vera pizza · Linha 1")).toHaveCount(0);
-      for (const labels of [["Cliente", "Apto"], ["Adultos", "CHD", "Avulsa"], ["Celular", "Valor"]]) {
+      for (const labels of [["Cliente", "Apto"], ["Adultos", "CHD", "Avulsa"], ["Contato", "Valor"]]) {
         const boxes = await Promise.all(labels.map((label) => dialog.getByLabel(label, { exact: true }).boundingBox()));
         for (let i = 1; i < boxes.length; i++) {
           expect(boxes[i]!.y).toBeCloseTo(boxes[0]!.y);
@@ -140,7 +140,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       await dialog.getByLabel("Apto").fill("102");
       await dialog.getByLabel("Avulsa").fill("a007x");
       await expect(dialog.getByLabel("Avulsa")).toHaveValue("007");
-      await dialog.getByLabel("Celular").fill("+44 7911 123456");
+      await dialog.getByLabel("Contato").fill("+44 7911 123456");
       await dialog.getByLabel("Nome dos hóspedes").fill("Ana");
       await dialog.getByLabel("Adultos").fill("2");
       await dialog.getByLabel("CHD").fill("1");
@@ -153,13 +153,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
       const pizzaRow = sheet.getByRole("row").filter({ hasText: "Ana" });
       await expect(pizzaRow.getByText(/R\$\s189,00/)).toBeVisible();
       await expect(pizzaRow.getByText("007", { exact: true })).toBeVisible();
-      await expect(pizzaRow.getByRole("cell").nth(5)).toHaveText("Sem queijo");
+      await expect(pizzaRow.getByRole("cell").nth(2)).toHaveText("Sem queijo");
       await expect(pizzaRow.getByText("+44 7911 123456", { exact: true })).toBeVisible();
       await fitsViewport(page);
       const columnWidth = await pizzaRow.getByRole("cell").nth(1).evaluate((cell) => cell.getBoundingClientRect().width);
       expect(columnWidth).toBeGreaterThanOrEqual(128);
       await sheet.getByRole("button", { name: "Editar linha 1, Ana" }).click();
-      await expect(dialog.getByLabel("Celular")).toHaveValue("+447911123456");
+      await expect(dialog.getByLabel("Contato")).toHaveValue("+447911123456");
       await expect(dialog.getByLabel("Avulsa")).toHaveValue("007");
       await dialog.getByLabel("Cortesia").check();
       await expect(dialog.getByLabel("CHD")).toHaveValue("1");

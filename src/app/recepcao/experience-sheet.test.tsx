@@ -128,13 +128,15 @@ describe("planilhas de experiências", () => {
     });
     render(<ExperienceSheet experience="pizza" day={day} />);
     const rows = within(await screen.findByRole("table")).getAllByRole("row");
-    expect(within(rows[0]).getByRole("columnheader", { name: "Avulsa" })).toBeTruthy();
+    expect(within(rows[0]).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+      "Apto", "Nome", "Observações", "Contato", "Valor", "Avulsa", "Ações",
+    ]);
     expect(within(rows[1]).getAllByRole("cell")[4].textContent).toBe("Cortesia");
     expect(rows[2].textContent).toContain("189,00");
     expect(within(rows.at(-1)!).getByRole("rowheader", { name: "Total" })).toBeTruthy();
     expect(within(rows.at(-1)!).getAllByRole("cell")[0].textContent).toMatch(/239,50/);
-    expect(within(rows[0]).getAllByRole("columnheader")[5].textContent).toBe("Observações");
-    expect(within(rows[2]).getAllByRole("cell")[5].textContent).toBe("Sem queijo");
+    expect(within(rows[0]).getAllByRole("columnheader")[2].textContent).toBe("Observações");
+    expect(within(rows[2]).getAllByRole("cell")[2].textContent).toBe("Sem queijo");
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar na linha 3" }));
     const modal = await screen.findByRole("dialog", { name: "Cadastrar reserva" });
     expect(modal.textContent).not.toContain("Linha 3");

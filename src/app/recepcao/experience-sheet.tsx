@@ -204,12 +204,12 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
               <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th scope="col" className="rounded-l-md px-3 py-3">Apto</th>
-                  <th scope="col" className={isPizza ? "w-full min-w-32 px-3 py-3" : "w-full px-3 py-3"}>Nome</th>
+                  <th scope="col" className={isPizza ? "w-[23%] min-w-32 px-3 py-3" : "w-full px-3 py-3"}>Nome</th>
                   {isPizza && <>
-                    <th scope="col" className="px-3 py-3">Avulsa</th>
-                    <th scope="col" className="px-3 py-3">Celular</th>
+                    <th scope="col" className="w-full min-w-32 px-3 py-3">Observações</th>
+                    <th scope="col" className="px-3 py-3">Contato</th>
                     <th scope="col" className="px-3 py-3">Valor</th>
-                    <th scope="col" className="px-3 py-3">Observações</th>
+                    <th scope="col" className="px-3 py-3">Avulsa</th>
                   </>}
                   <th scope="col" className="rounded-r-md px-3 py-3"><span className="sr-only">Ações</span></th>
                 </tr>
@@ -236,12 +236,12 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                         </button>
                       </td>
                       {isPizza && <>
-                        <td className="whitespace-nowrap px-3 py-2">{booking?.numbers}</td>
+                        <td className="min-w-32 whitespace-pre-wrap px-3 py-2 [overflow-wrap:anywhere]">{booking?.notes}</td>
                         <td className="whitespace-nowrap px-3 py-2">{booking?.phone && formatPhoneDisplay(booking.phone)}</td>
                         <td className="whitespace-nowrap px-3 py-2">
                           {booking && (booking.complimentary ? "Cortesia" : formatPizzaPrice(booking.price_cents ?? PIZZA_DEFAULT_PRICE_CENTS))}
                         </td>
-                        <td className="min-w-32 whitespace-pre-wrap px-3 py-2 [overflow-wrap:anywhere]">{booking?.notes}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{booking?.numbers}</td>
                       </>}
                       <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                         <Button
@@ -347,7 +347,7 @@ export function ExperienceSheet({ experience, day, toolbar }: { experience: Expe
                         </label>
                       </div>
                       <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-2 gap-y-1 sm:gap-x-4">
-                        <label className="grid min-w-0 gap-1 text-sm">Celular
+                        <label className="grid min-w-0 gap-1 text-sm">Contato
                           <Input name="phone" type="tel" autoComplete="tel" maxLength={40}
                             aria-describedby="pizza-phone-hint" defaultValue={current?.phone ?? ""} />
                         </label>
