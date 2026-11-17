@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { endOfMonth, format, parseISO } from "date-fns";
+import { DayButton, type DayButtonProps } from "react-day-picker";
 import { listExperienceDays } from "@/app/actions/experiences";
 import { Calendar } from "@/components/ui/calendar";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Experience } from "@/lib/experiences";
 
-export function ExperienceCalendar({ experience, day, onSelect }: {
+function ExperienceDayButton({ modifiers, ...props }: DayButtonProps) {
+  return (
+    <DayButton {...props} modifiers={modifiers} style={{
+      ...props.style,
+      borderColor: modifiers.today && !modifiers.scheduled ? "var(--rdp-accent-color)" : "transparent",
+    }} />
+  );
+}
+
+export function ExperienceCalendar({ experience, day, today, onSelect }: {
   experience: Experience;
   day: string;
+  today: string;
   onSelect: (day: string) => void;
 }) {
   const [month, setMonth] = useState(() => parseISO(day));
@@ -42,16 +53,22 @@ export function ExperienceCalendar({ experience, day, onSelect }: {
         mode="single"
         required
         selected={parseISO(day)}
+        today={parseISO(today)}
         month={month}
         onMonthChange={setMonth}
         onSelect={(date) => onSelect(format(date, "yyyy-MM-dd"))}
-        modifiers={{ scheduled: loaded ? result.days.map((date) => parseISO(date)) : [] }}
+        components={{ DayButton: ExperienceDayButton }}
+        modifiers={{
+          scheduled: loaded ? result.days.map((date) => parseISO(date)) : [],
+          scheduledToday: loaded && result.days.includes(today) ? parseISO(today) : [],
+        }}
         modifiersStyles={{
           scheduled: {
             backgroundColor: "var(--primary)",
             color: "var(--primary-foreground)",
             borderRadius: "0.5rem",
           },
+          scheduledToday: { outline: "2px solid var(--rdp-accent-color)", outlineOffset: "-2px" },
         }}
         labels={{ labelDayButton: (date, modifiers) =>
           `${format(date, "dd/MM/yyyy")}${modifiers.scheduled ? " — experiência cadastrada" : ""}`,

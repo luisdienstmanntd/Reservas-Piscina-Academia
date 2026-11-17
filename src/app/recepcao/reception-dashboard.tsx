@@ -1290,7 +1290,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
             <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={selectExperienceDay} onDismissSetup={() => selectSheet("pool")} />
             <Dialog open={experienceCalendarOpen} onOpenChange={setExperienceCalendarOpen}>
               {experienceCalendarOpen && (
-                <ExperienceCalendar experience={experience} day={dateStr} onSelect={(day) => {
+                <ExperienceCalendar experience={experience} day={dateStr} today={hotelToday} onSelect={(day) => {
                   setExperienceCalendarOpen(false);
                   selectExperienceDay(day);
                 }} />
