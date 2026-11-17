@@ -660,17 +660,17 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         </AlertDialog>
 
         <AlertDialog open={deletingSheet} onOpenChange={(open) => { if (!busy) setDeletingSheet(open); }}>
-          <AlertDialogContent className="sm:max-w-sm">
-            <AlertDialogHeader>
+          <AlertDialogContent className="max-w-[min(22rem,calc(100%-2rem))] p-4 sm:max-w-[22rem] sm:p-5">
+            <AlertDialogHeader className="text-center sm:text-center">
               <AlertDialogTitle>Apagar esta experiência?</AlertDialogTitle>
               <AlertDialogDescription className="sr-only">
                 A planilha de {definition.label} de {dateLabel} e todas as suas reservas serão apagadas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={busy}>Voltar</AlertDialogCancel>
-              <AlertDialogAction disabled={busy} onClick={(event) => {
+            <AlertDialogFooter className="grid grid-cols-2 gap-2">
+              <AlertDialogCancel className="w-full" disabled={busy}>Voltar</AlertDialogCancel>
+              <AlertDialogAction className="h-auto min-h-9 w-full whitespace-normal" disabled={busy} onClick={(event) => {
                 event.preventDefault();
                 void removeSheet();
               }}>{busy ? "Apagando…" : "Apagar experiência"}</AlertDialogAction>
