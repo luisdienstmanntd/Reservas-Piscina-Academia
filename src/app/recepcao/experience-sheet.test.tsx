@@ -159,7 +159,7 @@ describe("planilhas de experiências", () => {
     });
     actions.saveExperienceBooking.mockResolvedValue({
       ok: true,
-      booking: { line: 1, customer: "external", apartment: null, name: "Maria", pax: 2 },
+      booking: { line: 1, customer: "external", apartment: null, name: "Maria", pax: 2, numbers: "007", phone: "+5554999999999", notes: "Chega cedo" },
     });
     render(<ExperienceSheet experience="wine" day={day} />);
     const table = await screen.findByRole("table");
@@ -174,11 +174,17 @@ describe("planilhas de experiências", () => {
     expect(dialog.queryByLabelText("Apto")).toBeNull();
     fireEvent.change(dialog.getByLabelText("Nome"), { target: { value: "Maria" } });
     fireEvent.change(dialog.getByLabelText("Pax"), { target: { value: "2" } });
+    fireEvent.change(dialog.getByLabelText("Avulsa"), { target: { value: "a007" } });
+    fireEvent.change(dialog.getByLabelText("Contato"), { target: { value: "+5554999999999" } });
+    fireEvent.change(dialog.getByLabelText("Observações"), { target: { value: "Chega cedo" } });
     fireEvent.click(dialog.getByRole("button", { name: "Salvar" }));
     expect(await screen.findByText("Maria")).toBeTruthy();
+    expect(within(table).getByText("007")).toBeTruthy();
+    expect(within(table).getByText("Chega cedo")).toBeTruthy();
+    expect(within(table).getByText(/99999-9999/)).toBeTruthy();
     expect(actions.saveExperienceBooking).toHaveBeenCalledWith(
       { experience: "wine", day, line: 1 },
-      expect.objectContaining({ customer: "external", name: "Maria", pax: 2, revision: null })
+      expect.objectContaining({ customer: "external", name: "Maria", pax: 2, numbers: "007", phone: "+5554999999999", revision: null })
     );
   });
 

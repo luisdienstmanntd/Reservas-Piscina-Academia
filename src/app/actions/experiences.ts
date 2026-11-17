@@ -22,6 +22,7 @@ const setupSchema = z.object({
 });
 const count = z.number().int().min(0).max(999);
 const bookingColumns = "line,revision,customer,apartment,name,pax,adults,children,notes";
+const wineColumns = `${bookingColumns},numbers,phone`;
 const pizzaColumns = `${bookingColumns},price_cents,numbers,phone,complimentary`;
 const bookingSchema = z.object({
   customer: z.enum(["guest", "external"]),
@@ -53,7 +54,7 @@ export async function loadExperience(input: unknown) {
 
   const [session, bookings, capacity] = await Promise.all([
     db.from("experience_sessions").select("title,start_time").match(key.data).maybeSingle<ExperienceSession>(),
-    db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
+    db.from("experience_bookings").select(key.data.experience === "pizza" ? pizzaColumns : key.data.experience === "wine" ? wineColumns : bookingColumns)
       .match(key.data).returns<ExperienceBooking[]>(),
     key.data.experience === "pizza" || key.data.experience === "wine"
       ? db.from(key.data.experience === "pizza" ? "pizza_daily_capacity" : "wine_daily_capacity").select("capacity").eq("day", key.data.day).maybeSingle<{ capacity: number }>()
@@ -162,8 +163,9 @@ export async function saveExperienceBooking(input: unknown, details: unknown) {
   if (experience === "pizza" && (adults === undefined || children === undefined || adults + children === 0)) {
     return { ok: false, error: "Informe ao menos um adulto ou uma criança." } as const;
   }
-  const phone = booking.data.phone ? normalizePhone(booking.data.phone) : null;
-  if (experience === "pizza" && booking.data.phone && !phone) {
+  const hasContactDetails = experience === "pizza" || (experience === "wine" && customer === "external");
+  const phone = hasContactDetails && booking.data.phone ? normalizePhone(booking.data.phone) : null;
+  if (hasContactDetails && booking.data.phone && !phone) {
     return { ok: false, error: "Celular inválido. Informe o DDD brasileiro ou use + e o código do país." } as const;
   }
 
@@ -193,9 +195,11 @@ export async function saveExperienceBooking(input: unknown, details: unknown) {
     notes: experience !== "cinema" ? notes || null : null,
     ...(experience === "pizza" && {
       price_cents: priceCents,
-      numbers: booking.data.numbers || null,
-      phone,
       complimentary: booking.data.complimentary ?? false,
+    }),
+    ...((experience === "wine" || experience === "pizza") && {
+      numbers: hasContactDetails ? booking.data.numbers || null : null,
+      phone,
     }),
     revision: randomUUID(),
   };
@@ -203,7 +207,7 @@ export async function saveExperienceBooking(input: unknown, details: unknown) {
   const mutation = revision
     ? table.update(values).match({ ...key.data, revision })
     : table.insert({ ...key.data, ...values });
-  const { data, error } = await mutation.select(key.data.experience === "pizza" ? pizzaColumns : bookingColumns)
+  const { data, error } = await mutation.select(key.data.experience === "pizza" ? pizzaColumns : key.data.experience === "wine" ? wineColumns : bookingColumns)
     .returns<ExperienceBooking[]>();
   if (error?.code === "23505") return conflict;
   if (error) return { ok: false, error: "Não foi possível salvar a reserva." } as const;

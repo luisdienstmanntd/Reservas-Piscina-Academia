@@ -122,9 +122,11 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
         notes: fields.get("notes") ?? undefined,
         ...(isPizza && {
           price: fields.get("price"),
+          complimentary: fields.has("complimentary"),
+        }),
+        ...((isPizza || (experience === "wine" && customer === "external")) && {
           numbers: fields.get("numbers"),
           phone: fields.get("phone"),
-          complimentary: fields.has("complimentary"),
         }),
         revision: current?.revision ?? null,
       });
@@ -358,6 +360,11 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                     <th scope="col" className="px-3 py-3">Valor</th>
                     <th scope="col" className="px-3 py-3">Avulsa</th>
                   </>}
+                  {isWine && <>
+                    <th scope="col" className="min-w-32 px-3 py-3">Observações</th>
+                    <th scope="col" className="px-3 py-3">Contato</th>
+                    <th scope="col" className="px-3 py-3">Avulsa</th>
+                  </>}
                   <th scope="col" className="rounded-r-md px-3 py-3"><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
@@ -391,6 +398,11 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 italic">{booking?.numbers}</td>
                       </>}
+                      {isWine && <>
+                        <td className="whitespace-pre-wrap px-3 py-2 [overflow-wrap:anywhere]">{booking?.notes}</td>
+                        <td className="whitespace-nowrap px-3 py-2">{booking?.phone && formatPhoneDisplay(booking.phone)}</td>
+                        <td className="px-3 py-2 [overflow-wrap:anywhere]">{booking?.numbers}</td>
+                      </>}
                       <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
                         <Button
                           type="button"
@@ -412,7 +424,7 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
               {(isPizza || isWine) && (
                 <tfoot className="border-t border-border bg-muted/50 font-semibold">
                   <tr>
-                    <td colSpan={isPizza ? 3 : 2} className="px-3 py-2">
+                    <td colSpan={isPizza ? 3 : 5} className="px-3 py-2">
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         {isPizza ? <>
                           <span>{adults + children}/{capacity} lugares</span>
@@ -501,13 +513,22 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                 <>
                   <div className={experience === "wine" ? "grid grid-cols-2 gap-2 sm:gap-4" : isPizza ? "grid grid-cols-2 gap-2 sm:gap-4" : "contents"}>
                     {experience !== "cinema" && (
-                      <label className={(isPizza || experience === "wine") && customer === "external" ? "col-span-2 grid gap-1 text-sm" : "grid gap-1 text-sm"}>Cliente
+                      <label className={isPizza && customer === "external" ? "col-span-2 grid gap-1 text-sm" : "grid gap-1 text-sm"}>Cliente
                         <select className={selectClass} value={customer} onChange={(event) => {
                           setCustomer(event.target.value === "external" ? "external" : "guest");
                         }}>
                           <option value="guest">Hóspede</option>
                           <option value="external">Externo</option>
                         </select>
+                      </label>
+                    )}
+                    {isWine && customer === "external" && (
+                      <label className="grid min-w-0 gap-1 text-sm">Avulsa
+                        <Input name="numbers" inputMode="numeric" pattern="[0-9]*" maxLength={30}
+                          defaultValue={current?.numbers ?? ""}
+                          onChange={(event) => {
+                            event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, "");
+                          }} />
                       </label>
                     )}
                     {customer === "guest" && (
@@ -522,10 +543,17 @@ export function ExperienceSheet({ experience, day, toolbar, onDayChange, onDismi
                   <label className="grid gap-1 text-sm">{customer === "guest" ? "Nome dos hóspedes" : "Nome"}
                     <Input name="name" required maxLength={200} defaultValue={current?.name ?? ""} />
                   </label>
-                  {experience === "wine" && (
-                    <label className="grid gap-1 text-sm">Pax
-                      <Input name="pax" type="number" min={1} max={999} required defaultValue={current?.pax ?? 1} />
-                    </label>
+                  {isWine && (
+                    <div className={customer === "external" ? "grid grid-cols-2 gap-2 sm:gap-4" : "grid"}>
+                      <label className="grid min-w-0 gap-1 text-sm">Pax
+                        <Input name="pax" type="number" min={1} max={999} required defaultValue={current?.pax ?? 1} />
+                      </label>
+                      {customer === "external" && (
+                        <label className="grid min-w-0 gap-1 text-sm">Contato
+                          <Input name="phone" type="tel" autoComplete="tel" maxLength={40} defaultValue={current?.phone ?? ""} />
+                        </label>
+                      )}
+                    </div>
                   )}
                   {isPizza && (
                     <>
