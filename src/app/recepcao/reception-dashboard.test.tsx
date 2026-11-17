@@ -24,6 +24,7 @@ vi.mock("@/app/actions/experiences", () => ({
   loadExperience: vi.fn().mockImplementation(async ({ experience }) => ({
     ok: true, session: { title: experience, start_time: "19:30:00" }, bookings: [],
   })),
+  nextExperienceDay: vi.fn().mockResolvedValue({ ok: true, day: null }),
 }));
 vi.mock("@/app/actions/stays", () => ({ generateStayToken: vi.fn() }));
 vi.mock("next/image", () => ({ default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={props.alt ?? ""} {...props} /> }));

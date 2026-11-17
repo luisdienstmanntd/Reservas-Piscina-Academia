@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { experiences, type Experience } from "@/lib/experiences";
 import { ExperienceSheet } from "./experience-sheet";
+import { ExperienceCalendar } from "./experience-calendar";
+import { nextExperienceDay } from "@/app/actions/experiences";
 import { ReservationDateDialog } from "./reservation-date-dialog";
 import {
   Bell,
@@ -761,10 +763,10 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
   }, [authed, refreshFormSummary]);
 
   const dayInputRef = useRef<HTMLInputElement>(null);
-  const experienceDays = useRef<Partial<Record<Experience, string>>>({});
+  const sheetRequest = useRef(0);
+  const [experienceCalendarOpen, setExperienceCalendarOpen] = useState(false);
   function selectExperienceDay(day: string) {
     if (!day || !experience) return;
-    experienceDays.current[experience] = day;
     setDateStr(day);
   }
 
@@ -951,19 +953,32 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
       toast.error("Sessão da recepção expirada. Entre de novo.");
     },
   });
-  function selectSheet(tab: Facility | Experience) {
+  async function selectSheet(tab: Facility | Experience) {
+    const request = ++sheetRequest.current;
     if (tab === (experience ?? facility)) return;
     if (tab === "pool" || tab === "gym") {
       setDateStr(hotelToday);
       setExperience(null);
       setFacility(tab);
     } else {
-      setDateStr(experienceDays.current[tab] ?? hotelToday);
+      try {
+        const result = await nextExperienceDay({ experience: tab, day: hotelToday });
+        if (request !== sheetRequest.current) return;
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        setDateStr(result.day ?? hotelToday);
+      } catch {
+        if (request === sheetRequest.current) toast.error("Não foi possível consultar a próxima sessão.");
+        return;
+      }
       setExperience(tab);
     }
   }
 
   function viewNewReservation(item: NewReservationItem) {
+    sheetRequest.current++;
     setExperience(null);
     setFacility(item.facility === "gym" ? "gym" : "pool");
     setDateStr(item.reservation_date);
@@ -1177,7 +1192,7 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         />
       </div>
       {experience && (
-        <Button type="button" variant="outline" size="sm" onClick={openDayPicker}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setExperienceCalendarOpen(true)}>
           Consultar data
         </Button>
       )}
@@ -1271,7 +1286,17 @@ export function ReceptionDashboard({ initialAuthed }: Props) {
         />
 
         {experience ? (
-          <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={selectExperienceDay} onDismissSetup={() => selectSheet("pool")} />
+          <>
+            <ExperienceSheet key={`${experience}:${dateStr}`} experience={experience} day={dateStr} toolbar={sheetToolbar} onDayChange={selectExperienceDay} onDismissSetup={() => selectSheet("pool")} />
+            <Dialog open={experienceCalendarOpen} onOpenChange={setExperienceCalendarOpen}>
+              {experienceCalendarOpen && (
+                <ExperienceCalendar experience={experience} day={dateStr} onSelect={(day) => {
+                  setExperienceCalendarOpen(false);
+                  selectExperienceDay(day);
+                }} />
+              )}
+            </Dialog>
+          </>
         ) : (
         <Card className="border-border/80 shadow-sm">
           <CardContent

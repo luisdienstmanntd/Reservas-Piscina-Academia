@@ -46,6 +46,33 @@ async function receptionClient() {
   return (await readReceptionAuthed()) ? getAdminClient() : null;
 }
 
+export async function nextExperienceDay(input: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const key = keySchema.safeParse(input);
+  if (!key.success) return invalid;
+
+  const { data, error } = await db.from("experience_sessions").select("day")
+    .eq("experience", key.data.experience).gte("day", key.data.day)
+    .order("day").limit(1).maybeSingle<{ day: string }>();
+  if (error) return { ok: false, error: "Não foi possível consultar a próxima sessão." } as const;
+  return { ok: true, day: data?.day ?? null } as const;
+}
+
+export async function listExperienceDays(input: unknown) {
+  const db = await receptionClient();
+  if (!db) return { ok: false, error: accessError } as const;
+  const key = keySchema.safeParse(input);
+  if (!key.success) return invalid;
+
+  const month = key.data.day.slice(0, 7);
+  const { data, error } = await db.from("experience_sessions").select("day")
+    .eq("experience", key.data.experience)
+    .gte("day", `${month}-01`).lte("day", key.data.day);
+  if (error) return { ok: false, error: "Não foi possível consultar as datas." } as const;
+  return { ok: true, days: data.map(({ day }) => day as string) } as const;
+}
+
 export async function loadExperience(input: unknown) {
   const db = await receptionClient();
   if (!db) return { ok: false, error: accessError } as const;
